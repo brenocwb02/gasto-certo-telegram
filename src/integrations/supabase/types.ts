@@ -14,7 +14,329 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      accounts: {
+        Row: {
+          ativo: boolean
+          banco: string | null
+          cor: string | null
+          created_at: string
+          id: string
+          nome: string
+          saldo_atual: number
+          saldo_inicial: number
+          tipo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          banco?: string | null
+          cor?: string | null
+          created_at?: string
+          id?: string
+          nome: string
+          saldo_atual?: number
+          saldo_inicial?: number
+          tipo: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean
+          banco?: string | null
+          cor?: string | null
+          created_at?: string
+          id?: string
+          nome?: string
+          saldo_atual?: number
+          saldo_inicial?: number
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      categories: {
+        Row: {
+          cor: string | null
+          created_at: string
+          icone: string | null
+          id: string
+          nome: string
+          parent_id: string | null
+          tipo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cor?: string | null
+          created_at?: string
+          icone?: string | null
+          id?: string
+          nome: string
+          parent_id?: string | null
+          tipo: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cor?: string | null
+          created_at?: string
+          icone?: string | null
+          id?: string
+          nome?: string
+          parent_id?: string | null
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      goals: {
+        Row: {
+          categoria_id: string | null
+          created_at: string
+          data_fim: string
+          data_inicio: string
+          descricao: string | null
+          id: string
+          status: string
+          tipo_periodo: string
+          titulo: string
+          updated_at: string
+          user_id: string
+          valor_atual: number
+          valor_meta: number
+        }
+        Insert: {
+          categoria_id?: string | null
+          created_at?: string
+          data_fim: string
+          data_inicio: string
+          descricao?: string | null
+          id?: string
+          status?: string
+          tipo_periodo: string
+          titulo: string
+          updated_at?: string
+          user_id: string
+          valor_atual?: number
+          valor_meta: number
+        }
+        Update: {
+          categoria_id?: string | null
+          created_at?: string
+          data_fim?: string
+          data_inicio?: string
+          descricao?: string | null
+          id?: string
+          status?: string
+          tipo_periodo?: string
+          titulo?: string
+          updated_at?: string
+          user_id?: string
+          valor_atual?: number
+          valor_meta?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goals_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      licenses: {
+        Row: {
+          codigo: string
+          created_at: string
+          data_ativacao: string | null
+          data_expiracao: string | null
+          id: string
+          status: string
+          tipo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          codigo: string
+          created_at?: string
+          data_ativacao?: string | null
+          data_expiracao?: string | null
+          id?: string
+          status?: string
+          tipo?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          codigo?: string
+          created_at?: string
+          data_ativacao?: string | null
+          data_expiracao?: string | null
+          id?: string
+          status?: string
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          id: string
+          nome: string
+          telefone: string | null
+          telegram_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          nome: string
+          telefone?: string | null
+          telegram_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          nome?: string
+          telefone?: string | null
+          telegram_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      telegram_sessions: {
+        Row: {
+          chat_id: string
+          contexto: Json | null
+          created_at: string
+          id: string
+          status: string
+          telegram_id: string
+          ultimo_comando: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chat_id: string
+          contexto?: Json | null
+          created_at?: string
+          id?: string
+          status?: string
+          telegram_id: string
+          ultimo_comando?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chat_id?: string
+          contexto?: Json | null
+          created_at?: string
+          id?: string
+          status?: string
+          telegram_id?: string
+          ultimo_comando?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          anexos: Json | null
+          categoria_id: string | null
+          conta_destino_id: string | null
+          conta_origem_id: string | null
+          created_at: string
+          data_transacao: string
+          descricao: string
+          id: string
+          observacoes: string | null
+          origem: string | null
+          tags: string[] | null
+          tipo: string
+          updated_at: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          anexos?: Json | null
+          categoria_id?: string | null
+          conta_destino_id?: string | null
+          conta_origem_id?: string | null
+          created_at?: string
+          data_transacao?: string
+          descricao: string
+          id?: string
+          observacoes?: string | null
+          origem?: string | null
+          tags?: string[] | null
+          tipo: string
+          updated_at?: string
+          user_id: string
+          valor: number
+        }
+        Update: {
+          anexos?: Json | null
+          categoria_id?: string | null
+          conta_destino_id?: string | null
+          conta_origem_id?: string | null
+          created_at?: string
+          data_transacao?: string
+          descricao?: string
+          id?: string
+          observacoes?: string | null
+          origem?: string | null
+          tags?: string[] | null
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_conta_destino_id_fkey"
+            columns: ["conta_destino_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_conta_origem_id_fkey"
+            columns: ["conta_origem_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
