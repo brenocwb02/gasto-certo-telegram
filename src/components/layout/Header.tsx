@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { Bell, Settings, User, Menu } from "lucide-react";
+import { Bell, Settings, User, Menu, LogOut } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +15,20 @@ interface HeaderProps {
 }
 
 export function Header({ onMenuClick }: HeaderProps) {
+  const { user, signOut } = useAuth();
+
+  const handleLogout = async () => {
+    await signOut();
+  };
+
+  const getUserInitials = (email: string) => {
+    const parts = email.split('@')[0].split('.');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return email.substring(0, 2).toUpperCase();
+  };
+
   return (
     <header className="bg-card border-b border-border px-6 py-4 flex items-center justify-between">
       <div className="flex items-center gap-4">
@@ -41,14 +56,20 @@ export function Header({ onMenuClick }: HeaderProps) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="p-2">
               <Avatar className="h-8 w-8">
-                <AvatarImage src="/placeholder-avatar.jpg" alt="Usuário" />
+                <AvatarImage src="/placeholder-avatar.jpg" alt={user?.email} />
                 <AvatarFallback className="bg-primary text-primary-foreground">
-                  <User className="h-4 w-4" />
+                  {user?.email ? getUserInitials(user.email) : <User className="h-4 w-4" />}
                 </AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
+            <div className="flex items-center justify-start gap-2 p-2">
+              <div className="flex flex-col space-y-1 leading-none">
+                <p className="font-medium text-sm">{user?.email}</p>
+              </div>
+            </div>
+            <DropdownMenuSeparator />
             <DropdownMenuItem>
               <User className="mr-2 h-4 w-4" />
               Meu Perfil
@@ -58,7 +79,8 @@ export function Header({ onMenuClick }: HeaderProps) {
               Configurações
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-expense">
+            <DropdownMenuItem onClick={handleLogout} className="text-expense">
+              <LogOut className="mr-2 h-4 w-4" />
               Sair
             </DropdownMenuItem>
           </DropdownMenuContent>
