@@ -1,0 +1,298 @@
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useTransactions, useAccounts, useCategories } from '@/hooks/useSupabaseData';
+import { Loader2, Plus } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+
+const transactionSchema = z.object({
+  descricao: z.string().min(1, 'Descrição é obrigatória'),
+  valor: z.string().min(1, 'Valor é obrigatório'),
+  tipo: z.enum(['receita', 'despesa', 'transferencia']),
+  categoria_id: z.string().min(1, 'Categoria é obrigatória'),
+  conta_origem_id: z.string().min(1, 'Conta é obrigatória'),
+  conta_destino_id: z.string().optional(),
+  data_transacao: z.string().min(1, 'Data é obrigatória'),
+  observacoes: z.string().optional(),
+});
+
+type TransactionFormData = z.infer<typeof transactionSchema>;
+
+interface TransactionFormProps {
+  onSuccess?: () => void;
+  onCancel?: () => void;
+}
+
+export function TransactionForm({ onSuccess, onCancel }: TransactionFormProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { addTransaction } = useTransactions();
+  const { accounts } = useAccounts();
+  const { categories } = useCategories();
+
+  const form = useForm<TransactionFormData>({
+    resolver: zodResolver(transactionSchema),
+    defaultValues: {
+      data_transacao: new Date().toISOString().split('T')[0],
+      tipo: 'despesa',
+    },
+  });
+
+  const watchedType = form.watch('tipo');
+
+  const onSubmit = async (data: TransactionFormData) => {
+    setIsSubmitting(true);
+    try {
+      await addTransaction({
+        descricao: data.descricao,
+        valor: parseFloat(data.valor),
+        tipo: data.tipo,
+        categoria_id: data.categoria_id,
+        conta_origem_id: data.conta_origem_id,
+        conta_destino_id: data.conta_destino_id || null,
+        data_transacao: data.data_transacao,
+        observacoes: data.observacoes || null,
+        anexos: [],
+        tags: null,
+        origem: 'web',
+      });
+
+      toast({
+        title: 'Transação criada',
+        description: 'A transação foi registrada com sucesso.',
+      });
+
+      form.reset();
+      onSuccess?.();
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: error instanceof Error ? error.message : 'Erro ao criar transação',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const filteredCategories = categories.filter(cat => 
+    cat.tipo === watchedType || watchedType === 'transferencia'
+  );
+
+  return (
+    <Card className="financial-card">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Plus className="h-5 w-5" />
+          Nova Transação
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="descricao"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descrição</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Almoço no restaurante" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="valor"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Valor</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="0,00" 
+                        type="number" 
+                        step="0.01" 
+                        min="0" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="tipo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tipo</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o tipo" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="despesa">Despesa</SelectItem>
+                        <SelectItem value="receita">Receita</SelectItem>
+                        <SelectItem value="transferencia">Transferência</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="categoria_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Categoria</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a categoria" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {filteredCategories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="data_transacao"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="conta_origem_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      {watchedType === 'transferencia' ? 'Conta Origem' : 'Conta'}
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a conta" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {accounts.map((account) => (
+                          <SelectItem key={account.id} value={account.id}>
+                            {account.nome} - R$ {Number(account.saldo_atual).toFixed(2)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {watchedType === 'transferencia' && (
+                <FormField
+                  control={form.control}
+                  name="conta_destino_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Conta Destino</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a conta destino" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {accounts.map((account) => (
+                            <SelectItem key={account.id} value={account.id}>
+                              {account.nome} - R$ {Number(account.saldo_atual).toFixed(2)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+            </div>
+
+            <FormField
+              control={form.control}
+              name="observacoes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Observações (opcional)</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Informações adicionais sobre a transação..."
+                      className="min-h-[80px]"
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="flex gap-4 pt-4">
+              <Button 
+                type="submit" 
+                disabled={isSubmitting} 
+                className="flex-1"
+              >
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Salvar Transação
+              </Button>
+              {onCancel && (
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={onCancel}
+                  disabled={isSubmitting}
+                >
+                  Cancelar
+                </Button>
+              )}
+            </div>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
+  );
+}
