@@ -78,6 +78,23 @@ export function useTransactions() {
     };
 
     fetchTransactions();
+
+    // Realtime updates for transactions
+    const channel = supabase
+      .channel('transactions-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` },
+        () => {
+          // Refetch to keep state consistent
+          fetchTransactions();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const addTransaction = async (transaction: Omit<Transaction, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => {
@@ -98,7 +115,46 @@ export function useTransactions() {
     }
   };
 
-  return { transactions, loading, error, addTransaction };
+  const updateTransaction = async (
+    id: string,
+    updates: Partial<Omit<Transaction, 'id' | 'created_at' | 'updated_at' | 'user_id'>>
+  ) => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .update({ ...updates })
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      setTransactions(prev => prev.map(t => (t.id === id ? (data as Transaction) : t)));
+      return data as Transaction;
+    } catch (err) {
+      throw new Error(err instanceof Error ? err.message : 'Erro ao atualizar transação');
+    }
+  };
+
+  const deleteTransaction = async (id: string) => {
+    if (!user) return;
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      setTransactions(prev => prev.filter(t => t.id !== id));
+      return true;
+    } catch (err) {
+      throw new Error(err instanceof Error ? err.message : 'Erro ao excluir transação');
+    }
+  };
+
+  return { transactions, loading, error, addTransaction, updateTransaction, deleteTransaction };
 }
 
 export function useAccounts() {
@@ -288,6 +344,25 @@ export function useFinancialStats() {
     };
 
     fetchStats();
+
+    // Realtime: refetch stats when transactions or accounts change
+    const channel = supabase
+      .channel('financial-stats-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` },
+        () => fetchStats()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'accounts', filter: `user_id=eq.${user.id}` },
+        () => fetchStats()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   return { stats, loading, error };

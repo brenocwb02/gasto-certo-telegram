@@ -28,19 +28,38 @@ type TransactionFormData = z.infer<typeof transactionSchema>;
 interface TransactionFormProps {
   onSuccess?: () => void;
   onCancel?: () => void;
+  mode?: 'create' | 'edit';
+  // When editing, pass the current transaction values
+  initialData?: {
+    id?: string;
+    descricao?: string;
+    valor?: number | string;
+    tipo?: 'receita' | 'despesa' | 'transferencia';
+    categoria_id?: string | null;
+    conta_origem_id?: string | null;
+    conta_destino_id?: string | null;
+    data_transacao?: string; // ISO date
+    observacoes?: string | null;
+  };
 }
 
-export function TransactionForm({ onSuccess, onCancel }: TransactionFormProps) {
+export function TransactionForm({ onSuccess, onCancel, mode = 'create', initialData }: TransactionFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { addTransaction } = useTransactions();
+  const { addTransaction, updateTransaction } = useTransactions();
   const { accounts } = useAccounts();
   const { categories } = useCategories();
 
   const form = useForm<TransactionFormData>({
     resolver: zodResolver(transactionSchema),
     defaultValues: {
-      data_transacao: new Date().toISOString().split('T')[0],
-      tipo: 'despesa',
+      descricao: initialData?.descricao ?? '',
+      valor: initialData?.valor !== undefined ? String(initialData.valor) : '',
+      tipo: initialData?.tipo ?? 'despesa',
+      categoria_id: (initialData?.categoria_id as string) ?? '',
+      conta_origem_id: (initialData?.conta_origem_id as string) ?? '',
+      conta_destino_id: (initialData?.conta_destino_id as string) ?? undefined,
+      data_transacao: initialData?.data_transacao ?? new Date().toISOString().split('T')[0],
+      observacoes: (initialData?.observacoes as string) ?? '',
     },
   });
 
@@ -49,31 +68,50 @@ export function TransactionForm({ onSuccess, onCancel }: TransactionFormProps) {
   const onSubmit = async (data: TransactionFormData) => {
     setIsSubmitting(true);
     try {
-      await addTransaction({
-        descricao: data.descricao,
-        valor: parseFloat(data.valor),
-        tipo: data.tipo,
-        categoria_id: data.categoria_id,
-        conta_origem_id: data.conta_origem_id,
-        conta_destino_id: data.conta_destino_id || null,
-        data_transacao: data.data_transacao,
-        observacoes: data.observacoes || null,
-        anexos: [],
-        tags: null,
-        origem: 'web',
-      });
+      if (mode === 'edit' && initialData?.id) {
+        await updateTransaction(initialData.id, {
+          descricao: data.descricao,
+          valor: parseFloat(data.valor),
+          tipo: data.tipo,
+          categoria_id: data.categoria_id || null,
+          conta_origem_id: data.conta_origem_id,
+          conta_destino_id: data.conta_destino_id || null,
+          data_transacao: data.data_transacao,
+          observacoes: data.observacoes || null,
+        });
 
-      toast({
-        title: 'Transação criada',
-        description: 'A transação foi registrada com sucesso.',
-      });
+        toast({
+          title: 'Transação atualizada',
+          description: 'As alterações foram salvas com sucesso.',
+        });
+      } else {
+        await addTransaction({
+          descricao: data.descricao,
+          valor: parseFloat(data.valor),
+          tipo: data.tipo,
+          categoria_id: data.categoria_id,
+          conta_origem_id: data.conta_origem_id,
+          conta_destino_id: data.conta_destino_id || null,
+          data_transacao: data.data_transacao,
+          observacoes: data.observacoes || null,
+          anexos: [],
+          tags: null,
+          origem: 'web',
+        });
 
-      form.reset();
+        toast({
+          title: 'Transação criada',
+          description: 'A transação foi registrada com sucesso.',
+        });
+
+        form.reset();
+      }
+
       onSuccess?.();
     } catch (error) {
       toast({
         title: 'Erro',
-        description: error instanceof Error ? error.message : 'Erro ao criar transação',
+        description: error instanceof Error ? error.message : 'Erro ao salvar transação',
         variant: 'destructive',
       });
     } finally {
@@ -89,8 +127,14 @@ export function TransactionForm({ onSuccess, onCancel }: TransactionFormProps) {
     <Card className="financial-card">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Plus className="h-5 w-5" />
-          Nova Transação
+          {mode === 'edit' ? (
+            <>Editar Transação</>
+          ) : (
+            <>
+              <Plus className="h-5 w-5" />
+              Nova Transação
+            </>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent>

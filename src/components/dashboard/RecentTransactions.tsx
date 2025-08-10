@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -5,11 +6,45 @@ import { ArrowUpRight, ArrowDownLeft, ArrowRightLeft, MoreHorizontal } from "luc
 import { cn } from "@/lib/utils";
 import { useTransactions, useAccounts, useCategories } from "@/hooks/useSupabaseData";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { TransactionForm } from "@/components/forms/TransactionForm";
+import { toast } from "@/hooks/use-toast";
 
 export function RecentTransactions() {
-  const { transactions, loading } = useTransactions();
+  const { transactions, loading, deleteTransaction } = useTransactions();
   const { accounts } = useAccounts();
   const { categories } = useCategories();
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [selected, setSelected] = useState<any | null>(null);
+
+  const handleEdit = (transaction: any) => {
+    setSelected(transaction);
+    setEditOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selected) return;
+    setIsDeleting(true);
+    try {
+      await deleteTransaction(selected.id);
+      toast({ title: 'Transação excluída', description: 'A transação foi removida com sucesso.' });
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: error instanceof Error ? error.message : 'Erro ao excluir transação',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+      setDeleteOpen(false);
+      setSelected(null);
+    }
+  };
 
   const getTransactionIcon = (type: string) => {
     switch (type) {
@@ -129,9 +164,27 @@ export function RecentTransactions() {
                     {formatDate(transaction.data_transacao)}
                   </p>
                 </div>
-                <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleEdit(transaction)}>
+                      Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={() => {
+                        setSelected(transaction);
+                        setDeleteOpen(true);
+                      }}
+                    >
+                      Excluir
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           ))
