@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Link, useLocation } from "react-router-dom";
 import { 
   Home, 
   CreditCard, 
@@ -60,6 +61,7 @@ const bottomItems = [
 ];
 
 export function Sidebar({ className, isOpen = true }: SidebarProps) {
+  const location = useLocation();
   return (
     <div className={cn(
       "bg-sidebar border-r border-sidebar-border flex flex-col h-full",
@@ -85,38 +87,50 @@ export function Sidebar({ className, isOpen = true }: SidebarProps) {
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-2">
         <div className="space-y-1">
-          {navigationItems.map((item) => (
-            <Button
-              key={item.href}
-              variant={item.isActive ? "default" : "ghost"}
-              className={cn(
-                "w-full justify-start gap-3 h-12",
-                item.isActive && "primary-gradient text-primary-foreground shadow-md",
-                !isOpen && "justify-center px-0"
-              )}
-            >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-              {isOpen && <span className="truncate">{item.title}</span>}
-            </Button>
-          ))}
+          {navigationItems.map((item) => {
+            const active = location.pathname === item.href;
+            return (
+              <Button
+                key={item.href}
+                variant={active ? "default" : "ghost"}
+                className={cn(
+                  "w-full justify-start gap-3 h-12",
+                  active && "primary-gradient text-primary-foreground shadow-md",
+                  !isOpen && "justify-center px-0"
+                )}
+                asChild
+              >
+                <Link to={item.href}>
+                  <item.icon className="h-5 w-5 flex-shrink-0" />
+                  {isOpen && <span className="truncate">{item.title}</span>}
+                </Link>
+              </Button>
+            );
+          })}
         </div>
       </nav>
 
       {/* Bottom Section */}
       <div className="p-4 border-t border-sidebar-border space-y-1">
-        {bottomItems.map((item) => (
-          <Button
-            key={item.href}
-            variant="ghost"
-            className={cn(
-              "w-full justify-start gap-3 h-12",
-              !isOpen && "justify-center px-0"
-            )}
-          >
-            <item.icon className="h-5 w-5 flex-shrink-0" />
-            {isOpen && <span className="truncate">{item.title}</span>}
-          </Button>
-        ))}
+        {bottomItems.map((item) => {
+          const active = location.pathname === item.href;
+          return (
+            <Button
+              key={item.href}
+              variant={active ? "default" : "ghost"}
+              className={cn(
+                "w-full justify-start gap-3 h-12",
+                !isOpen && "justify-center px-0"
+              )}
+              asChild
+            >
+              <Link to={item.href}>
+                <item.icon className="h-5 w-5 flex-shrink-0" />
+                {isOpen && <span className="truncate">{item.title}</span>}
+              </Link>
+            </Button>
+          );
+        })}
       </div>
 
       {/* Quick Stats - Only show when open */}

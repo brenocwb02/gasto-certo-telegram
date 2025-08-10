@@ -11,8 +11,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { TransactionForm } from "@/components/forms/TransactionForm";
 import { toast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
 
-export function RecentTransactions() {
+export function RecentTransactions({ showViewAllButton = true, title = "Transações Recentes" }: { showViewAllButton?: boolean; title?: string }) {
   const { transactions, loading, deleteTransaction } = useTransactions();
   const { accounts } = useAccounts();
   const { categories } = useCategories();
@@ -88,10 +89,12 @@ export function RecentTransactions() {
   return (
     <Card className="financial-card">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <CardTitle className="text-lg font-semibold">Transações Recentes</CardTitle>
-        <Button variant="outline" size="sm">
-          Ver todas
-        </Button>
+        <CardTitle className="text-lg font-semibold">{title}</CardTitle>
+        {showViewAllButton && (
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/transactions">Ver todas</Link>
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         {loading ? (
@@ -190,6 +193,51 @@ export function RecentTransactions() {
           ))
         )}
       </CardContent>
+
+      {/* Edit Transaction Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Editar Transação</DialogTitle>
+          </DialogHeader>
+          {selected && (
+            <TransactionForm
+              mode="edit"
+              initialData={selected}
+              onSuccess={() => {
+                setEditOpen(false);
+                setSelected(null);
+              }}
+              onCancel={() => {
+                setEditOpen(false);
+                setSelected(null);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir transação</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
