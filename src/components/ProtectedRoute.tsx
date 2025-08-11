@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { LicenseGuard } from '@/components/LicenseGuard';
 import { Loader2 } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 
@@ -22,5 +23,9 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <Navigate to="/auth" replace />;
   }
 
-  return <>{children}</>;
+  return (
+    <LicenseGuard>
+      {children}
+    </LicenseGuard>
+  );
 }

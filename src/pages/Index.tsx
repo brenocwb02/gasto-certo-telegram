@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { useFinancialStats, useProfile, useGoals } from "@/hooks/useSupabaseData";
+import { LicenseStatus } from "@/components/LicenseGuard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Wallet, 
@@ -58,6 +59,7 @@ const Index = () => {
                 <p className="text-muted-foreground">Aqui está o resumo das suas finanças hoje</p>
               </div>
               <div className="flex items-center gap-3">
+                <LicenseStatus />
                 <Dialog open={showTransactionForm} onOpenChange={setShowTransactionForm}>
                   <DialogTrigger asChild>
                     <Button className="flex items-center gap-2">

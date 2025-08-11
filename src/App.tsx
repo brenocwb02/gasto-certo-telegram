@@ -14,6 +14,7 @@ import Reports from "./pages/Reports";
 import Goals from "./pages/Goals";
 import Settings from "./pages/Settings";
 import Support from "./pages/Support";
+import License from "./pages/License";
 
 const queryClient = new QueryClient();
 
@@ -79,6 +80,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Support />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/license"
+              element={
+                <ProtectedRoute>
+                  <License />
                 </ProtectedRoute>
               }
             />

@@ -1,0 +1,119 @@
+import React from 'react';
+import { useLicense } from '@/hooks/useLicense';
+import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, Shield, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+
+interface LicenseGuardProps {
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+}
+
+export function LicenseGuard({ children, fallback }: LicenseGuardProps) {
+  const { user, loading: authLoading } = useAuth();
+  const { license, loading: licenseLoading, error, isLicenseValid } = useLicense();
+
+  // Se ainda carregando autenticação ou licença
+  if (authLoading || licenseLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Verificando licença...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Se não logado
+  if (!user) {
+    return fallback || <div>Acesso negado</div>;
+  }
+
+  // Se erro ao carregar licença
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <ShieldAlert className="h-4 w-4" />
+        <AlertDescription>
+          Erro ao verificar licença: {error}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  // Se não tem licença ou licença inválida
+  if (!license || !isLicenseValid) {
+    return fallback || (
+      <Card className="border-warning bg-warning/5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-warning">
+            <ShieldAlert className="h-5 w-5" />
+            Licença Necessária
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            {!license 
+              ? 'Nenhuma licença encontrada para sua conta.' 
+              : 'Sua licença não está ativa ou expirou.'
+            }
+          </p>
+          <Badge variant="outline" className="text-warning border-warning">
+            {license?.status || 'Sem Licença'}
+          </Badge>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Licença válida - mostrar conteúdo
+  return <>{children}</>;
+}
+
+export function LicenseStatus() {
+  const { license, loading, error, isLicenseValid } = useLicense();
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="h-3 w-3 animate-spin" />
+        <span>Verificando...</span>
+      </div>
+    );
+  }
+
+  if (error || !license) {
+    return (
+      <div className="flex items-center gap-2 text-sm">
+        <ShieldAlert className="h-3 w-3 text-warning" />
+        <span className="text-warning">Licença Inválida</span>
+      </div>
+    );
+  }
+
+  const getStatusColor = () => {
+    if (!isLicenseValid) return 'text-warning';
+    return 'text-success';
+  };
+
+  const getStatusIcon = () => {
+    if (!isLicenseValid) return <ShieldAlert className="h-3 w-3" />;
+    return <ShieldCheck className="h-3 w-3" />;
+  };
+
+  const getStatusText = () => {
+    if (!isLicenseValid) return 'Inativa';
+    if (license.tipo === 'vitalicia') return 'Vitalícia';
+    return 'Ativa';
+  };
+
+  return (
+    <div className={`flex items-center gap-2 text-sm ${getStatusColor()}`}>
+      {getStatusIcon()}
+      <span>{getStatusText()}</span>
+    </div>
+  );
+}

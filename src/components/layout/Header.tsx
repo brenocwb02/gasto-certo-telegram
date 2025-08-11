@@ -1,11 +1,14 @@
 import { Button } from "@/components/ui/button";
-import { Bell, Settings, User, Menu, LogOut } from "lucide-react";
+import { Bell, Settings, User, Menu, LogOut, Shield } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { LicenseStatus } from "@/components/LicenseGuard";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -16,6 +19,7 @@ interface HeaderProps {
 
 export function Header({ onMenuClick }: HeaderProps) {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
   const handleLogout = async () => {
     await signOut();
@@ -64,17 +68,29 @@ export function Header({ onMenuClick }: HeaderProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <div className="flex items-center justify-start gap-2 p-2">
-              <div className="flex flex-col space-y-1 leading-none">
-                <p className="font-medium text-sm">{user?.email}</p>
+            <DropdownMenuLabel className="font-normal">
+              <div className="flex flex-col space-y-2">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium leading-none">
+                    {user?.user_metadata?.nome || user?.email?.split('@')[0] || 'Usuário'}
+                  </p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {user?.email}
+                  </p>
+                </div>
+                <LicenseStatus />
               </div>
-            </div>
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
               <User className="mr-2 h-4 w-4" />
               Meu Perfil
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/license')}>
+              <Shield className="mr-2 h-4 w-4" />
+              Licença
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/settings')}>
               <Settings className="mr-2 h-4 w-4" />
               Configurações
             </DropdownMenuItem>

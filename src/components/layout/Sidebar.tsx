@@ -10,7 +10,8 @@ import {
   HelpCircle,
   DollarSign,
   TrendingUp,
-  Wallet
+  Wallet,
+  Shield
 } from "lucide-react";
 
 interface SidebarProps {
@@ -48,6 +49,11 @@ const navigationItems = [
 ];
 
 const bottomItems = [
+  {
+    title: "Licença",
+    icon: Shield,
+    href: "/license"
+  },
   {
     title: "Configurações",
     icon: Settings,
