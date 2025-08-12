@@ -12,9 +12,12 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const accountSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
-  tipo: z.enum(["dinheiro", "corrente", "poupanca", "investimento"]),
+  tipo: z.enum(["dinheiro", "corrente", "poupanca", "investimento", "cartao_credito"]),
   banco: z.string().optional(),
   saldo_inicial: z.string().min(1, "Saldo inicial é obrigatório"),
+  limite_credito: z.string().optional(),
+  dia_fechamento: z.string().optional(),
+  dia_vencimento: z.string().optional(),
   cor: z.string().min(1, "Cor é obrigatória"),
 });
 
@@ -35,6 +38,9 @@ export function AccountForm({ account, onSuccess }: AccountFormProps) {
       tipo: account?.tipo || "corrente",
       banco: account?.banco || "",
       saldo_inicial: account?.saldo_inicial?.toString() || "0",
+      limite_credito: account?.limite_credito?.toString() || "",
+      dia_fechamento: account?.dia_fechamento?.toString() || "",
+      dia_vencimento: account?.dia_vencimento?.toString() || "",
       cor: account?.cor || "#10b981",
     },
   });
@@ -52,6 +58,9 @@ export function AccountForm({ account, onSuccess }: AccountFormProps) {
         banco: values.banco || null,
         saldo_inicial: saldoInicial,
         saldo_atual: account ? account.saldo_atual : saldoInicial,
+        limite_credito: values.limite_credito ? parseFloat(values.limite_credito) : null,
+        dia_fechamento: values.dia_fechamento ? parseInt(values.dia_fechamento) : null,
+        dia_vencimento: values.dia_vencimento ? parseInt(values.dia_vencimento) : null,
         cor: values.cor,
         user_id: user.id,
       };
@@ -130,6 +139,7 @@ export function AccountForm({ account, onSuccess }: AccountFormProps) {
                   <SelectItem value="corrente">Conta Corrente</SelectItem>
                   <SelectItem value="poupanca">Poupança</SelectItem>
                   <SelectItem value="investimento">Investimento</SelectItem>
+                  <SelectItem value="cartao_credito">Cartão de Crédito</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -156,7 +166,9 @@ export function AccountForm({ account, onSuccess }: AccountFormProps) {
           name="saldo_inicial"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Saldo Inicial</FormLabel>
+              <FormLabel>
+                {form.watch("tipo") === "cartao_credito" ? "Limite Disponível" : "Saldo Inicial"}
+              </FormLabel>
               <FormControl>
                 <Input 
                   type="number" 
@@ -169,6 +181,71 @@ export function AccountForm({ account, onSuccess }: AccountFormProps) {
             </FormItem>
           )}
         />
+
+        {form.watch("tipo") === "cartao_credito" && (
+          <>
+            <FormField
+              control={form.control}
+              name="limite_credito"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Limite do Cartão</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      step="0.01" 
+                      placeholder="0.00" 
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="dia_fechamento"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Dia Fechamento</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        min="1" 
+                        max="31"
+                        placeholder="Ex: 5" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="dia_vencimento"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Dia Vencimento</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        min="1" 
+                        max="31"
+                        placeholder="Ex: 15" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </>
+        )}
 
         <FormField
           control={form.control}

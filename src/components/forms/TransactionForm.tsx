@@ -96,6 +96,7 @@ export function TransactionForm({ onSuccess, onCancel, mode = 'create', initialD
           observacoes: data.observacoes || null,
           anexos: [],
           tags: null,
+          data_vencimento: null,
           origem: 'web',
         });
 

@@ -1,39 +1,50 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, ArrowDownLeft, ArrowUpRight, ArrowRightLeft, MessageSquare } from "lucide-react";
-
-const quickActions = [
-  {
-    title: "Nova Receita",
-    description: "Registrar entrada",
-    icon: ArrowDownLeft,
-    color: "success",
-    action: () => console.log("Nova receita")
-  },
-  {
-    title: "Nova Despesa", 
-    description: "Registrar saída",
-    icon: ArrowUpRight,
-    color: "expense",
-    action: () => console.log("Nova despesa")
-  },
-  {
-    title: "Transferência",
-    description: "Entre contas",
-    icon: ArrowRightLeft,
-    color: "warning",
-    action: () => console.log("Transferência")
-  },
-  {
-    title: "Via Telegram",
-    description: "Comando rápido",
-    icon: MessageSquare,
-    color: "primary",
-    action: () => console.log("Telegram")
-  }
-];
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { TransactionForm } from "@/components/forms/TransactionForm";
+import { useState } from "react";
 
 export function QuickActions() {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [transactionType, setTransactionType] = useState<'receita' | 'despesa' | 'transferencia'>('despesa');
+
+  const openTransactionDialog = (tipo: 'receita' | 'despesa' | 'transferencia') => {
+    setTransactionType(tipo);
+    setDialogOpen(true);
+  };
+
+  const quickActions = [
+    {
+      title: "Nova Receita",
+      description: "Registrar entrada",
+      icon: ArrowDownLeft,
+      color: "success",
+      action: () => openTransactionDialog('receita')
+    },
+    {
+      title: "Nova Despesa", 
+      description: "Registrar saída",
+      icon: ArrowUpRight,
+      color: "expense",
+      action: () => openTransactionDialog('despesa')
+    },
+    {
+      title: "Transferência",
+      description: "Entre contas",
+      icon: ArrowRightLeft,
+      color: "warning",
+      action: () => openTransactionDialog('transferencia')
+    },
+    {
+      title: "Via Telegram",
+      description: "Comando rápido",
+      icon: MessageSquare,
+      color: "primary",
+      action: () => window.open('https://t.me/GastoCertoBot', '_blank')
+    }
+  ];
+
   return (
     <Card className="financial-card">
       <CardHeader>
@@ -67,6 +78,21 @@ export function QuickActions() {
             </Button>
           ))}
         </div>
+
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {transactionType === 'receita' ? 'Nova Receita' : 
+                 transactionType === 'despesa' ? 'Nova Despesa' : 'Nova Transferência'}
+              </DialogTitle>
+            </DialogHeader>
+            <TransactionForm 
+              initialData={{ tipo: transactionType }}
+              onSuccess={() => setDialogOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );

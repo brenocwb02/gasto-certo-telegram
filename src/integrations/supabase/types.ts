@@ -20,7 +20,10 @@ export type Database = {
           banco: string | null
           cor: string | null
           created_at: string
+          dia_fechamento: number | null
+          dia_vencimento: number | null
           id: string
+          limite_credito: number | null
           nome: string
           saldo_atual: number
           saldo_inicial: number
@@ -33,7 +36,10 @@ export type Database = {
           banco?: string | null
           cor?: string | null
           created_at?: string
+          dia_fechamento?: number | null
+          dia_vencimento?: number | null
           id?: string
+          limite_credito?: number | null
           nome: string
           saldo_atual?: number
           saldo_inicial?: number
@@ -46,7 +52,10 @@ export type Database = {
           banco?: string | null
           cor?: string | null
           created_at?: string
+          dia_fechamento?: number | null
+          dia_vencimento?: number | null
           id?: string
+          limite_credito?: number | null
           nome?: string
           saldo_atual?: number
           saldo_inicial?: number
@@ -225,6 +234,39 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_bot_configs: {
+        Row: {
+          bot_token: string
+          bot_username: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          updated_at: string
+          user_id: string
+          webhook_url: string | null
+        }
+        Insert: {
+          bot_token: string
+          bot_username?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          user_id: string
+          webhook_url?: string | null
+        }
+        Update: {
+          bot_token?: string
+          bot_username?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          user_id?: string
+          webhook_url?: string | null
+        }
+        Relationships: []
+      }
       telegram_sessions: {
         Row: {
           chat_id: string
@@ -269,6 +311,7 @@ export type Database = {
           conta_origem_id: string | null
           created_at: string
           data_transacao: string
+          data_vencimento: string | null
           descricao: string
           id: string
           observacoes: string | null
@@ -286,6 +329,7 @@ export type Database = {
           conta_origem_id?: string | null
           created_at?: string
           data_transacao?: string
+          data_vencimento?: string | null
           descricao: string
           id?: string
           observacoes?: string | null
@@ -303,6 +347,7 @@ export type Database = {
           conta_origem_id?: string | null
           created_at?: string
           data_transacao?: string
+          data_vencimento?: string | null
           descricao?: string
           id?: string
           observacoes?: string | null
@@ -342,7 +387,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      calcular_vencimento_cartao: {
+        Args: {
+          data_transacao: string
+          dia_fechamento: number
+          dia_vencimento: number
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
