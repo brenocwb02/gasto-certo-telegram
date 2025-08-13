@@ -15,6 +15,8 @@ import Goals from "./pages/Goals";
 import Settings from "./pages/Settings";
 import Support from "./pages/Support";
 import License from "./pages/License";
+import TelegramIntegration from "./pages/TelegramIntegration";
+import Categories from "./pages/Categories";
 
 const queryClient = new QueryClient();
 
@@ -88,6 +90,22 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <License />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/categories"
+              element={
+                <ProtectedRoute>
+                  <Categories />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/telegram"
+              element={
+                <ProtectedRoute>
+                  <TelegramIntegration />
                 </ProtectedRoute>
               }
             />

@@ -189,13 +189,83 @@ export function useAccounts() {
     };
 
     fetchAccounts();
+
+    // Realtime updates for accounts
+    const channel = supabase
+      .channel('accounts-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'accounts', filter: `user_id=eq.${user.id}` },
+        () => {
+          fetchAccounts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
+
+  const addAccount = async (account: Omit<Account, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('accounts')
+        .insert([{ ...account, user_id: user.id }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      throw new Error(err instanceof Error ? err.message : 'Erro ao criar conta');
+    }
+  };
+
+  const updateAccount = async (
+    id: string,
+    updates: Partial<Omit<Account, 'id' | 'created_at' | 'updated_at' | 'user_id'>>
+  ) => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('accounts')
+        .update(updates)
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Account;
+    } catch (err) {
+      throw new Error(err instanceof Error ? err.message : 'Erro ao atualizar conta');
+    }
+  };
+
+  const deleteAccount = async (id: string) => {
+    if (!user) return;
+    try {
+      const { error } = await supabase
+        .from('accounts')
+        .update({ ativo: false })
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      throw new Error(err instanceof Error ? err.message : 'Erro ao excluir conta');
+    }
+  };
 
   const getTotalBalance = () => {
     return accounts.reduce((total, account) => total + Number(account.saldo_atual), 0);
   };
 
-  return { accounts, loading, error, getTotalBalance };
+  return { accounts, loading, error, addAccount, updateAccount, deleteAccount, getTotalBalance };
 }
 
 export function useCategories() {
@@ -229,9 +299,87 @@ export function useCategories() {
     };
 
     fetchCategories();
+
+    // Realtime updates for categories
+    const channel = supabase
+      .channel('categories-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'categories', filter: `user_id=eq.${user.id}` },
+        () => {
+          fetchCategories();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
-  return { categories, loading, error };
+  const addCategory = async (category: Omit<Category, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .insert([{ ...category, user_id: user.id }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      throw new Error(err instanceof Error ? err.message : 'Erro ao criar categoria');
+    }
+  };
+
+  const updateCategory = async (
+    id: string,
+    updates: Partial<Omit<Category, 'id' | 'created_at' | 'updated_at' | 'user_id'>>
+  ) => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .update(updates)
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Category;
+    } catch (err) {
+      throw new Error(err instanceof Error ? err.message : 'Erro ao atualizar categoria');
+    }
+  };
+
+  const deleteCategory = async (id: string) => {
+    if (!user) return;
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      throw new Error(err instanceof Error ? err.message : 'Erro ao excluir categoria');
+    }
+  };
+
+  const getHierarchicalCategories = () => {
+    const parentCategories = categories.filter(cat => !cat.parent_id);
+    return parentCategories.map(parent => ({
+      ...parent,
+      subcategories: categories.filter(cat => cat.parent_id === parent.id)
+    }));
+  };
+
+  return { categories, loading, error, addCategory, updateCategory, deleteCategory, getHierarchicalCategories };
 }
 
 export function useGoals() {
@@ -266,9 +414,79 @@ export function useGoals() {
     };
 
     fetchGoals();
+
+    // Realtime updates for goals
+    const channel = supabase
+      .channel('goals-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'goals', filter: `user_id=eq.${user.id}` },
+        () => {
+          fetchGoals();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
-  return { goals, loading, error };
+  const addGoal = async (goal: Omit<Goal, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('goals')
+        .insert([{ ...goal, user_id: user.id }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      throw new Error(err instanceof Error ? err.message : 'Erro ao criar meta');
+    }
+  };
+
+  const updateGoal = async (
+    id: string,
+    updates: Partial<Omit<Goal, 'id' | 'created_at' | 'updated_at' | 'user_id'>>
+  ) => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('goals')
+        .update(updates)
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Goal;
+    } catch (err) {
+      throw new Error(err instanceof Error ? err.message : 'Erro ao atualizar meta');
+    }
+  };
+
+  const deleteGoal = async (id: string) => {
+    if (!user) return;
+    try {
+      const { error } = await supabase
+        .from('goals')
+        .update({ status: 'cancelada' })
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      throw new Error(err instanceof Error ? err.message : 'Erro ao excluir meta');
+    }
+  };
+
+  return { goals, loading, error, addGoal, updateGoal, deleteGoal };
 }
 
 export function useFinancialStats() {

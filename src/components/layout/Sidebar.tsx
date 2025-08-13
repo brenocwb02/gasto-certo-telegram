@@ -11,7 +11,9 @@ import {
   DollarSign,
   TrendingUp,
   Wallet,
-  Shield
+  Shield,
+  Bot,
+  Tags
 } from "lucide-react";
 
 interface SidebarProps {
@@ -45,6 +47,11 @@ const navigationItems = [
     title: "Contas",
     icon: Wallet,
     href: "/accounts"
+  },
+  {
+    title: "Categorias", 
+    icon: Tags,
+    href: "/categories"
   }
 ];
 
@@ -53,6 +60,11 @@ const bottomItems = [
     title: "Licença",
     icon: Shield,
     href: "/license"
+  },
+  {
+    title: "Telegram",
+    icon: Bot,
+    href: "/telegram"
   },
   {
     title: "Configurações",
