@@ -18,13 +18,17 @@ export type Database = {
         Row: {
           ativo: boolean
           banco: string | null
+          closing_day: number | null
           cor: string | null
           created_at: string
           dia_fechamento: number | null
           dia_vencimento: number | null
+          due_day: number | null
           id: string
+          is_primary: boolean | null
           limite_credito: number | null
           nome: string
+          parent_account_id: string | null
           saldo_atual: number
           saldo_inicial: number
           tipo: string
@@ -34,13 +38,17 @@ export type Database = {
         Insert: {
           ativo?: boolean
           banco?: string | null
+          closing_day?: number | null
           cor?: string | null
           created_at?: string
           dia_fechamento?: number | null
           dia_vencimento?: number | null
+          due_day?: number | null
           id?: string
+          is_primary?: boolean | null
           limite_credito?: number | null
           nome: string
+          parent_account_id?: string | null
           saldo_atual?: number
           saldo_inicial?: number
           tipo: string
@@ -50,20 +58,32 @@ export type Database = {
         Update: {
           ativo?: boolean
           banco?: string | null
+          closing_day?: number | null
           cor?: string | null
           created_at?: string
           dia_fechamento?: number | null
           dia_vencimento?: number | null
+          due_day?: number | null
           id?: string
+          is_primary?: boolean | null
           limite_credito?: number | null
           nome?: string
+          parent_account_id?: string | null
           saldo_atual?: number
           saldo_inicial?: number
           tipo?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "accounts_parent_account_id_fkey"
+            columns: ["parent_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       categories: {
         Row: {
