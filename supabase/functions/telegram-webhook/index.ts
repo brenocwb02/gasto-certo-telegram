@@ -1,298 +1,174 @@
+// supabase/functions/telegram-webhook/index.ts
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.44.2'
 import { corsHeaders } from '../_shared/cors.ts'
 
-// --- Interfaces ---
 interface TelegramWebhookBody {
   message: {
     chat: { id: number }
-    from: { id: number }
     text: string
   }
 }
 
-interface TransactionData {
-  amount: number
-  description: string
-  categoryName: string | null
-  type: 'income' | 'expense'
-}
-
-// --- Funções Auxiliares do Telegram ---
+// Function to send a message to Telegram
 async function sendTelegramMessage(chatId: number, text: string, parseMode = 'Markdown') {
   const telegramApiUrl = `https://api.telegram.org/bot${Deno.env.get('TELEGRAM_BOT_TOKEN')}/sendMessage`
-  await fetch(telegramApiUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: chatId, text, parse_mode: parseMode }),
-  })
+  try {
+    const response = await fetch(telegramApiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: parseMode }),
+    });
+    if (!response.ok) {
+      console.error("Telegram API error:", await response.json());
+    }
+  } catch (e) {
+    console.error("Failed to send message to Telegram:", e);
+  }
 }
 
-// --- Funções de Lógica de Negócio ---
-
-// Processa o texto para extrair dados da transação (receita ou despesa)
-function parseTransaction(text: string): TransactionData | null {
-  const expenseKeywords = '(?:gastei|comprei|paguei)'
-  const incomeKeywords = '(?:recebi|ganhei|vendi)'
-
-  // Regex para despesas: "gastei 50 em almoço #comida"
-  const expenseRegex = new RegExp(`${expenseKeywords}\\s+R?\\$\\s?(\\d+[\\.,]?\\d*)\\s+(?:em|de|com)\\s+([^#]+)(?:\\s+#(\\w+))?`, 'i')
-  // Regex para receitas: "recebi 100 de freelance #trabalho"
-  const incomeRegex = new RegExp(`${incomeKeywords}\\s+R?\\$\\s?(\\d+[\\.,]?\\d*)\\s+(?:em|de|com|como)\\s+([^#]+)(?:\\s+#(\\w+))?`, 'i')
-  // Regex genérico: "50,50 lanche" (assume despesa)
-  const genericRegex = /^(\d+[\.,]?\\d*)\s+([^#]+)(?:\s+#(\w+))?$/i
-
-  let match: RegExpMatchArray | null = null
-  let type: 'income' | 'expense' | null = null
-
-  match = text.match(expenseRegex)
-  if (match) type = 'expense'
-
-  if (!match) {
-    match = text.match(incomeRegex)
-    if (match) type = 'income'
-  }
-
-  if (!match) {
-    match = text.match(genericRegex)
-    if (match) type = 'expense' // Genérico assume despesa
-  }
-
-  if (match) {
-    const amount = parseFloat(match[1].replace(',', '.')) * 100 // Armazenar em centavos
-    const description = match[2].trim()
-    const categoryName = match[3] ? match[3].trim() : null
-    return { amount, description, categoryName, type: type! }
-  }
-
-  return null
-}
-
-// Vincula um usuário a uma licença usando o comando /start
-async function linkUserWithLicense(supabase: SupabaseClient, telegramChatId: number, licenseCode: string): Promise<boolean> {
-  console.log(`Tentando vincular licença ${licenseCode} ao chat ${telegramChatId}`)
-  // 1. Encontra a licença pelo código
+// Links a user to a license using the /start command
+async function linkUserWithLicense(supabase: SupabaseClient, telegramChatId: number, licenseCode: string): Promise<{ success: boolean; message: string }> {
+  console.log(`Attempting to link license ${licenseCode} to chat ${telegramChatId}`)
+  
   const { data: license, error: licenseError } = await supabase
     .from('licenses')
-    .select('profile_id, status')
-    .eq('code', licenseCode)
+    .select('user_id, status')
+    .eq('codigo', licenseCode)
     .single()
 
-  if (licenseError || !license || license.status !== 'active') {
-    console.error('Licença não encontrada ou inativa:', licenseError)
-    return false
-  }
-  console.log('Licença encontrada para o perfil:', license.profile_id)
-
-  // 2. Verifica se o chat já está vinculado a outra conta
-  const { data: existingLink } = await supabase.from('telegram_integration').select('id').eq('telegram_chat_id', telegramChatId).single()
-  if (existingLink) {
-    console.log(`Chat ${telegramChatId} já está vinculado.`)
-    await sendTelegramMessage(telegramChatId, '⚠️ Este chat do Telegram já está vinculado a uma conta.')
-    return false
+  if (licenseError || !license || license.status !== 'ativo') {
+    console.error('License not found or inactive:', licenseError)
+    return { success: false, message: '❌ Código de licença inválido, expirado ou não encontrado.' };
   }
 
-  // 3. Cria o vínculo na tabela de integração
-  const { error: updateError } = await supabase
+  // Check if this chat is already linked
+  const { data: existingIntegration, error: existingError } = await supabase
     .from('telegram_integration')
-    .insert({ profile_id: license.profile_id, telegram_chat_id: telegramChatId })
+    .select('user_id')
+    .eq('telegram_chat_id', telegramChatId)
+    .single();
 
-  if (updateError) {
-    console.error('Erro ao vincular conta:', updateError)
-    return false
+  if (existingIntegration) {
+    if (existingIntegration.user_id === license.user_id) {
+      return { success: true, message: '✅ Este chat já está vinculado à sua conta.' };
+    } else {
+      return { success: false, message: '⚠️ Este chat do Telegram já está vinculado a outra conta.' };
+    }
   }
-  console.log('Vínculo criado com sucesso.')
-  return true
-}
 
-// Verifica se a licença do usuário é válida
-async function checkLicense(supabase: SupabaseClient, profileId: string): Promise<boolean> {
-    const { data, error } = await supabase
-        .from('licenses')
-        .select('status, type, expires_at')
-        .eq('profile_id', profileId)
-        .single()
+  // Create the link
+  const { error: insertError } = await supabase
+    .from('telegram_integration')
+    .insert({ user_id: license.user_id, telegram_chat_id: telegramChatId });
 
-    if (error || !data || data.status !== 'active') {
-        console.log(`Licença inválida ou não encontrada para o perfil ${profileId}. Erro:`, error)
-        return false
-    }
-
-    if (data.type === 'lifetime') {
-        console.log(`Licença vitalícia válida para o perfil ${profileId}.`)
-        return true
-    }
-
-    if (data.expires_at) {
-        const isValid = new Date() <= new Date(data.expires_at)
-        console.log(`Verificando licença com expiração para o perfil ${profileId}. Válida: ${isValid}`)
-        return isValid
-    }
-
-    console.log(`Licença para o perfil ${profileId} não é vitalícia e não tem data de expiração. Considerada inválida.`)
-    return false;
-}
-
-
-// Processa comandos como /saldo, /resumo, etc.
-async function processCommand(supabase: SupabaseClient, command: string, profileId: string, chatId: number) {
-  console.log(`Processando comando '${command}' para o perfil ${profileId}`)
-  switch (command) {
-    case '/saldo': {
-      const { data, error } = await supabase.rpc('get_total_balance', { p_profile_id: profileId })
-      if (error) throw error
-      const formattedBalance = (data as number).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-      await sendTelegramMessage(chatId, `� *Saldo Total:* ${formattedBalance}`)
-      break
-    }
-    case '/resumo': {
-      const today = new Date()
-      const startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString()
-      const endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString()
-      const { data, error } = await supabase.rpc('get_monthly_summary', { p_profile_id: profileId, p_start_date: startDate, p_end_date: endDate })
-      if (error) throw error
-      const summary = data[0]
-      const formattedIncome = summary.total_income.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-      const formattedExpenses = summary.total_expenses.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-      const balance = summary.total_income - summary.total_expenses
-      const formattedBalance = balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-      await sendTelegramMessage(chatId, `📈 *Resumo do Mês*\n\n💚 Receitas: ${formattedIncome}\n❤️ Despesas: ${formattedExpenses}\n💰 Saldo: ${formattedBalance}`)
-      break
-    }
-    default:
-      await sendTelegramMessage(chatId, '❓ Comando não reconhecido.\n\n*Comandos disponíveis:*\n`/saldo` - Ver saldo total\n`/resumo` - Resumo de receitas e despesas do mês\n\nOu envie uma mensagem como:\n`gastei 50 em almoço`')
+  if (insertError) {
+    console.error('Error linking account:', insertError)
+    return { success: false, message: '❌ Ocorreu um erro ao vincular sua conta. Tente novamente.' };
   }
+  
+  return { success: true, message: '✅ Conta vinculada com sucesso! Agora você pode registrar transações.' };
 }
 
-// --- Função Principal do Webhook ---
+// Main webhook handler
 serve(async (req) => {
-  console.log('--- Nova requisição recebida ---')
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
-  }
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
     const body: TelegramWebhookBody = await req.json()
-    console.log('Corpo da requisição:', JSON.stringify(body, null, 2))
-
-    const { chat, text } = body.message
-
-    if (!chat || !text) {
-      console.error('Payload inválido: Faltando chat ou texto.')
-      return new Response('Payload inválido', { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    // The request might not have a message body, so we need to check for it
+    if (!body || !body.message) {
+        console.warn("Webhook received an empty or invalid body.");
+        return new Response('Invalid body', { status: 400, headers: corsHeaders });
     }
+    const { chat, text } = body.message
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
-    console.log('Cliente Supabase inicializado.')
 
-    // --- Lógica de Comandos e Vinculação ---
+    // Handle the /start command for linking accounts
     if (text.startsWith('/start')) {
       const licenseCode = text.split(' ')[1]
       if (!licenseCode) {
-        await sendTelegramMessage(chat.id, '❌ Código de licença não fornecido.\nUse: `/start SEU_CODIGO`')
-        return new Response('OK', { status: 200, headers: corsHeaders })
-      }
-      const linked = await linkUserWithLicense(supabaseAdmin, chat.id, licenseCode)
-      if (linked) {
-        await sendTelegramMessage(chat.id, '✅ *Conta vinculada com sucesso!*\n\nAgora você pode registrar transações ou usar comandos como `/saldo` e `/resumo`.')
+        await sendTelegramMessage(chat.id, 'Para começar, use o comando `/start SEU_CODIGO_DE_LICENCA` que você encontra na página de Configurações do site.')
       } else {
-        await sendTelegramMessage(chat.id, '❌ Código de licença inválido, expirado ou já em uso.')
+        const result = await linkUserWithLicense(supabaseAdmin, chat.id, licenseCode)
+        await sendTelegramMessage(chat.id, result.message)
       }
       return new Response('OK', { status: 200, headers: corsHeaders })
     }
 
-    // --- Verificação de Perfil e Licença ---
-    console.log(`Procurando integração para o chat ID: ${chat.id}`)
-    const { data: integrationData, error: integrationError } = await supabaseAdmin
+    // Find the user associated with this Telegram chat
+    const { data: integration, error: integrationError } = await supabaseAdmin
       .from('telegram_integration')
-      .select('profile_id')
+      .select('user_id')
       .eq('telegram_chat_id', chat.id)
       .single()
 
-    if (integrationError || !integrationData) {
-      console.error(`Usuário do Telegram não encontrado para o chat ${chat.id}. Erro:`, integrationError)
-      await sendTelegramMessage(chat.id, '❌ Sua conta do Telegram não está vinculada.\nUse o comando `/start SEU_CODIGO` para começar.')
-      throw new Error(`Usuário do Telegram não encontrado: ${chat.id}`)
+    if (integrationError || !integration) {
+      await sendTelegramMessage(chat.id, 'Sua conta do Telegram não está vinculada. Use `/start SEU_CODIGO_DE_LICENCA` para começar.')
+      throw new Error(`User not found for chat ${chat.id}`)
     }
-    const profileId = integrationData.profile_id
-    console.log(`Perfil encontrado: ${profileId}. Verificando licença...`)
+    
+    const userId = integration.user_id;
 
-    const hasValidLicense = await checkLicense(supabaseAdmin, profileId)
-    if (!hasValidLicense) {
-        await sendTelegramMessage(chat.id, '❌ Sua licença é inválida ou expirou. Por favor, verifique no site do Gasto Certo.')
-        return new Response('Licença inválida', { status: 403, headers: corsHeaders })
-    }
-    console.log('Licença válida.')
+    // --- NLP Transaction Processing ---
+    await sendTelegramMessage(chat.id, "🧠 Analisando sua mensagem...");
 
-    // --- Processamento de Comandos ou Transações ---
-    if (text.startsWith('/')) {
-      await processCommand(supabaseAdmin, text.split(' ')[0], profileId, chat.id)
-      return new Response('Comando processado', { status: 200, headers: corsHeaders })
-    }
+    const { data: nlpData, error: nlpError } = await supabaseAdmin.functions.invoke('nlp-transaction', {
+        body: { text },
+    })
 
-    console.log('Processando como uma mensagem de transação...')
-    const transactionData = parseTransaction(text)
-    if (!transactionData) {
-      console.log('Não foi possível processar a transação. Enviando mensagem de ajuda.')
-      await sendTelegramMessage(chat.id, '🤖 Olá! Para registrar uma transação, envie uma mensagem como:\n\n`gastei 50 em almoço`\n`recebi 200 de um amigo`\n\nUse `#categoria` para categorizar.')
-      return new Response('ok', { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
-    console.log('Dados da transação processados:', transactionData)
-
-    // --- Lógica de Criação de Transação ---
-    const { amount, description, categoryName, type } = transactionData
-
-    const { data: accountData } = await supabaseAdmin.from('accounts').select('id').eq('profile_id', profileId).limit(1).single()
-    if (!accountData) {
-      await sendTelegramMessage(chat.id, '❌ Nenhuma conta bancária encontrada. Cadastre uma no site.')
-      throw new Error(`Nenhuma conta encontrada para o perfil: ${profileId}`)
-    }
-    const accountId = accountData.id
-    console.log(`Usando conta padrão: ${accountId}`)
-
-    let categoryId = null
-    if (categoryName) {
-      const { data: categoryData } = await supabaseAdmin.from('categories').select('id').eq('profile_id', profileId).ilike('name', categoryName).single()
-      if (categoryData) {
-        categoryId = categoryData.id
-        console.log(`Categoria encontrada: ${categoryId}`)
-      } else {
-        console.log(`Categoria #${categoryName} não encontrada.`)
-        await sendTelegramMessage(chat.id, `⚠️ Categoria #${categoryName} não encontrada.`)
-      }
+    if (nlpError || !nlpData) {
+      console.error("NLP function error:", nlpError);
+      await sendTelegramMessage(chat.id, "Desculpe, não consegui processar sua mensagem agora. Tente novamente mais tarde.");
+      throw new Error('Error processing message with NLP.')
     }
 
-    console.log('Inserindo transação no banco de dados...')
-    const { error: transactionError } = await supabaseAdmin
-      .from('transactions')
-      .insert({ profile_id: profileId, account_id: accountId, category_id: categoryId, amount, description, type, date: new Date().toISOString() })
+    const { valor, descricao, tipo, categoria } = nlpData;
+
+    if (!valor || !descricao || !tipo) {
+        await sendTelegramMessage(chat.id, "Não consegui entender os detalhes da transação. Tente ser mais específico, como 'gastei 50 reais no almoço' ou 'recebi 500 de um projeto'.")
+        return new Response('OK', { status: 200, headers: corsHeaders })
+    }
+
+    // Find the user's primary account
+    const { data: account } = await supabaseAdmin.from('accounts').select('id').eq('user_id', userId).limit(1).single()
+    if (!account) {
+      await sendTelegramMessage(chat.id, 'Você precisa ter pelo menos uma conta cadastrada no site para registrar transações.')
+      return new Response('OK', { status: 200, headers: corsHeaders })
+    }
+    
+    // Find the category ID
+    const { data: categoryData } = await supabaseAdmin.from('categories').select('id').eq('user_id', userId).ilike('nome', `%${categoria}%`).single()
+
+    // Insert the transaction
+    const { error: transactionError } = await supabaseAdmin.from('transactions').insert({
+        user_id: userId,
+        conta_origem_id: account.id,
+        valor,
+        descricao,
+        tipo,
+        categoria_id: categoryData?.id || null,
+        origem: 'telegram'
+    })
 
     if (transactionError) {
-      console.error('Erro ao inserir transação:', transactionError)
-      await sendTelegramMessage(chat.id, '❌ Ops! Erro ao registrar sua transação.')
-      throw transactionError
+      throw transactionError;
     }
-    console.log('Transação inserida com sucesso.')
 
-    const formattedAmount = (amount / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-    const emoji = type === 'income' ? '💚' : '❤️'
-    await sendTelegramMessage(chat.id, `${emoji} Transação de ${formattedAmount} (${description}) registrada!`)
+    await sendTelegramMessage(chat.id, `✅ Transação registrada!\n*${descricao}*: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor)}`)
 
     return new Response(JSON.stringify({ success: true }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200,
     })
   } catch (error) {
-    console.error('--- ERRO INESPERADO NA FUNÇÃO ---')
-    console.error(error)
-    console.error('---------------------------------')
+    console.error('Error in webhook:', error)
+    // Avoid sending error messages to the user via Telegram for a better experience
     return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500,
     })
   }
 })
-�
