@@ -18,7 +18,7 @@ const Accounts = () => {
   const [editingAccount, setEditingAccount] = useState(null);
 
   useEffect(() => {
-    document.title = "Contas | Gasto Certo";
+    document.title = "Contas | Boas Contas";
     const meta = document.querySelector('meta[name="description"]');
     if (meta) {
       meta.setAttribute("content", "Gerencie suas contas financeiras no Gasto Certo: carteira, conta corrente, poupança e investimentos.");
