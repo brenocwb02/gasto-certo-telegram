@@ -2,7 +2,7 @@ import { useEffect } from "react";
 
 const Support = () => {
   useEffect(() => {
-    document.title = "Suporte | Gasto Certo";
+    document.title = "Suporte | Boas Contas";
   }, []);
   return (
     <main className="p-6">
