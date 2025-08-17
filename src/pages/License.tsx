@@ -22,7 +22,7 @@ const License = () => {
   const { license, loading, error, isLicenseValid, getLicenseInfo } = useLicense();
 
   useEffect(() => {
-    document.title = "Licença | Gasto Certo";
+    document.title = "Metas | Boas Contas";
   }, []);
 
   const licenseInfo = getLicenseInfo();
