@@ -7,7 +7,7 @@ const Transactions = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
-    document.title = "Transações | Gasto Certo";
+    document.title = "Transações | Boas Contas";
     const meta = document.querySelector('meta[name="description"]');
     if (meta) {
       meta.setAttribute(
