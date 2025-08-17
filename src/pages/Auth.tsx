@@ -155,7 +155,7 @@ export default function Auth() {
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
               <DollarSign className="w-6 h-6 text-primary-foreground" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">Gasto Certo</h1>
+             <h1 className="text-2xl font-bold text-foreground">Boas Contas</h1>
           </div>
           <p className="text-muted-foreground">Seu controle financeiro pessoal</p>
         </div>
