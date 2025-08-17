@@ -213,7 +213,7 @@ const Settings = () => {
                 <h4 className="font-semibold mb-2">Como conectar:</h4>
                 <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
                   <li>Copie seu código de licença acima</li>
-                  <li>Abra o Telegram e busque por: <strong>@GastoCertoBot</strong></li>
+                  <li>Abra o Telegram e busque por: <strong>@BoasContasBot</strong></li>
                   <li>Inicie uma conversa com: <strong>/start {license?.codigo}</strong></li>
                   <li>O bot confirmará a vinculação da sua conta</li>
                 </ol>
