@@ -24,7 +24,7 @@ const Settings = () => {
   const { user } = useAuth();
 
   useEffect(() => {
-    document.title = "Configurações | Gasto Certo";
+    document.title = "Configurações | Boas Contas";
     const meta = document.querySelector('meta[name="description"]');
     if (meta) {
       meta.setAttribute("content", "Configure sua conta do Gasto Certo: vincule o Telegram, gerencie licença e ajuste preferências.");
