@@ -19,7 +19,7 @@ const Goals = () => {
   const [editingGoal, setEditingGoal] = useState(null);
 
   useEffect(() => {
-    document.title = "Metas | Gasto Certo";
+    document.title = "Metas | Boas Contas";
     const meta = document.querySelector('meta[name="description"]');
     if (meta) {
       meta.setAttribute("content", "Defina e acompanhe suas metas financeiras no Gasto Certo: economia, investimentos e objetivos pessoais.");
