@@ -87,7 +87,7 @@ export function useTelegramIntegration() {
       const { error: webhookError } = await supabase.functions.invoke('telegram-bot-setup', {
         body: {
           bot_token: botToken,
-          webhook_url: `https://dnpwlpxugkzomqczijwy.supabase.co/functions/v1/telegram-webhook/${user.id}`,
+          webhook_url: `https://dnpwlpxugkzomqczijwy.supabase.co/functions/v1/telegram-webhook`,
         },
       });
 
@@ -100,7 +100,7 @@ export function useTelegramIntegration() {
         id: user.id,
         bot_token: botToken,
         bot_username: botInfo.result.username,
-        webhook_url: `https://dnpwlpxugkzomqczijwy.supabase.co/functions/v1/telegram-webhook/${user.id}`,
+        webhook_url: `https://dnpwlpxugkzomqczijwy.supabase.co/functions/v1/telegram-webhook`,
         is_active: true
       });
 

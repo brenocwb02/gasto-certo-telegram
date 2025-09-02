@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Header } from '@/components/layout/Header';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { useTelegramIntegration } from '@/hooks/useTelegramIntegration';
 import { useLicense } from '@/hooks/useLicense';
 import { useToast } from '@/hooks/use-toast';
 import { Bot, CheckCircle, XCircle, ExternalLink, Copy, QrCode } from 'lucide-react';
@@ -15,6 +16,7 @@ import { Bot, CheckCircle, XCircle, ExternalLink, Copy, QrCode } from 'lucide-re
 export default function TelegramIntegration() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { getLicenseInfo } = useLicense();
+  const { config } = useTelegramIntegration();
   const { toast } = useToast();
   
   const licenseInfo = getLicenseInfo();

@@ -1,29 +1,5 @@
-// supabase/functions/nlp-transaction/index.ts
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
-
-// Função auxiliar para normalizar texto (acentos, maiúsculas, etc.)
-function normalizeText(text: string): string {
-  if (!text) return ''
-  return text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .trim()
-}
-
-// Função auxiliar para extrair valor numérico de uma string
-function extractValue(text: string): number | null {
-  // Procura por padrões como "50", "50,50", "50.50", "R$ 50"
-  const match = text.match(/(?:R\$ ?)?(\d+([.,]\d{1,2})?)/)
-  if (match) {
-    // Converte vírgula para ponto para garantir que o parseFloat funcione
-    const valueStr = match[1].replace(',', '.')
-    return parseFloat(valueStr)
-  }
-  return null
-}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -32,141 +8,104 @@ serve(async (req) => {
 
   try {
     const { text, userId } = await req.json()
+
     if (!text || !userId) {
-      throw new Error('O texto da mensagem e o ID do utilizador são obrigatórios.')
+      return new Response(
+        JSON.stringify({ error: 'text and userId are required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
-    // Inicializa o cliente Supabase Admin para poder ler os dados do utilizador
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    // Simple NLP processing - can be enhanced with AI later
+    const processedText = processTransaction(text.toLowerCase())
+
+    return new Response(
+      JSON.stringify(processedText),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
-    // Busca as contas e categorias do utilizador no banco de dados para usar na análise
-    const { data: accounts, error: accountsError } = await supabaseAdmin
-      .from('accounts')
-      .select('nome')
-      .eq('user_id', userId)
-    if (accountsError) throw accountsError
-
-    const { data: categories, error: categoriesError } = await supabaseAdmin
-      .from('categories')
-      .select('nome, tipo')
-      .eq('user_id', userId)
-    if (categoriesError) throw categoriesError
-
-    // --- Lógica de Interpretação Baseada no seu Apps Script ---
-    const normalizedText = normalizeText(text)
-    
-    // 1. Detectar Tipo (Despesa, Receita, Transferência)
-    let tipo: 'despesa' | 'receita' | 'transferencia' = 'despesa'; // Padrão é despesa
-    let keywordTipo = '';
-    const receitaKeywords = ['recebi', 'salario', 'rendeu', 'pix recebido', 'ganhei', 'pagamento recebido', 'reembolso']
-    const despesaKeywords = ['gastei', 'paguei', 'comprei', 'saida', 'debito']
-    const transferenciaKeywords = ['transferi', 'transferir', 'enviei']
-
-    // Prioriza transferência
-    for (const kw of transferenciaKeywords) {
-      if (normalizedText.includes(kw)) {
-        tipo = 'transferencia';
-        keywordTipo = kw;
-        break;
-      }
-    }
-    // Se não for transferência, verifica se é receita
-    if (tipo !== 'transferencia') {
-      for (const kw of receitaKeywords) {
-        if (normalizedText.includes(kw)) {
-          tipo = 'receita';
-          keywordTipo = kw;
-          break;
-        }
-      }
-    }
-    // Se não for nenhum dos dois, verifica se é despesa (ou assume como padrão)
-     if (tipo !== 'transferencia' && tipo !== 'receita') {
-        for (const kw of despesaKeywords) {
-            if (normalizedText.includes(kw)) {
-                tipo = 'despesa';
-                keywordTipo = kw;
-                break;
-            }
-        }
-    }
-
-    // 2. Extrair Valor
-    const valor = extractValue(text)
-
-    // 3. Extrair Contas e Categoria
-    let conta = null;
-    let contaOrigem = null;
-    let contaDestino = null;
-    let categoria = null;
-
-    if (tipo === 'transferencia') {
-      const matchOrigem = normalizedText.match(/(?:de|do)\s(.*?)(?=\s(?:para|pra)|$)/);
-      const matchDestino = normalizedText.match(/(?:para|pra)\s(.+)/);
-
-      if (matchOrigem) {
-         const found = accounts.find(c => normalizeText(matchOrigem[1]).includes(normalizeText(c.nome)));
-         if (found) contaOrigem = found.nome;
-      }
-      if (matchDestino) {
-        const found = accounts.find(c => normalizeText(matchDestino[1]).includes(normalizeText(c.nome)));
-        if (found) contaDestino = found.nome;
-      }
-    } else {
-      // Encontrar conta
-      const foundConta = accounts.find(c => normalizedText.includes(normalizeText(c.nome)));
-      if (foundConta) conta = foundConta.nome;
-
-      // Encontrar categoria (a mais longa que corresponder)
-      let bestMatch = '';
-      categories.forEach(c => {
-        if (normalizeText(c.tipo) === tipo && normalizedText.includes(normalizeText(c.nome))) {
-          if (c.nome.length > bestMatch.length) {
-            bestMatch = c.nome;
-          }
-        }
-      });
-      if (bestMatch) categoria = bestMatch;
-    }
-    
-    // 4. Extrair Descrição
-    let descricao = text
-        .replace(new RegExp(keywordTipo, 'i'), '')
-        .replace(/(?:R\$ ?)?(\d+([.,]\d{1,2})?)/, '')
-        .replace(/reais|real/gi, '')
-        .trim();
-        
-    if (conta) descricao = descricao.replace(new RegExp(conta, 'gi'), '');
-    if (contaOrigem) descricao = descricao.replace(new RegExp(contaOrigem, 'gi'), '');
-    if (contaDestino) descricao = descricao.replace(new RegExp(contaDestino, 'gi'), '');
-    if (categoria) descricao = descricao.replace(new RegExp(categoria, 'gi'), '');
-    
-    // Limpa preposições e espaços extras
-    descricao = descricao.replace(/\s+(de|do|da|com|no|na|para|pra)\s+/gi, ' ').replace(/\s+/g, ' ').trim();
-    
-    const responseData = {
-      valor,
-      descricao: descricao || (tipo === 'transferencia' ? 'Transferência' : 'Lançamento'),
-      tipo,
-      categoria: categoria || 'Outras',
-      conta,
-      conta_origem: contaOrigem,
-      conta_destino: contaDestino,
-    }
-
-    return new Response(JSON.stringify(responseData), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    })
-
   } catch (error) {
-    console.error('Erro na função nlp-transaction:', error.message)
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
-    })
+    console.error('Error processing NLP transaction:', error)
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
   }
 })
+
+function processTransaction(text: string) {
+  // Extract value
+  const valueMatch = text.match(/(\d+(?:[.,]\d{2})?)/);
+  const valor = valueMatch ? parseFloat(valueMatch[1].replace(',', '.')) : null;
+
+  // Determine transaction type
+  let tipo = 'despesa';
+  if (text.includes('recebi') || text.includes('receita') || text.includes('salario') || text.includes('salário')) {
+    tipo = 'receita';
+  } else if (text.includes('transferi') || text.includes('transfer')) {
+    tipo = 'transferencia';
+  }
+
+  // Extract description (simplified)
+  let descricao = text;
+  if (text.includes('gastei')) {
+    descricao = text.replace(/gastei\s*\d+(?:[.,]\d{2})?\s*/, '').trim();
+  } else if (text.includes('recebi')) {
+    descricao = text.replace(/recebi\s*\d+(?:[.,]\d{2})?\s*/, '').trim();
+  }
+
+  // Extract account name (look for common keywords)
+  let conta = null;
+  const accountKeywords = ['nubank', 'itau', 'itaú', 'bradesco', 'santander', 'caixa', 'bb', 'banco do brasil', 'mercado pago', 'picpay', 'carteira'];
+  for (const keyword of accountKeywords) {
+    if (text.includes(keyword)) {
+      conta = keyword === 'bb' ? 'Banco do Brasil' : 
+             keyword === 'itau' || keyword === 'itaú' ? 'Itaú' :
+             keyword === 'mercado pago' ? 'Mercado Pago' :
+             keyword === 'picpay' ? 'PicPay' :
+             keyword.charAt(0).toUpperCase() + keyword.slice(1);
+      break;
+    }
+  }
+
+  // Extract category (simplified mapping)
+  let categoria = null;
+  const categoryMapping = {
+    'mercado': 'Alimentação',
+    'supermercado': 'Alimentação',
+    'comida': 'Alimentação',
+    'almoço': 'Alimentação',
+    'jantar': 'Alimentação',
+    'uber': 'Transporte',
+    'taxi': 'Transporte',
+    'gasolina': 'Transporte',
+    'combustivel': 'Transporte',
+    'salario': 'Salário',
+    'salário': 'Salário',
+    'freelance': 'Freelance',
+    'cinema': 'Lazer',
+    'shopping': 'Lazer',
+    'remedio': 'Saúde',
+    'remedios': 'Saúde',
+    'farmacia': 'Saúde',
+    'farmácia': 'Saúde'
+  };
+
+  for (const [keyword, cat] of Object.entries(categoryMapping)) {
+    if (text.includes(keyword)) {
+      categoria = cat;
+      break;
+    }
+  }
+
+  return {
+    valor,
+    descricao: descricao || text,
+    tipo,
+    categoria,
+    subcategoria: null,
+    conta,
+    conta_origem: conta,
+    conta_destino: null
+  };
+}

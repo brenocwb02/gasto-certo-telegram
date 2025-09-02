@@ -79,6 +79,12 @@ async function linkUserWithLicense(supabase: SupabaseClient, telegramChatId: num
     return { success: false, message: '❌ Ocorreu um erro ao vincular a sua conta. Tente novamente.' };
   }
   
+  // Update telegram_chat_id in profiles
+  await supabase
+    .from('profiles')
+    .update({ telegram_chat_id: telegramChatId })
+    .eq('user_id', license.user_id);
+  
   return { success: true, message: '✅ Conta vinculada com sucesso! Agora você pode registrar transações ou usar /ajuda para ver os comandos.' };
 }
 
@@ -131,14 +137,70 @@ serve(async (req) => {
 
     // --- Tratamento de Comandos Específicos ---
     if (text.toLowerCase() === '/saldo') {
-      // TODO: Implementar a lógica para buscar e enviar o saldo do utilizador
-      await sendTelegramMessage(chatId, "Comando /saldo em desenvolvimento!");
+      // Get account balances
+      const { data: accounts } = await supabaseAdmin
+        .from('accounts')
+        .select('nome, saldo_atual, tipo')
+        .eq('user_id', userId)
+        .eq('ativo', true);
+
+      let saldoMessage = '💰 *Seus Saldos:*\n\n';
+      if (accounts && accounts.length > 0) {
+        accounts.forEach(account => {
+          const emoji = account.tipo === 'cartao_credito' ? '💳' : account.tipo === 'poupanca' ? '🏦' : '💵';
+          saldoMessage += `${emoji} *${account.nome}*: R$ ${account.saldo_atual.toFixed(2)}\n`;
+        });
+      } else {
+        saldoMessage += 'Nenhuma conta encontrada.';
+      }
+      
+      await sendTelegramMessage(chatId, saldoMessage);
     } else if (text.toLowerCase() === '/resumo') {
-      // TODO: Implementar a lógica para buscar e enviar o resumo do utilizador
-      await sendTelegramMessage(chatId, "Comando /resumo em desenvolvimento!");
+      // Get monthly summary
+      const currentDate = new Date();
+      const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+
+      const { data: transactions } = await supabaseAdmin
+        .from('transactions')
+        .select('tipo, valor')
+        .eq('user_id', userId)
+        .gte('data_transacao', firstDay.toISOString().split('T')[0])
+        .lte('data_transacao', lastDay.toISOString().split('T')[0]);
+
+      let receitas = 0;
+      let despesas = 0;
+
+      if (transactions) {
+        transactions.forEach(t => {
+          if (t.tipo === 'receita') receitas += Number(t.valor);
+          if (t.tipo === 'despesa') despesas += Number(t.valor);
+        });
+      }
+
+      const saldo = receitas - despesas;
+      const resumoMessage = `📊 *Resumo do Mês:*\n\n💚 Receitas: R$ ${receitas.toFixed(2)}\n❌ Despesas: R$ ${despesas.toFixed(2)}\n💰 Saldo: R$ ${saldo.toFixed(2)}`;
+      
+      await sendTelegramMessage(chatId, resumoMessage);
     } else if (text.toLowerCase() === '/metas') {
-      // TODO: Implementar a lógica para buscar e enviar as metas do utilizador
-      await sendTelegramMessage(chatId, "Comando /metas em desenvolvimento!");
+      // Get active goals
+      const { data: goals } = await supabaseAdmin
+        .from('goals')
+        .select('titulo, valor_meta, valor_atual')
+        .eq('user_id', userId)
+        .eq('status', 'ativa');
+
+      let metasMessage = '🎯 *Suas Metas:*\n\n';
+      if (goals && goals.length > 0) {
+        goals.forEach(goal => {
+          const progresso = (Number(goal.valor_atual) / Number(goal.valor_meta)) * 100;
+          metasMessage += `📈 *${goal.titulo}*\nMeta: R$ ${Number(goal.valor_meta).toFixed(2)}\nAtual: R$ ${Number(goal.valor_atual).toFixed(2)}\nProgresso: ${progresso.toFixed(1)}%\n\n`;
+        });
+      } else {
+        metasMessage += 'Nenhuma meta ativa encontrada.';
+      }
+      
+      await sendTelegramMessage(chatId, metasMessage);
     } else if (text.toLowerCase() === '/ajuda') {
        const helpMessage = `
 👋 *Bem-vindo ao Boas Contas!*

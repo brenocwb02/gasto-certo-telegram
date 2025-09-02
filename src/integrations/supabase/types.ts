@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "13.0.4"
@@ -228,6 +228,8 @@ export type Database = {
           id: string
           nome: string
           telefone: string | null
+          telegram_bot_token: string | null
+          telegram_chat_id: number | null
           telegram_id: string | null
           updated_at: string
           user_id: string
@@ -238,6 +240,8 @@ export type Database = {
           id?: string
           nome: string
           telefone?: string | null
+          telegram_bot_token?: string | null
+          telegram_chat_id?: number | null
           telegram_id?: string | null
           updated_at?: string
           user_id: string
@@ -248,6 +252,8 @@ export type Database = {
           id?: string
           nome?: string
           telefone?: string | null
+          telegram_bot_token?: string | null
+          telegram_chat_id?: number | null
           telegram_id?: string | null
           updated_at?: string
           user_id?: string
@@ -284,6 +290,30 @@ export type Database = {
           updated_at?: string
           user_id?: string
           webhook_url?: string | null
+        }
+        Relationships: []
+      }
+      telegram_integration: {
+        Row: {
+          created_at: string
+          id: string
+          telegram_chat_id: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          telegram_chat_id: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          telegram_chat_id?: number
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
