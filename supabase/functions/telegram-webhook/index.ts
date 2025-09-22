@@ -231,36 +231,65 @@ serve(async (req) => {
         throw new Error('Erro ao processar mensagem com NLP.')
       }
       
-      const { valor, descricao, tipo, categoria, subcategoria, conta, conta_origem, conta_destino } = nlpData;
+      const { valor, descricao, tipo, categoria, categoria_id, conta, conta_origem_id, conta_destino_id, validation_errors, confidence } = nlpData;
 
-      if (!valor || !descricao || !tipo) {
-          await sendTelegramMessage(chatId, "Não consegui entender os detalhes da transação. Tente ser mais específico, como 'gastei 50 reais no almoço'.")
+      if (validation_errors && validation_errors.length > 0) {
+          await sendTelegramMessage(chatId, `❌ Problemas encontrados:\n${validation_errors.join('\n')}\n\nTente ser mais específico, como 'gastei 50 reais no almoço no Nubank'.`)
           return new Response('OK', { status: 200, headers: corsHeaders })
       }
 
-      // Encontrar IDs correspondentes para conta e categoria
-      const { data: accountData } = await supabaseAdmin.from('accounts').select('id').eq('user_id', userId).eq('nome', conta || conta_origem).single();
-      const { data: categoryData } = await supabaseAdmin.from('categories').select('id').eq('user_id', userId).eq('nome', categoria).single();
-
-      if (!accountData) {
-        await sendTelegramMessage(chatId, `A conta "${conta || conta_origem}" não foi encontrada. Verifique o nome e tente novamente.`);
-        return new Response('OK', { status: 200, headers: corsHeaders });
+      if (confidence === 'low') {
+        await sendTelegramMessage(chatId, "⚠️ Não tenho certeza se entendi corretamente. Tente ser mais específico com valor, conta e categoria.")
+        return new Response('OK', { status: 200, headers: corsHeaders })
       }
 
-      // Inserir a transação
-      const { error: transactionError } = await supabaseAdmin.from('transactions').insert({
+      // Preparar dados da transação
+      const transactionData: any = {
           user_id: userId,
-          conta_origem_id: accountData.id,
           valor,
           descricao,
           tipo,
-          categoria_id: categoryData?.id || null,
           origem: 'telegram'
-      })
+      }
 
-      if (transactionError) throw transactionError;
+      if (tipo === 'transferencia') {
+        if (!conta_origem_id || !conta_destino_id) {
+          await sendTelegramMessage(chatId, "Para transferências, preciso saber a conta de origem e destino. Ex: 'transferi 100 do Nubank para a Carteira'")
+          return new Response('OK', { status: 200, headers: corsHeaders })
+        }
+        transactionData.conta_origem_id = conta_origem_id
+        transactionData.conta_destino_id = conta_destino_id
+      } else {
+        if (!conta_origem_id) {
+          await sendTelegramMessage(chatId, `Não encontrei a conta "${conta}". Verifique se ela existe no seu app.`)
+          return new Response('OK', { status: 200, headers: corsHeaders })
+        }
+        transactionData.conta_origem_id = conta_origem_id
+      }
 
-      await sendTelegramMessage(chatId, `✅ Transação registrada!\n*${descricao}*: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor)}`)
+      if (categoria_id) {
+        transactionData.categoria_id = categoria_id
+      }
+
+      // Inserir a transação
+      const { error: transactionError } = await supabaseAdmin.from('transactions').insert(transactionData)
+
+      if (transactionError) {
+        console.error('Transaction error:', transactionError)
+        throw transactionError
+      }
+
+      const confidenceEmoji = confidence === 'high' ? '✅' : '⚠️'
+      const successMessage = `${confidenceEmoji} Transação registrada!\n*${descricao}*: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor)}`
+      
+      await sendTelegramMessage(chatId, successMessage)
+
+      // Check for spending alerts
+      if (tipo === 'despesa' && valor > 200) {
+        await supabaseAdmin.functions.invoke('telegram-notifications', {
+          body: { type: 'spending_alert', userId }
+        })
+      }
     }
 
     return new Response(JSON.stringify({ success: true }), {
