@@ -15,7 +15,8 @@ import Goals from "./pages/Goals";
 import Settings from "./pages/Settings";
 import Support from "./pages/Support";
 import License from "./pages/License";
-import TelegramIntegration from "./pages/TelegramIntegration";
+import TelegramSetup from "./pages/TelegramSetup";
+import TelegramBot from "./pages/TelegramBot";
 import Categories from "./pages/Categories";
 
 const queryClient = new QueryClient();
@@ -105,7 +106,15 @@ const App = () => (
               path="/telegram"
               element={
                 <ProtectedRoute>
-                  <TelegramIntegration />
+                  <TelegramSetup />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/telegram-bot"
+              element={
+                <ProtectedRoute>
+                  <TelegramBot />
                 </ProtectedRoute>
               }
             />

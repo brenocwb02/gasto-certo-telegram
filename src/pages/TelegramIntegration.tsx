@@ -126,15 +126,24 @@ export default function TelegramIntegration() {
                       <p className="text-sm text-muted-foreground">
                         Clique no botão abaixo para abrir o Telegram e encontrar o @{botUsername}.
                       </p>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="mt-2"
-                        onClick={() => window.open(`https://t.me/${botUsername}`, '_blank')}
-                      >
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        Abrir @{botUsername}
-                      </Button>
+                       <div className="flex gap-2 mt-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => window.open(`https://t.me/${botUsername}`, '_blank')}
+                        >
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Abrir @{botUsername}
+                        </Button>
+                        <Button 
+                          variant="secondary" 
+                          size="sm" 
+                          onClick={() => window.open('/telegram-bot', '_self')}
+                        >
+                          <Bot className="h-4 w-4 mr-2" />
+                          Bot Próprio
+                        </Button>
+                      </div>
                     </div>
                   </div>
 

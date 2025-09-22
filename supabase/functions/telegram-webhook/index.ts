@@ -85,7 +85,7 @@ async function linkUserWithLicense(supabase: SupabaseClient, telegramChatId: num
     .update({ telegram_chat_id: telegramChatId })
     .eq('user_id', license.user_id);
   
-  return { success: true, message: '✅ Conta vinculada com sucesso! Agora você pode registrar transações ou usar /ajuda para ver os comandos.' };
+  return { success: true, message: '✅ Conta vinculada com sucesso! Agora você pode usar todos os comandos:\n\n🔍 /saldo - Ver saldo das suas contas\n📊 /resumo - Resumo financeiro do mês\n🎯 /metas - Acompanhar suas metas\n❓ /ajuda - Ver lista completa de comandos\n\n💬 Ou simplesmente escreva como "Gastei 25 reais com almoço" que eu registro automaticamente!' };
 }
 
 /**
@@ -113,7 +113,7 @@ serve(async (req) => {
     if (text.startsWith('/start')) {
       const licenseCode = text.split(' ')[1]
       if (!licenseCode) {
-        await sendTelegramMessage(chatId, 'Para começar, use o comando `/start SEU_CODIGO_DE_VINCULACAO` que você encontra na página de Telegram no site.')
+        await sendTelegramMessage(chatId, '👋 *Bem-vindo ao Gasto Certo!*\n\nPara vincular sua conta, use o comando:\n`/start SEU_CODIGO_DE_LICENCA`\n\n📍 Você encontra seu código na aba "Licença" do aplicativo web.\n\n❓ Use /ajuda para ver todos os comandos disponíveis.')
       } else {
         const result = await linkUserWithLicense(supabaseAdmin, chatId, licenseCode)
         await sendTelegramMessage(chatId, result.message)
@@ -129,7 +129,7 @@ serve(async (req) => {
       .single()
 
     if (integrationError || !integration) {
-      await sendTelegramMessage(chatId, 'Sua conta do Telegram não está vinculada. Use `/start SEU_CODIGO_DE_VINCULACAO` para começar.')
+      await sendTelegramMessage(chatId, '🔗 *Sua conta não está vinculada*\n\nPara começar a usar o bot, você precisa vincular sua conta usando:\n`/start SEU_CODIGO_DE_LICENCA`\n\n📍 Encontre seu código na aba "Licença" do aplicativo web.')
       return new Response('Utilizador não vinculado', { status: 401, headers: corsHeaders });
     }
     
