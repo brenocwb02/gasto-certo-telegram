@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const accountSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
-  tipo: z.enum(["dinheiro", "corrente", "poupanca", "investimento", "cartao_credito"]),
+  tipo: z.enum(["dinheiro", "corrente", "poupanca", "investimento", "cartao"]),
   banco: z.string().optional(),
   saldo_inicial: z.string().min(1, "Saldo inicial é obrigatório"),
   limite_credito: z.string().optional(),
@@ -44,6 +44,8 @@ export function AccountForm({ account, onSuccess }: AccountFormProps) {
       cor: account?.cor || "#10b981",
     },
   });
+
+  const accountType = form.watch("tipo");
 
   const onSubmit = async (values: z.infer<typeof accountSchema>) => {
     if (!user) return;
@@ -139,7 +141,7 @@ export function AccountForm({ account, onSuccess }: AccountFormProps) {
                   <SelectItem value="corrente">Conta Corrente</SelectItem>
                   <SelectItem value="poupanca">Poupança</SelectItem>
                   <SelectItem value="investimento">Investimento</SelectItem>
-                  <SelectItem value="cartao_credito">Cartão de Crédito</SelectItem>
+                  <SelectItem value="cartao">Cartão de Crédito</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -167,7 +169,7 @@ export function AccountForm({ account, onSuccess }: AccountFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>
-                {form.watch("tipo") === "cartao_credito" ? "Limite Disponível" : "Saldo Inicial"}
+                {accountType === "cartao" ? "Saldo Inicial (Fatura)" : "Saldo Inicial"}
               </FormLabel>
               <FormControl>
                 <Input 
@@ -182,7 +184,7 @@ export function AccountForm({ account, onSuccess }: AccountFormProps) {
           )}
         />
 
-        {form.watch("tipo") === "cartao_credito" && (
+        {accountType === "cartao" && (
           <>
             <FormField
               control={form.control}
