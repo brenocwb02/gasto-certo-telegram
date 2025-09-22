@@ -34,11 +34,13 @@ export function CategoryForm({ category, parentCategories = [], onSuccess }: Cat
     defaultValues: {
       nome: category?.nome || "",
       tipo: category?.tipo || "despesa",
-      parent_id: category?.parent_id || "",
+      parent_id: category?.parent_id || undefined,
       cor: category?.cor || "#6366f1",
       icone: category?.icone || "shopping-bag",
     },
   });
+
+  const watchedType = form.watch("tipo");
 
   const onSubmit = async (values: z.infer<typeof categorySchema>) => {
     if (!user) return;
@@ -94,6 +96,8 @@ export function CategoryForm({ category, parentCategories = [], onSuccess }: Cat
     }
   };
 
+  const filteredParentCategories = parentCategories.filter(pCat => pCat.tipo === watchedType);
+
   const iconOptions = [
     "shopping-bag", "home", "car", "utensils", "heart", "gamepad-2", 
     "banknote", "laptop", "trending-up", "coffee", "shirt", "gas-pump",
@@ -146,15 +150,14 @@ export function CategoryForm({ category, parentCategories = [], onSuccess }: Cat
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Categoria Pai (Opcional)</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione uma categoria pai" />
+                      <SelectValue placeholder="Nenhuma (Categoria principal)" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">Nenhuma (Categoria principal)</SelectItem>
-                    {parentCategories.map((cat) => (
+                    {filteredParentCategories.map((cat) => (
                       <SelectItem key={cat.id} value={cat.id}>
                         {cat.nome}
                       </SelectItem>
