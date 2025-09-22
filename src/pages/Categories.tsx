@@ -23,13 +23,12 @@ interface Category {
 }
 
 export default function Categories() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -52,7 +51,6 @@ export default function Categories() {
 
       if (error) throw error;
 
-      // Organizar categorias hierarquicamente
       const parentCategories = (data || []).filter(cat => !cat.parent_id);
       const childCategories = (data || []).filter(cat => cat.parent_id);
 
@@ -78,26 +76,34 @@ export default function Categories() {
     if (!user) return;
 
     try {
+      // Also delete subcategories
+      if (category.subcategories && category.subcategories.length > 0) {
+        const subcategoryIds = category.subcategories.map(sub => sub.id);
+        const { error: subError } = await supabase
+          .from('categories')
+          .delete()
+          .in('id', subcategoryIds);
+        if (subError) throw subError;
+      }
+      
       const { error } = await supabase
         .from('categories')
         .delete()
-        .eq('id', category.id)
-        .eq('user_id', user.id);
+        .eq('id', category.id);
 
       if (error) throw error;
 
       toast({
         title: "Categoria excluída",
-        description: "A categoria foi excluída com sucesso.",
+        description: "A categoria e suas subcategorias foram excluídas.",
       });
 
       fetchCategories();
-      setDeletingCategory(null);
     } catch (error) {
       console.error('Erro ao excluir categoria:', error);
       toast({
         title: "Erro",
-        description: "Erro ao excluir categoria",
+        description: "Erro ao excluir a categoria.",
         variant: "destructive",
       });
     }
@@ -113,15 +119,15 @@ export default function Categories() {
     setExpandedCategories(newExpanded);
   };
 
-  const getParentCategories = (tipo: string) => {
-    return categories.filter(cat => cat.tipo === tipo && !cat.parent_id);
+  const getParentCategories = () => {
+    return categories.filter(cat => !cat.parent_id);
   };
 
   const renderCategory = (category: Category, isSubcategory = false) => (
-    <div key={category.id} className={`${isSubcategory ? 'ml-6' : ''}`}>
-      <div className="flex items-center justify-between p-4 bg-card border rounded-lg">
+    <div key={category.id} className={isSubcategory ? 'ml-6' : ''}>
+      <div className="flex items-center justify-between p-3 bg-card border rounded-lg hover:bg-card-hover transition-colors">
         <div className="flex items-center gap-3">
-          {!isSubcategory && category.subcategories && category.subcategories.length > 0 && (
+          {!isSubcategory && category.subcategories && category.subcategories.length > 0 ? (
             <Button
               variant="ghost"
               size="sm"
@@ -133,32 +139,23 @@ export default function Categories() {
                 <ChevronRight className="h-4 w-4" />
               }
             </Button>
-          )}
+          ) : <div className="w-6 h-6"></div>}
           
           <div
-            className="w-4 h-4 rounded-full"
+            className="w-4 h-4 rounded-full flex-shrink-0"
             style={{ backgroundColor: category.cor }}
           />
           
           <div>
             <h3 className="font-medium">{category.nome}</h3>
-            <div className="flex items-center gap-2 mt-1">
-              <Badge variant={category.tipo === 'receita' ? 'default' : 'secondary'}>
-                {category.tipo === 'receita' ? 'Receita' : 'Despesa'}
-              </Badge>
-              {category.subcategories && category.subcategories.length > 0 && (
-                <Badge variant="outline">
-                  {category.subcategories.length} subcategoria{category.subcategories.length !== 1 ? 's' : ''}
-                </Badge>
-              )}
-            </div>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <Button
-            variant="outline"
-            size="sm"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
             onClick={() => {
               setEditingCategory(category);
               setFormOpen(true);
@@ -169,7 +166,7 @@ export default function Categories() {
 
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="outline" size="sm">
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
                 <Trash2 className="h-4 w-4" />
               </Button>
             </AlertDialogTrigger>
@@ -198,7 +195,6 @@ export default function Categories() {
         </div>
       </div>
 
-      {/* Subcategorias */}
       {!isSubcategory && expandedCategories.has(category.id) && category.subcategories && (
         <div className="mt-2 space-y-2">
           {category.subcategories.map(sub => renderCategory(sub, true))}
@@ -208,13 +204,16 @@ export default function Categories() {
   );
 
   return (
-    <div className="min-h-screen bg-background">
-      <Sidebar />
-      
-      <div className="lg:pl-64">
-        <Header onMenuClick={() => setSidebarOpen(true)} />
-        
-        <main className="p-6">
+    <div className="min-h-screen bg-background flex">
+      <div className="hidden lg:block">
+        <Sidebar isOpen={sidebarOpen} />
+      </div>
+      <div className="lg:hidden">
+        <Sidebar isOpen={false} />
+      </div>
+      <div className="flex-1 flex flex-col">
+        <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+        <main className="flex-1 p-6">
           <div className="max-w-7xl mx-auto space-y-6">
             <div className="flex items-center justify-between">
               <div>
@@ -223,7 +222,6 @@ export default function Categories() {
                   Gerencie suas categorias e subcategorias de transações
                 </p>
               </div>
-
               <Dialog open={formOpen} onOpenChange={setFormOpen}>
                 <DialogTrigger asChild>
                   <Button onClick={() => setEditingCategory(null)}>
@@ -239,7 +237,7 @@ export default function Categories() {
                   </DialogHeader>
                   <CategoryForm
                     category={editingCategory}
-                    parentCategories={getParentCategories(editingCategory?.tipo || 'despesa')}
+                    parentCategories={getParentCategories()}
                     onSuccess={() => {
                       setFormOpen(false);
                       setEditingCategory(null);
@@ -255,7 +253,7 @@ export default function Categories() {
                 <p className="text-muted-foreground">Carregando categorias...</p>
               </div>
             ) : (
-              <div className="grid gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {['receita', 'despesa'].map((tipo) => (
                   <Card key={tipo}>
                     <CardHeader>
@@ -263,17 +261,17 @@ export default function Categories() {
                         <div className={`w-3 h-3 rounded-full ${tipo === 'receita' ? 'bg-success' : 'bg-expense'}`} />
                         {tipo === 'receita' ? 'Receitas' : 'Despesas'}
                         <Badge variant="outline">
-                          {categories.filter(cat => cat.tipo === tipo).length} categorias
+                          {categories.filter(cat => cat.tipo === tipo && !cat.parent_id).length}
                         </Badge>
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
                         {categories
-                          .filter(cat => cat.tipo === tipo)
+                          .filter(cat => cat.tipo === tipo && !cat.parent_id)
                           .map(category => renderCategory(category))}
                         
-                        {categories.filter(cat => cat.tipo === tipo).length === 0 && (
+                        {categories.filter(cat => cat.tipo === tipo && !cat.parent_id).length === 0 && (
                           <p className="text-center text-muted-foreground py-8">
                             Nenhuma categoria de {tipo} encontrada
                           </p>
@@ -290,3 +288,4 @@ export default function Categories() {
     </div>
   );
 }
+
