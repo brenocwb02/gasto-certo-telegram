@@ -17,6 +17,7 @@ import Support from "./pages/Support";
 import License from "./pages/License";
 import TelegramSetup from "./pages/TelegramSetup";
 import TelegramBot from "./pages/TelegramBot";
+import Budget from "./pages/Budget";
 import Categories from "./pages/Categories";
 
 const queryClient = new QueryClient();
@@ -91,6 +92,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <License />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/orcamento"
+              element={
+                <ProtectedRoute>
+                  <Budget />
                 </ProtectedRoute>
               }
             />

@@ -59,7 +59,11 @@ export default function Categories() {
 
       const organizedCategories = parentCategories.map(parent => ({
         ...parent,
-        subcategories: childCategories.filter(child => child.parent_id === parent.id)
+        subcategories: childCategories.filter(child => child.parent_id === parent.id).map(child => ({
+          ...child,
+          keywords: child.keywords || []
+        })),
+        keywords: parent.keywords || []
       }));
 
       setCategories(organizedCategories);

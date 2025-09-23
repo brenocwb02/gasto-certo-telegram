@@ -13,7 +13,8 @@ import {
   Wallet,
   Shield,
   Bot,
-  Tags
+  Tags,
+  PiggyBank
 } from "lucide-react";
 
 interface SidebarProps {
@@ -38,11 +39,11 @@ const navigationItems = [
     icon: BarChart3,
     href: "/reports"
   },
-  {
-    title: "Metas",
-    icon: Target,
-    href: "/goals"
-  },
+    {
+      title: "Orçamento",
+      icon: PiggyBank,
+      href: "/orcamento"
+    },
   {
     title: "Contas",
     icon: Wallet,

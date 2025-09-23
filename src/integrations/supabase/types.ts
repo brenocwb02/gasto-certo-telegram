@@ -85,12 +85,43 @@ export type Database = {
           },
         ]
       }
+      budgets: {
+        Row: {
+          amount: number
+          category_id: string
+          created_at: string
+          id: string
+          month: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          category_id: string
+          created_at?: string
+          id?: string
+          month: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category_id?: string
+          created_at?: string
+          id?: string
+          month?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           cor: string | null
           created_at: string
           icone: string | null
           id: string
+          keywords: string[] | null
           nome: string
           parent_id: string | null
           tipo: string
@@ -102,6 +133,7 @@ export type Database = {
           created_at?: string
           icone?: string | null
           id?: string
+          keywords?: string[] | null
           nome: string
           parent_id?: string | null
           tipo: string
@@ -113,6 +145,7 @@ export type Database = {
           created_at?: string
           icone?: string | null
           id?: string
+          keywords?: string[] | null
           nome?: string
           parent_id?: string | null
           tipo?: string
