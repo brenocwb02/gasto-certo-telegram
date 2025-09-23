@@ -18,7 +18,7 @@ import License from "./pages/License";
 import TelegramSetup from "./pages/TelegramSetup";
 import TelegramBot from "./pages/TelegramBot";
 import Categories from "./pages/Categories";
-import Budget from "./pages/Budget"; // <-- Adicionado
+import Budget from "./pages/Budget";
 
 const queryClient = new QueryClient();
 
