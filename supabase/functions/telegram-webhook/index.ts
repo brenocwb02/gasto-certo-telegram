@@ -175,7 +175,7 @@ serve(async (req) => {
         extratoMessage += 'Nenhuma transação encontrada.';
       }    
 
-      await sendTelegramMessage(chatId, saldoMessage);
+      await sendTelegramMessage(chatId, extratoMessage);
     } else if (text.toLowerCase() === '/resumo') {
       // Get monthly summary
       const currentDate = new Date();
@@ -341,3 +341,4 @@ Para registrar, basta enviar uma mensagem como se estivesse a conversar.
     })
   }
 })
+
