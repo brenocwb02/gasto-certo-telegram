@@ -3,8 +3,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,9 +14,10 @@ import { useAuth } from "@/contexts/AuthContext";
 const categorySchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
   tipo: z.enum(["receita", "despesa"]),
-  parent_id: z.string().optional(),
+  parent_id: z.string().optional().nullable(),
   cor: z.string().min(1, "Cor é obrigatória"),
   icone: z.string().min(1, "Ícone é obrigatório"),
+  keywords: z.string().optional(),
 });
 
 interface CategoryFormProps {
@@ -34,9 +36,10 @@ export function CategoryForm({ category, parentCategories = [], onSuccess }: Cat
     defaultValues: {
       nome: category?.nome || "",
       tipo: category?.tipo || "despesa",
-      parent_id: category?.parent_id || undefined,
+      parent_id: category?.parent_id || null,
       cor: category?.cor || "#6366f1",
       icone: category?.icone || "shopping-bag",
+      keywords: category?.keywords?.join(', ') || '',
     },
   });
 
@@ -47,6 +50,10 @@ export function CategoryForm({ category, parentCategories = [], onSuccess }: Cat
 
     setLoading(true);
     try {
+      const keywordsArray = values.keywords
+        ? values.keywords.split(',').map(k => k.trim().toLowerCase()).filter(Boolean)
+        : [];
+
       const categoryData = {
         nome: values.nome,
         tipo: values.tipo,
@@ -54,6 +61,7 @@ export function CategoryForm({ category, parentCategories = [], onSuccess }: Cat
         cor: values.cor,
         icone: values.icone,
         user_id: user.id,
+        keywords: keywordsArray,
       };
 
       if (category) {
@@ -143,14 +151,14 @@ export function CategoryForm({ category, parentCategories = [], onSuccess }: Cat
           )}
         />
 
-        {parentCategories.length > 0 && (
+        {filteredParentCategories.length > 0 && (
           <FormField
             control={form.control}
             name="parent_id"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Categoria Pai (Opcional)</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value || ""} defaultValue={field.value || undefined}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Nenhuma (Categoria principal)" />
@@ -203,7 +211,7 @@ export function CategoryForm({ category, parentCategories = [], onSuccess }: Cat
               <FormLabel>Cor</FormLabel>
               <FormControl>
                 <div className="flex items-center space-x-2">
-                  <Input type="color" className="w-16 h-10" {...field} />
+                  <Input type="color" className="w-16 h-10 p-1" {...field} />
                   <Input 
                     placeholder="#6366f1" 
                     {...field} 
@@ -216,6 +224,26 @@ export function CategoryForm({ category, parentCategories = [], onSuccess }: Cat
           )}
         />
 
+        <FormField
+          control={form.control}
+          name="keywords"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Palavras-chave</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Ex: mercado, ifood, almoço (separado por vírgulas)"
+                  {...field}
+                />
+              </FormControl>
+              <FormDescription>
+                Palavras para ajudar o bot a categorizar automaticamente.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <Button type="submit" disabled={loading} className="w-full">
           {loading ? "Salvando..." : category ? "Atualizar Categoria" : "Criar Categoria"}
         </Button>
@@ -223,3 +251,4 @@ export function CategoryForm({ category, parentCategories = [], onSuccess }: Cat
     </Form>
   );
 }
+
