@@ -9,12 +9,11 @@ import {
   Settings, 
   HelpCircle,
   DollarSign,
-  TrendingUp,
   Wallet,
   Shield,
   Bot,
   Tags,
-  PiggyBank
+  ClipboardList,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -39,11 +38,16 @@ const navigationItems = [
     icon: BarChart3,
     href: "/reports"
   },
-    {
-      title: "Orçamento",
-      icon: PiggyBank,
-      href: "/orcamento"
-    },
+  {
+    title: "Metas",
+    icon: Target,
+    href: "/goals"
+  },
+  {
+    title: "Orçamento",
+    icon: ClipboardList,
+    href: "/orcamento"
+  },
   {
     title: "Contas",
     icon: Wallet,
