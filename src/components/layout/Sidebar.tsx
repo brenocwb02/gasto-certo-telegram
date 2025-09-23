@@ -26,7 +26,6 @@ const navigationItems = [
     title: "Dashboard",
     icon: Home,
     href: "/",
-    isActive: true
   },
   {
     title: "Transações",
@@ -177,3 +176,4 @@ export function Sidebar({ className, isOpen = true }: SidebarProps) {
     </div>
   );
 }
+
