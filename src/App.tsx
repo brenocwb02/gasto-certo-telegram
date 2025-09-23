@@ -12,14 +12,13 @@ import Transactions from "./pages/Transactions";
 import Accounts from "./pages/Accounts";
 import Reports from "./pages/Reports";
 import Goals from "./pages/Goals";
+import Budget from "./pages/Budget";
 import Settings from "./pages/Settings";
 import Support from "./pages/Support";
 import License from "./pages/License";
 import TelegramSetup from "./pages/TelegramSetup";
 import TelegramBot from "./pages/TelegramBot";
-import Budget from "./pages/Budget";
 import Categories from "./pages/Categories";
-import Budget from "./pages/Budget"; // <-- Adicionado
 
 const queryClient = new QueryClient();
 
@@ -105,14 +104,6 @@ const App = () => (
               }
             />
             <Route
-              path="/orcamento"
-              element={
-                <ProtectedRoute>
-                  <Budget />
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/categories"
               element={
                 <ProtectedRoute>
@@ -146,3 +137,5 @@ const App = () => (
 );
 
 export default App;
+
+
