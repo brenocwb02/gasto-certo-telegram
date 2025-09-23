@@ -154,6 +154,27 @@ serve(async (req) => {
         saldoMessage += 'Nenhuma conta encontrada.';
       }
       
+        await sendTelegramMessage(chatId, saldoMessage);
+    } else if (text.toLowerCase() === '/extrato') {
+      const { data: transactions } = await supabaseAdmin
+        .from('transactions')
+        .select('data_transacao, descricao, valor, tipo')
+        .eq('user_id', userId)
+        .order('data_transacao', { ascending: false })
+        .limit(10);
+      
+      let extratoMessage = '📄 *Últimas Transações:*\n\n';
+      if (transactions && transactions.length > 0) {
+        transactions.forEach(t => {
+          const emoji = t.tipo === 'receita' ? '🟢' : '🔴';
+          const valor = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(t.valor);
+          const data = new Date(t.data_transacao).toLocaleDateString('pt-BR');
+          extratoMessage += `${emoji} *${t.descricao}* - ${valor} [${data}]\n`;
+        });
+      } else {
+        extratoMessage += 'Nenhuma transação encontrada.';
+      }    
+
       await sendTelegramMessage(chatId, saldoMessage);
     } else if (text.toLowerCase() === '/resumo') {
       // Get monthly summary
@@ -205,16 +226,34 @@ serve(async (req) => {
        const helpMessage = `
 👋 *Bem-vindo ao Boas Contas!*
 
-*Para registrar um lançamento, basta enviar uma mensagem como:*
-• \`gastei 50 no mercado com Nubank\`
-• \`recebi 3000 de salario no Itau\`
-• \`transferi 200 do Itau para o Mercado Pago\`
+Aqui está um guia completo das minhas funcionalidades.
 
-*Comandos disponíveis:*
-• \`/resumo\` – Resumo financeiro do mês.
-• \`/saldo\` – Saldo de todas as contas e faturas.
-• \`/metas\` – Acompanhe suas metas.
-• \`/ajuda\` – Ver esta mensagem novamente.
+---
+*LANÇAMENTOS (LINGUAGEM NATURAL)*
+---
+Para registrar, basta enviar uma mensagem como se estivesse a conversar.
+*Gastos:* \`gastei 50 no mercado com Cartão Nubank\`
+*Receitas:* \`recebi 3000 de salario no Itau\`
+*Transferências:* \`transferi 200 do Itau para o PicPay\`
+
+---
+*ANÁLISES E RELATÓRIOS*
+---
+• \`/resumo\` – Visão geral financeira do mês.
+• \`/saldo\` – Saldos de todas as suas contas.
+• \`/extrato\` – Mostra as últimas transações.
+• \`/dashboard\` – Aceder ao dashboard web completo.
+
+---
+*PLANEJAMENTO*
+---
+• \`/metas\` – Veja o progresso das suas metas.
+
+---
+*PRODUTIVIDADE*
+---
+• \`/tarefa DESCRIÇÃO\` – Cria uma nova tarefa.
+• \`/tarefas\` – Lista as suas tarefas pendentes.
       `;
       await sendTelegramMessage(chatId, helpMessage);
     } else {
