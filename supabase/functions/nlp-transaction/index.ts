@@ -22,7 +22,6 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Enhanced NLP processing with database validation
     const processedText = await processTransactionEnhanced(text.toLowerCase(), userId, supabase)
 
     return new Response(
@@ -42,172 +41,115 @@ serve(async (req) => {
 async function processTransactionEnhanced(text: string, userId: string, supabase: any) {
   console.log(`Processing transaction text: "${text}" for user ${userId}`)
   
-  // Extract value with improved patterns
+  // 1. Extrair Valor
   const valuePatterns = [
     /(\d+(?:[.,]\d{1,2})?)(?:\s*reais?)/i,
     /r\$?\s*(\d+(?:[.,]\d{1,2})?)/i,
-    /(\d+(?:[.,]\d{1,2})?)/
   ];
-  
   let valor = null;
+  let valorTexto = '';
   for (const pattern of valuePatterns) {
     const match = text.match(pattern);
     if (match) {
       valor = parseFloat(match[1].replace(',', '.'));
+      valorTexto = match[0];
       break;
     }
   }
 
-  // Enhanced transaction type detection
+  // 2. Detetar Tipo de Transação
   let tipo = 'despesa';
   const receitaKeywords = ['recebi', 'receita', 'salario', 'salário', 'ganho', 'renda', 'pagamento', 'deposito', 'entrada'];
   const transferenciaKeywords = ['transferi', 'transfer', 'enviei', 'mandei', 'passei'];
-  
-  if (receitaKeywords.some(keyword => text.includes(keyword))) {
-    tipo = 'receita';
-  } else if (transferenciaKeywords.some(keyword => text.includes(keyword))) {
-    tipo = 'transferencia';
-  }
+  if (receitaKeywords.some(keyword => text.includes(keyword))) tipo = 'receita';
+  else if (transferenciaKeywords.some(keyword => text.includes(keyword))) tipo = 'transferencia';
 
-  // Get user's accounts and categories from database
-  const { data: userAccounts } = await supabase
-    .from('accounts')
-    .select('nome, id')
-    .eq('user_id', userId)
-    .eq('ativo', true);
+  // 3. Obter Contas e Categorias do Utilizador
+  const { data: userAccounts } = await supabase.from('accounts').select('nome, id').eq('user_id', userId).eq('ativo', true);
+  const { data: userCategories } = await supabase.from('categories').select('nome, id, keywords').eq('user_id', userId);
 
-  const { data: userCategories } = await supabase
-    .from('categories')
-    .select('nome, id')
-    .eq('user_id', userId);
-
-  // Enhanced account detection
+  // 4. Detetar Contas
   let conta_origem = null;
   let conta_origem_id = null;
   let conta_destino = null;
   let conta_destino_id = null;
 
   if (userAccounts) {
-    // Check exact matches first
-    for (const account of userAccounts) {
+    const sortedAccounts = [...userAccounts].sort((a, b) => b.nome.length - a.nome.length);
+    for (const account of sortedAccounts) {
       const accountNameLower = account.nome.toLowerCase();
       if (text.includes(accountNameLower)) {
         if (tipo === 'transferencia') {
-          if (text.indexOf('para') > text.indexOf(accountNameLower)) {
-            conta_origem = account.nome;
-            conta_origem_id = account.id;
-          } else if (text.indexOf('do') < text.indexOf(accountNameLower)) {
-            conta_destino = account.nome;
-            conta_destino_id = account.id;
-          }
+            if (!conta_origem_id && (text.includes(`de ${accountNameLower}`) || text.includes(`do ${accountNameLower}`))) {
+              conta_origem = account.nome;
+              conta_origem_id = account.id;
+            } else if (!conta_destino_id && (text.includes(`para ${accountNameLower}`))) {
+              conta_destino = account.nome;
+              conta_destino_id = account.id;
+            }
         } else {
-          conta_origem = account.nome;
-          conta_origem_id = account.id;
+            if (!conta_origem_id) {
+                conta_origem = account.nome;
+                conta_origem_id = account.id;
+            }
         }
-        break;
       }
     }
-
-    // Fallback to partial matches
-    if (!conta_origem_id) {
-      const accountKeywords = {
-        'nubank': ['nubank', 'roxinho'],
-        'itau': ['itau', 'itaú', 'banco itau'],
-        'bradesco': ['bradesco', 'banco bradesco'],
-        'santander': ['santander', 'banco santander'],
-        'caixa': ['caixa', 'caixa economica'],
-        'bb': ['bb', 'banco do brasil'],
-        'mercado pago': ['mercado pago', 'mp'],
-        'picpay': ['picpay', 'pic pay'],
-        'carteira': ['carteira', 'dinheiro']
-      };
-
-      for (const account of userAccounts) {
-        for (const [key, keywords] of Object.entries(accountKeywords)) {
-          if (keywords.some(keyword => text.includes(keyword)) && 
-              account.nome.toLowerCase().includes(key)) {
-            conta_origem = account.nome;
-            conta_origem_id = account.id;
-            break;
-          }
+    if (tipo === 'transferencia' && userAccounts.length > 0 && (!conta_origem_id || !conta_destino_id)) {
+        const foundAccount = userAccounts.find(acc => text.includes(acc.nome.toLowerCase()));
+        if(foundAccount && !conta_origem_id) {
+            conta_origem = foundAccount.nome;
+            conta_origem_id = foundAccount.id;
         }
-        if (conta_origem_id) break;
-      }
     }
   }
 
-  // Enhanced category detection
+  // 5. Detetar Categoria
   let categoria = null;
   let categoria_id = null;
-
   if (userCategories) {
-    // Check exact matches first
-    for (const category of userCategories) {
-      if (text.includes(category.nome.toLowerCase())) {
-        categoria = category.nome;
-        categoria_id = category.id;
-        break;
-      }
-    }
-
-    // Fallback to keyword mapping
-    if (!categoria_id) {
-      const categoryMapping = {
-        'alimentação': ['mercado', 'supermercado', 'comida', 'almoço', 'almoço', 'jantar', 'lanche', 'restaurante', 'ifood', 'delivery'],
-        'transporte': ['uber', '99', 'taxi', 'gasolina', 'combustivel', 'combustível', 'onibus', 'ônibus', 'metro', 'metrô'],
-        'saúde': ['remedio', 'remédio', 'remedios', 'remédios', 'farmacia', 'farmácia', 'medico', 'médico', 'hospital'],
-        'lazer': ['cinema', 'shopping', 'bar', 'festa', 'show', 'netflix', 'spotify'],
-        'moradia': ['aluguel', 'condominio', 'condomínio', 'luz', 'agua', 'água', 'gas', 'gás', 'internet'],
-        'salário': ['salario', 'salário'],
-        'freelance': ['freelance', 'freela', 'trabalho']
-      };
-
-      for (const category of userCategories) {
-        const categoryNameLower = category.nome.toLowerCase();
-        const keywords = categoryMapping[categoryNameLower] || [];
-        if (keywords.some(keyword => text.includes(keyword))) {
-          categoria = category.nome;
-          categoria_id = category.id;
-          break;
-        }
-      }
+    let bestMatch = { id: null, name: null, keyword: '' };
+    userCategories.forEach(cat => {
+        const keywords = [cat.nome.toLowerCase(), ...(cat.keywords || [])];
+        keywords.forEach(keyword => {
+            if (text.includes(keyword) && keyword.length > bestMatch.keyword.length) {
+                bestMatch = { id: cat.id, name: cat.nome, keyword: keyword };
+            }
+        });
+    });
+    if (bestMatch.id) {
+        categoria = bestMatch.name;
+        categoria_id = bestMatch.id;
     }
   }
-
-  // Enhanced description extraction
+  
+  // 6. Extrair a Descrição
   let descricao = text;
-  const actionWords = ['gastei', 'recebi', 'transferi', 'paguei', 'comprei'];
-  for (const action of actionWords) {
-    if (text.includes(action)) {
-      descricao = text.replace(new RegExp(`${action}\\s*\\d+(?:[.,]\\d{1,2})?\\s*(?:reais?)?`, 'i'), '').trim();
-      break;
-    }
+  const actionWords = ['gastei', 'recebi', 'transferi', 'paguei', 'comprei', 'reais'];
+  const noiseWords = ['no', 'na', 'do', 'da', 'com', 'para', 'de', 'em', 'e', 'r$'];
+
+  if (valorTexto) descricao = descricao.replace(valorTexto, '');
+  if (conta_origem) descricao = descricao.replace(new RegExp(conta_origem, 'ig'), '');
+  if (conta_destino) descricao = descricao.replace(new RegExp(conta_destino, 'ig'), '');
+  if (categoria) descricao = descricao.replace(new RegExp(categoria, 'ig'), '');
+  
+  [...actionWords, ...noiseWords].forEach(word => {
+    descricao = descricao.replace(new RegExp(`\\b${word}\\b`, 'ig'), '');
+  });
+  
+  descricao = descricao.replace(/\s+/g, ' ').trim();
+  if (!descricao && categoria) {
+    descricao = categoria;
   }
+  descricao = descricao.charAt(0).toUpperCase() + descricao.slice(1);
 
-  // Clean up description
-  descricao = descricao
-    .replace(/\b(no|na|do|da|com|para|de)\s+\w+/g, '') // Remove prepositions + account names
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  if (!descricao || descricao.length < 3) {
-    descricao = text.substring(0, 50);
-  }
-
-  // Validation
+  // 7. Validação
   const validationErrors = [];
-  if (!valor || valor <= 0) {
-    validationErrors.push('Valor inválido ou não encontrado');
-  }
-  if (!descricao) {
-    validationErrors.push('Descrição não encontrada');
-  }
-  if (!conta_origem_id && tipo !== 'transferencia') {
-    validationErrors.push('Conta não encontrada');
-  }
-  if (tipo === 'transferencia' && (!conta_origem_id || !conta_destino_id)) {
-    validationErrors.push('Para transferências, especifique conta origem e destino');
-  }
+  if (!valor || valor <= 0) validationErrors.push('Valor inválido ou não encontrado');
+  if (!descricao) validationErrors.push('Descrição não encontrada');
+  if (!conta_origem_id) validationErrors.push('Conta de origem não encontrada');
+  if (tipo === 'transferencia' && !conta_destino_id) validationErrors.push('Conta de destino não encontrada para transferência');
+  if (!categoria_id && tipo !== 'transferencia') validationErrors.push('Categoria não encontrada');
 
   return {
     valor,
@@ -220,6 +162,7 @@ async function processTransactionEnhanced(text: string, userId: string, supabase
     conta_destino,
     conta_destino_id,
     validation_errors: validationErrors,
-    confidence: validationErrors.length === 0 ? 'high' : validationErrors.length <= 1 ? 'medium' : 'low'
+    confidence: validationErrors.length === 0 ? 'high' : 'low'
   };
 }
+
