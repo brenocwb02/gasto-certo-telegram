@@ -7,14 +7,17 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCategories } from "@/hooks/useSupabaseData";
-import { supabase } from "@/integrations/supabase/client";
 
 const budgetSchema = z.object({
   category_id: z.string().min(1, "Categoria é obrigatória"),
-  amount: z.string().min(1, "Valor é obrigatório"),
-  month: z.string().min(1, "Mês é obrigatório"),
+  amount: z.string().min(1, "Valor é obrigatório").regex(/^\d+(\.\d{1,2})?$/, "Valor inválido"),
+  month: z.object({
+    month: z.string().min(1, "Mês é obrigatório"),
+    year: z.string().min(1, "Ano é obrigatório"),
+  }),
 });
 
 interface BudgetFormProps {
@@ -27,12 +30,18 @@ export function BudgetForm({ onSuccess }: BudgetFormProps) {
   const { user } = useAuth();
   const { categories } = useCategories();
 
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1;
+
   const form = useForm<z.infer<typeof budgetSchema>>({
     resolver: zodResolver(budgetSchema),
     defaultValues: {
       category_id: "",
       amount: "",
-      month: new Date().toISOString().slice(0, 7), // YYYY-MM
+      month: {
+        month: String(currentMonth).padStart(2, '0'),
+        year: String(currentYear)
+      },
     },
   });
 
@@ -44,7 +53,7 @@ export function BudgetForm({ onSuccess }: BudgetFormProps) {
         user_id: user.id,
         category_id: values.category_id,
         amount: parseFloat(values.amount),
-        month: `${values.month}-01`, // Garante que é o primeiro dia do mês
+        month: `${values.month.year}-${values.month.month}-01`,
       };
 
       const { error } = await supabase.from("budgets").insert(budgetData);
@@ -53,6 +62,7 @@ export function BudgetForm({ onSuccess }: BudgetFormProps) {
         if (error.code === '23505') { // unique_violation
           throw new Error("Já existe um orçamento para esta categoria neste mês.");
         }
+        console.error("Supabase error:", error);
         throw error;
       }
 
@@ -62,6 +72,7 @@ export function BudgetForm({ onSuccess }: BudgetFormProps) {
       });
       onSuccess?.();
     } catch (error) {
+      console.error("Erro ao criar orçamento:", error);
       toast({
         title: "Erro",
         description: error instanceof Error ? error.message : "Não foi possível criar o orçamento.",
@@ -74,6 +85,17 @@ export function BudgetForm({ onSuccess }: BudgetFormProps) {
 
   const expenseCategories = categories.filter(c => c.tipo === 'despesa');
 
+  const months = [
+    { value: '01', label: 'Janeiro' }, { value: '02', label: 'Fevereiro' },
+    { value: '03', label: 'Março' }, { value: '04', label: 'Abril' },
+    { value: '05', label: 'Maio' }, { value: '06', label: 'Junho' },
+    { value: '07', label: 'Julho' }, { value: '08', label: 'Agosto' },
+    { value: '09', label: 'Setembro' }, { value: '10', label: 'Outubro' },
+    { value: '11', label: 'Novembro' }, { value: '12', label: 'Dezembro' },
+  ];
+  const years = [currentYear, currentYear + 1];
+
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -83,9 +105,28 @@ export function BudgetForm({ onSuccess }: BudgetFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Mês do Orçamento</FormLabel>
-              <FormControl>
-                <Input type="month" {...field} />
-              </FormControl>
+              <div className="flex gap-2">
+                <Select onValueChange={(value) => field.onChange({ ...field.value, month: value })} defaultValue={field.value.month}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Mês" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {months.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                 <Select onValueChange={(value) => field.onChange({ ...field.value, year: value })} defaultValue={field.value.year}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Ano" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {years.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
               <FormMessage />
             </FormItem>
           )}
