@@ -85,72 +85,42 @@ export type Database = {
           },
         ]
       }
-      budgets: {
-        Row: {
-          amount: number
-          category_id: string
-          created_at: string
-          id: string
-          month: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          amount?: number
-          category_id: string
-          created_at?: string
-          id?: string
-          month: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          category_id?: string
-          created_at?: string
-          id?: string
-          month?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       categories: {
         Row: {
           cor: string | null
           created_at: string
           icone: string | null
           id: string
-          keywords: string[] | null
           nome: string
           parent_id: string | null
           tipo: string
           updated_at: string
           user_id: string
+          keywords: string[] | null
         }
         Insert: {
           cor?: string | null
           created_at?: string
           icone?: string | null
           id?: string
-          keywords?: string[] | null
           nome: string
           parent_id?: string | null
           tipo: string
           updated_at?: string
           user_id: string
+          keywords?: string[] | null
         }
         Update: {
           cor?: string | null
           created_at?: string
           icone?: string | null
           id?: string
-          keywords?: string[] | null
           nome?: string
           parent_id?: string | null
           tipo?: string
           updated_at?: string
           user_id?: string
+          keywords?: string[] | null
         }
         Relationships: [
           {
@@ -216,6 +186,51 @@ export type Database = {
             referencedRelation: "categories"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      budgets: {
+        Row: {
+          id: string
+          user_id: string
+          category_id: string
+          amount: number
+          month: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          category_id: string
+          amount: number
+          month: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          category_id?: string
+          amount?: number
+          month?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budgets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budgets_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          }
         ]
       }
       licenses: {
@@ -610,3 +625,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+

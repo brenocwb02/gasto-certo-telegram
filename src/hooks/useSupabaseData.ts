@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Database } from '@/integrations/supabase/types';
@@ -9,6 +9,8 @@ type Account = Tables['accounts']['Row'];
 type Category = Tables['categories']['Row'];
 type Profile = Tables['profiles']['Row'];
 type Goal = Tables['goals']['Row'];
+type Budget = Tables['budgets']['Row'];
+
 
 export function useProfile() {
   const { user } = useAuth();
@@ -52,70 +54,63 @@ export function useTransactions() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchTransactions = useCallback(async () => {
     if (!user) {
       setTransactions([]);
       setLoading(false);
       return;
     }
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('data_transacao', { ascending: false });
 
-    const fetchTransactions = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('transactions')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('data_transacao', { ascending: false })
-          .limit(10);
+      if (error) throw error;
+      setTransactions(data || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao carregar transações');
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
 
-        if (error) throw error;
-        setTransactions(data || []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erro ao carregar transações');
-      } finally {
-        setLoading(false);
-      }
-    };
 
+  useEffect(() => {
     fetchTransactions();
 
-    // Realtime updates for transactions
     const channel = supabase
       .channel('transactions-changes')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` },
-        () => {
-          // Refetch to keep state consistent
-          fetchTransactions();
-        }
+        () => fetchTransactions()
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, fetchTransactions]);
 
   const addTransaction = async (transaction: Omit<Transaction, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => {
     if (!user) return;
-
     try {
       const { data, error } = await supabase
         .from('transactions')
         .insert([{ ...transaction, user_id: user.id }])
         .select()
         .single();
-
       if (error) throw error;
-      setTransactions(prev => [data, ...prev.slice(0, 9)]);
       return data;
     } catch (err) {
       throw new Error(err instanceof Error ? err.message : 'Erro ao criar transação');
     }
   };
-
-  const updateTransaction = async (
+  
+    const updateTransaction = async (
     id: string,
     updates: Partial<Omit<Transaction, 'id' | 'created_at' | 'updated_at' | 'user_id'>>
   ) => {
@@ -190,7 +185,6 @@ export function useAccounts() {
 
     fetchAccounts();
 
-    // Realtime updates for accounts
     const channel = supabase
       .channel('accounts-changes')
       .on(
@@ -300,7 +294,6 @@ export function useCategories() {
 
     fetchCategories();
 
-    // Realtime updates for categories
     const channel = supabase
       .channel('categories-changes')
       .on(
@@ -317,70 +310,9 @@ export function useCategories() {
     };
   }, [user]);
 
-  const addCategory = async (category: Omit<Category, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => {
-    if (!user) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('categories')
-        .insert([{ ...category, user_id: user.id }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Erro ao criar categoria');
-    }
-  };
-
-  const updateCategory = async (
-    id: string,
-    updates: Partial<Omit<Category, 'id' | 'created_at' | 'updated_at' | 'user_id'>>
-  ) => {
-    if (!user) return;
-    try {
-      const { data, error } = await supabase
-        .from('categories')
-        .update(updates)
-        .eq('id', id)
-        .eq('user_id', user.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data as Category;
-    } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Erro ao atualizar categoria');
-    }
-  };
-
-  const deleteCategory = async (id: string) => {
-    if (!user) return;
-    try {
-      const { error } = await supabase
-        .from('categories')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-      return true;
-    } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Erro ao excluir categoria');
-    }
-  };
-
-  const getHierarchicalCategories = () => {
-    const parentCategories = categories.filter(cat => !cat.parent_id);
-    return parentCategories.map(parent => ({
-      ...parent,
-      subcategories: categories.filter(cat => cat.parent_id === parent.id)
-    }));
-  };
-
-  return { categories, loading, error, addCategory, updateCategory, deleteCategory, getHierarchicalCategories };
+  return { categories, loading, error };
 }
+
 
 export function useGoals() {
   const { user } = useAuth();
@@ -388,106 +320,103 @@ export function useGoals() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchGoals = useCallback(async () => {
     if (!user) {
       setGoals([]);
       setLoading(false);
       return;
     }
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('goals')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at');
 
-    const fetchGoals = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('goals')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('status', 'ativa')
-          .order('created_at');
+      if (error) throw error;
+      setGoals(data || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao carregar metas');
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
 
-        if (error) throw error;
-        setGoals(data || []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erro ao carregar metas');
-      } finally {
-        setLoading(false);
-      }
-    };
-
+  useEffect(() => {
     fetchGoals();
 
-    // Realtime updates for goals
     const channel = supabase
       .channel('goals-changes')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'goals', filter: `user_id=eq.${user.id}` },
-        () => {
-          fetchGoals();
-        }
+        () => fetchGoals()
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, fetchGoals]);
 
-  const addGoal = async (goal: Omit<Goal, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => {
-    if (!user) return;
+  return { goals, loading, error, refetchGoals: fetchGoals };
+}
 
-    try {
-      const { data, error } = await supabase
-        .from('goals')
-        .insert([{ ...goal, user_id: user.id }])
-        .select()
-        .single();
+export function useBudgets() {
+  const { user } = useAuth();
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-      if (error) throw error;
-      return data;
-    } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Erro ao criar meta');
+  const fetchBudgets = useCallback(async () => {
+    if (!user) {
+      setBudgets([]);
+      setLoading(false);
+      return;
     }
-  };
-
-  const updateGoal = async (
-    id: string,
-    updates: Partial<Omit<Goal, 'id' | 'created_at' | 'updated_at' | 'user_id'>>
-  ) => {
-    if (!user) return;
     try {
+      setLoading(true);
       const { data, error } = await supabase
-        .from('goals')
-        .update(updates)
-        .eq('id', id)
-        .eq('user_id', user.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data as Goal;
-    } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Erro ao atualizar meta');
-    }
-  };
-
-  const deleteGoal = async (id: string) => {
-    if (!user) return;
-    try {
-      const { error } = await supabase
-        .from('goals')
-        .update({ status: 'cancelada' })
-        .eq('id', id)
+        .from('budgets')
+        .select(`
+          *,
+          categories (
+            nome,
+            cor
+          )
+        `)
         .eq('user_id', user.id);
 
       if (error) throw error;
-      return true;
+      setBudgets(data as any[] || []);
     } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Erro ao excluir meta');
+      setError(err instanceof Error ? err.message : 'Erro ao carregar orçamentos');
+    } finally {
+      setLoading(false);
     }
-  };
+  },[user]);
 
-  return { goals, loading, error, addGoal, updateGoal, deleteGoal };
+  useEffect(() => {
+    fetchBudgets();
+
+    const channel = supabase
+      .channel('budgets-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'budgets', filter: `user_id=eq.${user.id}` },
+        () => fetchBudgets()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, fetchBudgets]);
+
+  return { budgets, loading, error, refetchBudgets: fetchBudgets };
 }
+
 
 export function useFinancialStats() {
   const { user } = useAuth();
@@ -513,7 +442,6 @@ export function useFinancialStats() {
         const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
         const lastDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
         
-        // Get accounts total balance
         const { data: accounts, error: accountsError } = await supabase
           .from('accounts')
           .select('saldo_atual')
@@ -524,7 +452,6 @@ export function useFinancialStats() {
 
         const totalBalance = accounts?.reduce((sum, acc) => sum + Number(acc.saldo_atual), 0) || 0;
 
-        // Get monthly transactions
         const { data: transactions, error: transactionsError } = await supabase
           .from('transactions')
           .select('valor, tipo')
@@ -544,7 +471,6 @@ export function useFinancialStats() {
 
         const monthlySavings = monthlyIncome - monthlyExpenses;
 
-        // Calculate trend (simplified - comparing with mock data for now)
         const trend = monthlySavings > 0 ? 12 : -5;
 
         setStats({
@@ -563,7 +489,6 @@ export function useFinancialStats() {
 
     fetchStats();
 
-    // Realtime: refetch stats when transactions or accounts change
     const channel = supabase
       .channel('financial-stats-changes')
       .on(
@@ -585,3 +510,4 @@ export function useFinancialStats() {
 
   return { stats, loading, error };
 }
+
