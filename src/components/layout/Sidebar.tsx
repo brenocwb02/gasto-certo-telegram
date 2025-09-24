@@ -1,179 +1,227 @@
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Link, useLocation } from "react-router-dom";
-import { 
-  Home, 
-  CreditCard, 
-  BarChart3, 
-  Target, 
-  Settings, 
-  HelpCircle,
-  DollarSign,
-  Wallet,
-  Shield,
+import { NavLink, useNavigate } from "react-router-dom";
+import {
+  Home,
+  Receipt,
+  Banknote,
+  PieChart,
+  Target,
+  Folders,
+  Settings,
+  LifeBuoy,
   Bot,
-  Tags,
-  ClipboardList,
+  KeyRound,
+  LogOut,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "../../contexts/AuthContext";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-interface SidebarProps {
-  className?: string;
-  isOpen?: boolean;
-}
+export function Sidebar() {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
-const navigationItems = [
-  {
-    title: "Dashboard",
-    icon: Home,
-    href: "/",
-  },
-  {
-    title: "Transações",
-    icon: CreditCard,
-    href: "/transactions"
-  },
-  {
-    title: "Relatórios",
-    icon: BarChart3,
-    href: "/reports"
-  },
-  {
-    title: "Metas",
-    icon: Target,
-    href: "/goals"
-  },
-  {
-    title: "Orçamento",
-    icon: ClipboardList,
-    href: "/orcamento"
-  },
-  {
-    title: "Contas",
-    icon: Wallet,
-    href: "/accounts"
-  },
-  {
-    title: "Categorias", 
-    icon: Tags,
-    href: "/categories"
-  }
-];
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/auth");
+  };
 
-const bottomItems = [
-  {
-    title: "Licença",
-    icon: Shield,
-    href: "/license"
-  },
-  {
-    title: "Telegram",
-    icon: Bot,
-    href: "/telegram"
-  },
-  {
-    title: "Configurações",
-    icon: Settings,
-    href: "/settings"
-  },
-  {
-    title: "Suporte",
-    icon: HelpCircle,
-    href: "/support"
-  }
-];
-
-export function Sidebar({ className, isOpen = true }: SidebarProps) {
-  const location = useLocation();
   return (
-    <div className={cn(
-      "bg-sidebar border-r border-sidebar-border flex flex-col h-full",
-      "w-64 lg:w-72 transition-all duration-300",
-      !isOpen && "-translate-x-full lg:translate-x-0 lg:w-16",
-      className
-    )}>
-      {/* Logo Section */}
-      <div className="p-6 border-b border-sidebar-border">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 primary-gradient rounded-xl flex items-center justify-center">
-            <DollarSign className="h-6 w-6 text-primary-foreground" />
-          </div>
-          {isOpen && (
-            <div>
-              <h2 className="font-bold text-sidebar-foreground">Gasto Certo</h2>
-              <p className="text-xs text-muted-foreground">Versão 1.0</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2">
-        <div className="space-y-1">
-          {navigationItems.map((item) => {
-            const active = location.pathname === item.href;
-            return (
-              <Button
-                key={item.href}
-                variant={active ? "default" : "ghost"}
-                className={cn(
-                  "w-full justify-start gap-3 h-12",
-                  active && "primary-gradient text-primary-foreground shadow-md",
-                  !isOpen && "justify-center px-0"
-                )}
-                asChild
+    <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background sm:flex">
+      <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
+        <NavLink
+          to="/"
+          className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:h-8 md:w-8 md:text-base"
+        >
+          <Home className="h-4 w-4 transition-all group-hover:scale-110" />
+          <span className="sr-only">Gasto Certo</span>
+        </NavLink>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <NavLink
+                to="/"
+                className={({ isActive }) =>
+                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
+                    isActive ? "bg-accent text-accent-foreground" : ""
+                  }`
+                }
               >
-                <Link to={item.href}>
-                  <item.icon className="h-5 w-5 flex-shrink-0" />
-                  {isOpen && <span className="truncate">{item.title}</span>}
-                </Link>
-              </Button>
-            );
-          })}
-        </div>
+                <Home className="h-5 w-5" />
+                <span className="sr-only">Dashboard</span>
+              </NavLink>
+            </TooltipTrigger>
+            <TooltipContent side="right">Dashboard</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <NavLink
+                to="/transactions"
+                className={({ isActive }) =>
+                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
+                    isActive ? "bg-accent text-accent-foreground" : ""
+                  }`
+                }
+              >
+                <Receipt className="h-5 w-5" />
+                <span className="sr-only">Transações</span>
+              </NavLink>
+            </TooltipTrigger>
+            <TooltipContent side="right">Transações</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <NavLink
+                to="/accounts"
+                className={({ isActive }) =>
+                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
+                    isActive ? "bg-accent text-accent-foreground" : ""
+                  }`
+                }
+              >
+                <Banknote className="h-5 w-5" />
+                <span className="sr-only">Contas</span>
+              </NavLink>
+            </TooltipTrigger>
+            <TooltipContent side="right">Contas</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <NavLink
+                to="/categories"
+                className={({ isActive }) =>
+                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
+                    isActive ? "bg-accent text-accent-foreground" : ""
+                  }`
+                }
+              >
+                <Folders className="h-5 w-5" />
+                <span className="sr-only">Categorias</span>
+              </NavLink>
+            </TooltipTrigger>
+            <TooltipContent side="right">Categorias</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <NavLink
+                to="/reports"
+                className={({ isActive }) =>
+                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
+                    isActive ? "bg-accent text-accent-foreground" : ""
+                  }`
+                }
+              >
+                <PieChart className="h-5 w-5" />
+                <span className="sr-only">Relatórios</span>
+              </NavLink>
+            </TooltipTrigger>
+            <TooltipContent side="right">Relatórios</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <NavLink
+                to="/goals"
+                className={({ isActive }) =>
+                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
+                    isActive ? "bg-accent text-accent-foreground" : ""
+                  }`
+                }
+              >
+                <Target className="h-5 w-5" />
+                <span className="sr-only">Metas</span>
+              </NavLink>
+            </TooltipTrigger>
+            <TooltipContent side="right">Metas</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </nav>
-
-      {/* Bottom Section */}
-      <div className="p-4 border-t border-sidebar-border space-y-1">
-        {bottomItems.map((item) => {
-          const active = location.pathname === item.href;
-          return (
-            <Button
-              key={item.href}
-              variant={active ? "default" : "ghost"}
-              className={cn(
-                "w-full justify-start gap-3 h-12",
-                !isOpen && "justify-center px-0"
-              )}
-              asChild
-            >
-              <Link to={item.href}>
-                <item.icon className="h-5 w-5 flex-shrink-0" />
-                {isOpen && <span className="truncate">{item.title}</span>}
-              </Link>
-            </Button>
-          );
-        })}
-      </div>
-
-      {/* Quick Stats - Only show when open */}
-      {isOpen && (
-        <div className="p-4 border-t border-sidebar-border">
-          <div className="stats-card space-y-3">
-            <h3 className="font-semibold text-sm text-sidebar-foreground">Resumo Rápido</h3>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-muted-foreground">Saldo Total</span>
-                <span className="text-sm font-medium text-success">R$ 2.450,00</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-muted-foreground">Este mês</span>
-                <span className="text-sm font-medium text-expense">-R$ 890,50</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <NavLink
+                to="/telegram-integration"
+                className={({ isActive }) =>
+                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
+                    isActive ? "bg-accent text-accent-foreground" : ""
+                  }`
+                }
+              >
+                <Bot className="h-5 w-5" />
+                <span className="sr-only">Integração Telegram</span>
+              </NavLink>
+            </TooltipTrigger>
+            <TooltipContent side="right">Integração Telegram</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <NavLink
+                to="/license"
+                className={({ isActive }) =>
+                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
+                    isActive ? "bg-accent text-accent-foreground" : ""
+                  }`
+                }
+              >
+                <KeyRound className="h-5 w-5" />
+                <span className="sr-only">Licença</span>
+              </NavLink>
+            </TooltipTrigger>
+            <TooltipContent side="right">Licença</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <NavLink
+                to="/support"
+                className={({ isActive }) =>
+                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
+                    isActive ? "bg-accent text-accent-foreground" : ""
+                  }`
+                }
+              >
+                <LifeBuoy className="h-5 w-5" />
+                <span className="sr-only">Suporte</span>
+              </NavLink>
+            </TooltipTrigger>
+            <TooltipContent side="right">Suporte</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <NavLink
+                to="/settings"
+                className={({ isActive }) =>
+                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
+                    isActive ? "bg-accent text-accent-foreground" : ""
+                  }`
+                }
+              >
+                <Settings className="h-5 w-5" />
+                <span className="sr-only">Configurações</span>
+              </NavLink>
+            </TooltipTrigger>
+            <TooltipContent side="right">Configurações</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 text-muted-foreground hover:text-foreground md:h-8 md:w-8"
+                onClick={handleLogout}
+              >
+                <LogOut className="h-5 w-5" />
+                <span className="sr-only">Sair</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Sair</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </nav>
+    </aside>
   );
 }
 
