@@ -330,9 +330,9 @@ export function useGoals() {
       setLoading(true);
       const { data, error } = await supabase
         .from('goals')
-        .select('*')
+        .select('*, categories(nome, cor)')
         .eq('user_id', user.id)
-        .order('created_at');
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       setGoals(data || []);
@@ -360,7 +360,23 @@ export function useGoals() {
     };
   }, [user, fetchGoals]);
 
-  return { goals, loading, error, refetchGoals: fetchGoals };
+  const deleteGoal = async (goalId: string) => {
+    try {
+      const { error } = await supabase
+        .from('goals')
+        .delete()
+        .eq('id', goalId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      setGoals(prev => prev.filter(g => g.id !== goalId));
+      return true;
+    } catch (err) {
+      throw new Error(err instanceof Error ? err.message : 'Erro ao excluir meta');
+    }
+  };
+
+  return { goals, loading, error, refetchGoals: fetchGoals, deleteGoal };
 }
 
 export function useBudgets(month: Date) {
@@ -403,8 +419,8 @@ export function useBudgets(month: Date) {
         .select('category_id, valor')
         .eq('user_id', user.id)
         .eq('tipo', 'despesa')
-        .gte('data', startOfMonth)
-        .lt('data', endOfMonth);
+        .gte('data_transacao', startOfMonth)
+        .lt('data_transacao', endOfMonth);
 
       if (transactionsError) throw transactionsError;
 

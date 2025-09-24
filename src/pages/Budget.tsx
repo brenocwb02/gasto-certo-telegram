@@ -3,17 +3,21 @@ import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, ClipboardList, PiggyBank } from "lucide-react";
+import { Plus, PiggyBank, Edit, Trash2 } from "lucide-react";
 import { useBudgets } from "@/hooks/useSupabaseData";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { BudgetForm } from "@/components/forms/BudgetForm";
 import { Progress } from "@/components/ui/progress";
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Budget = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentMonth] = useState(new Date());
   const { budgets, loading, refetchBudgets } = useBudgets(currentMonth);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingBudget, setEditingBudget] = useState(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     document.title = "Orçamento | Boas Contas";
@@ -29,7 +33,39 @@ const Budget = () => {
   
   const handleSuccess = () => {
     setDialogOpen(false);
+    setEditingBudget(null);
     refetchBudgets();
+  };
+
+  const handleEdit = (budget: any) => {
+    setEditingBudget(budget);
+    setDialogOpen(true);
+  };
+
+  const handleDelete = async (budgetId: string) => {
+    if (!confirm("Tem certeza que deseja excluir este orçamento?")) return;
+    
+    try {
+      const { error } = await supabase
+        .from('budgets')
+        .delete()
+        .eq('id', budgetId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Orçamento excluído",
+        description: "O orçamento foi excluído com sucesso.",
+      });
+      refetchBudgets();
+    } catch (error) {
+      console.error("Erro ao excluir orçamento:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir o orçamento.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -47,22 +83,35 @@ const Budget = () => {
             </div>
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
-                <Button>
+                <Button onClick={() => setEditingBudget(null)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Novo Orçamento
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Novo Orçamento</DialogTitle>
+                  <DialogTitle>{editingBudget ? 'Editar Orçamento' : 'Novo Orçamento'}</DialogTitle>
                 </DialogHeader>
-                <BudgetForm onSuccess={handleSuccess} />
+                <BudgetForm budget={editingBudget} onSuccess={handleSuccess} />
               </DialogContent>
             </Dialog>
           </div>
 
           {loading ? (
-            <p>Carregando orçamentos...</p>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="animate-pulse">
+                  <CardHeader className="space-y-2">
+                    <div className="h-4 bg-muted rounded w-2/3"></div>
+                    <div className="h-3 bg-muted rounded w-1/2"></div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="h-3 bg-muted rounded w-full"></div>
+                    <div className="h-6 bg-muted rounded w-3/4"></div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           ) : budgets.length === 0 ? (
             <Card className="text-center py-12">
               <CardContent>
@@ -73,7 +122,7 @@ const Budget = () => {
                 </p>
                  <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button>
+                    <Button onClick={() => setEditingBudget(null)}>
                       <Plus className="h-4 w-4 mr-2" />
                       Criar Primeiro Orçamento
                     </Button>
@@ -93,24 +142,72 @@ const Budget = () => {
                 const spent = budget.spent || 0; 
                 const progress = budget.amount > 0 ? (spent / budget.amount) * 100 : 0;
                 const remaining = budget.amount - spent;
+                const isOverBudget = progress > 100;
+                const isNearLimit = progress > 80 && progress <= 100;
                 
                 return (
-                  <Card key={budget.id}>
+                  <Card key={budget.id} className="hover:shadow-md transition-shadow">
                     <CardHeader>
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-base flex items-center gap-2">
-                           <div className="w-3 h-3 rounded-full" style={{ backgroundColor: budget.categories.cor }} />
-                          {budget.categories.nome}
+                           <div className="w-3 h-3 rounded-full" style={{ backgroundColor: budget.categories?.cor || '#6366f1' }} />
+                          {budget.categories?.nome || 'Categoria não encontrada'}
                         </CardTitle>
-                         <span className="text-sm font-bold">{formatCurrency(budget.amount)}</span>
+                         <div className="flex items-center gap-2">
+                           <span className="text-sm font-bold">{formatCurrency(budget.amount)}</span>
+                           <div className="flex space-x-1">
+                             <Button
+                               variant="ghost"
+                               size="sm"
+                               onClick={() => handleEdit(budget)}
+                             >
+                               <Edit className="h-4 w-4" />
+                             </Button>
+                             <Button
+                               variant="ghost"
+                               size="sm"
+                               onClick={() => handleDelete(budget.id)}
+                               className="text-destructive hover:text-destructive"
+                             >
+                               <Trash2 className="h-4 w-4" />
+                             </Button>
+                           </div>
+                         </div>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                       <Progress value={progress} />
-                       <div className="flex justify-between text-xs text-muted-foreground">
-                           <span>Gasto: {formatCurrency(spent)}</span>
-                           <span>Restante: {formatCurrency(remaining)}</span>
+                       <div className="space-y-2">
+                         <div className="flex justify-between text-sm">
+                           <span>Progresso</span>
+                           <span className={`font-medium ${
+                             isOverBudget ? 'text-destructive' : 
+                             isNearLimit ? 'text-orange-500' : 
+                             'text-muted-foreground'
+                           }`}>
+                             {progress.toFixed(1)}%
+                           </span>
+                         </div>
+                         <Progress 
+                           value={Math.min(progress, 100)} 
+                           className={`h-2 ${
+                             isOverBudget ? '[&>div]:bg-destructive' :
+                             isNearLimit ? '[&>div]:bg-orange-500' : 
+                             '[&>div]:bg-primary'
+                           }`}
+                         />
                        </div>
+                       <div className="flex justify-between text-xs text-muted-foreground">
+                           <span>Gasto: <span className="font-medium">{formatCurrency(spent)}</span></span>
+                           <span className={remaining >= 0 ? '' : 'text-destructive font-medium'}>
+                             {remaining >= 0 ? 'Restante: ' : 'Excesso: '}
+                             {formatCurrency(Math.abs(remaining))}
+                           </span>
+                       </div>
+                       {isOverBudget && (
+                         <div className="text-xs text-destructive bg-destructive/10 p-2 rounded">
+                           ⚠️ Orçamento ultrapassado em {formatCurrency(spent - budget.amount)}
+                         </div>
+                       )}
                     </CardContent>
                   </Card>
                 );

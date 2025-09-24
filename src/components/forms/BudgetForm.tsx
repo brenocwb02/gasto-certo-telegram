@@ -21,10 +21,11 @@ const budgetSchema = z.object({
 });
 
 interface BudgetFormProps {
+  budget?: any;
   onSuccess?: () => void;
 }
 
-export function BudgetForm({ onSuccess }: BudgetFormProps) {
+export function BudgetForm({ budget, onSuccess }: BudgetFormProps) {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -33,14 +34,17 @@ export function BudgetForm({ onSuccess }: BudgetFormProps) {
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
 
+  // Parse budget month if editing
+  const budgetDate = budget?.month ? new Date(budget.month) : null;
+
   const form = useForm<z.infer<typeof budgetSchema>>({
     resolver: zodResolver(budgetSchema),
     defaultValues: {
-      category_id: "",
-      amount: "",
+      category_id: budget?.category_id || "",
+      amount: budget?.amount?.toString() || "",
       month: {
-        month: String(currentMonth).padStart(2, '0'),
-        year: String(currentYear)
+        month: budgetDate ? String(budgetDate.getMonth() + 1).padStart(2, '0') : String(currentMonth).padStart(2, '0'),
+        year: budgetDate ? String(budgetDate.getFullYear()) : String(currentYear)
       },
     },
   });
@@ -56,26 +60,43 @@ export function BudgetForm({ onSuccess }: BudgetFormProps) {
         month: `${values.month.year}-${values.month.month}-01`,
       };
 
-      const { error } = await supabase.from("budgets").insert(budgetData);
+      if (budget) {
+        // Update existing budget
+        const { error } = await supabase
+          .from("budgets")
+          .update(budgetData)
+          .eq('id', budget.id);
 
-      if (error) {
-        if (error.code === '23505') { // unique_violation
-          throw new Error("Já existe um orçamento para esta categoria neste mês.");
+        if (error) throw error;
+
+        toast({
+          title: "Orçamento atualizado",
+          description: "Seu orçamento foi atualizado com sucesso.",
+        });
+      } else {
+        // Create new budget
+        const { error } = await supabase.from("budgets").insert(budgetData);
+
+        if (error) {
+          if (error.code === '23505') { // unique_violation
+            throw new Error("Já existe um orçamento para esta categoria neste mês.");
+          }
+          console.error("Supabase error:", error);
+          throw error;
         }
-        console.error("Supabase error:", error);
-        throw error;
+
+        toast({
+          title: "Orçamento criado",
+          description: "Seu novo orçamento foi criado com sucesso.",
+        });
       }
 
-      toast({
-        title: "Orçamento criado",
-        description: "Seu novo orçamento foi criado com sucesso.",
-      });
       onSuccess?.();
     } catch (error) {
-      console.error("Erro ao criar orçamento:", error);
+      console.error("Erro ao salvar orçamento:", error);
       toast({
         title: "Erro",
-        description: error instanceof Error ? error.message : "Não foi possível criar o orçamento.",
+        description: error instanceof Error ? error.message : "Não foi possível salvar o orçamento.",
         variant: "destructive",
       });
     } finally {
@@ -172,7 +193,7 @@ export function BudgetForm({ onSuccess }: BudgetFormProps) {
         />
 
         <Button type="submit" disabled={loading} className="w-full">
-          {loading ? "Salvando..." : "Criar Orçamento"}
+          {loading ? "Salvando..." : budget ? "Atualizar Orçamento" : "Criar Orçamento"}
         </Button>
       </form>
     </Form>

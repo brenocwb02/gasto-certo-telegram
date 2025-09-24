@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Plus, Target, Calendar, TrendingUp, Edit } from "lucide-react";
+import { Plus, Target, Calendar, TrendingUp, Edit, Trash2 } from "lucide-react";
 import { useGoals } from "@/hooks/useSupabaseData";
 import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -13,7 +13,7 @@ import { GoalForm } from "@/components/forms/GoalForm";
 
 const Goals = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { goals, loading, error, refetchGoals } = useGoals();
+  const { goals, loading, error, refetchGoals, deleteGoal } = useGoals();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState(null);
@@ -62,7 +62,26 @@ const Goals = () => {
   const handleSuccess = () => {
     handleCloseDialog();
     refetchGoals();
-  }
+  };
+
+  const handleDelete = async (goalId: string) => {
+    if (!confirm("Tem certeza que deseja excluir esta meta?")) return;
+    
+    try {
+      await deleteGoal(goalId);
+      toast({
+        title: "Meta excluída",
+        description: "A meta foi excluída com sucesso.",
+      });
+    } catch (error) {
+      console.error("Erro ao excluir meta:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir a meta.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -164,6 +183,14 @@ const Goals = () => {
                           onClick={() => handleEdit(goal)}
                         >
                           <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(goal.id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </CardHeader>
