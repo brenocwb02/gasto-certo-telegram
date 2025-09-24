@@ -9,9 +9,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 interface LicenseGuardProps {
   children: React.ReactNode;
   fallback?: React.ReactNode;
+  requirePremium?: boolean;
 }
 
-export function LicenseGuard({ children, fallback }: LicenseGuardProps) {
+export function LicenseGuard({ children, fallback, requirePremium = false }: LicenseGuardProps) {
   const { user, loading: authLoading } = useAuth();
   const { license, loading: licenseLoading, error, isLicenseValid } = useLicense();
 
@@ -63,6 +64,28 @@ export function LicenseGuard({ children, fallback }: LicenseGuardProps) {
           </p>
           <Badge variant="outline" className="text-warning border-warning">
             {license?.status || 'Sem Licença'}
+          </Badge>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Se requer Premium mas usuário tem plano gratuito
+  if (requirePremium && license.plano === 'gratuito') {
+    return fallback || (
+      <Card className="border-warning bg-warning/5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-warning">
+            <ShieldAlert className="h-5 w-5" />
+            Funcionalidade Premium
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Esta funcionalidade está disponível apenas no plano Premium.
+          </p>
+          <Badge variant="outline" className="text-warning border-warning">
+            Plano Gratuito
           </Badge>
         </CardContent>
       </Card>

@@ -8,19 +8,28 @@ serve(async (req) => {
   }
 
   try {
-    const { text, userId } = await req.json()
+    const { text, userId } = await req.json();
 
-    if (!text || !userId) {
-      return new Response(
-        JSON.stringify({ error: 'text and userId are required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    // Verificar se o usuário tem plano premium
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data: license, error: licenseError } = await supabase
+      .from('licenses')
+      .select('plano, status')
+      .eq('user_id', userId)
+      .eq('status', 'ativo')
+      .single();
+
+    if (licenseError || !license || license.plano !== 'premium') {
+      return new Response(JSON.stringify({
+        validation_errors: ['Esta funcionalidade requer um plano Premium. Faça upgrade para usar a integração com Telegram.']
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 403,
+      });
     }
-
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
 
     const processedText = await processTransactionEnhanced(text.toLowerCase(), userId, supabase)
 

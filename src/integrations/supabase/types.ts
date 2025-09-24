@@ -85,42 +85,72 @@ export type Database = {
           },
         ]
       }
+      budgets: {
+        Row: {
+          amount: number
+          category_id: string
+          created_at: string
+          id: string
+          month: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          category_id: string
+          created_at?: string
+          id?: string
+          month: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category_id?: string
+          created_at?: string
+          id?: string
+          month?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           cor: string | null
           created_at: string
           icone: string | null
           id: string
+          keywords: string[] | null
           nome: string
           parent_id: string | null
           tipo: string
           updated_at: string
           user_id: string
-          keywords: string[] | null
         }
         Insert: {
           cor?: string | null
           created_at?: string
           icone?: string | null
           id?: string
+          keywords?: string[] | null
           nome: string
           parent_id?: string | null
           tipo: string
           updated_at?: string
           user_id: string
-          keywords?: string[] | null
         }
         Update: {
           cor?: string | null
           created_at?: string
           icone?: string | null
           id?: string
+          keywords?: string[] | null
           nome?: string
           parent_id?: string | null
           tipo?: string
           updated_at?: string
           user_id?: string
-          keywords?: string[] | null
         }
         Relationships: [
           {
@@ -188,51 +218,6 @@ export type Database = {
           },
         ]
       }
-      budgets: {
-        Row: {
-          id: string
-          user_id: string
-          category_id: string
-          amount: number
-          month: string
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          category_id: string
-          amount: number
-          month: string
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          category_id?: string
-          amount?: number
-          month?: string
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "budgets_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "budgets_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "categories"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
       licenses: {
         Row: {
           codigo: string
@@ -240,6 +225,7 @@ export type Database = {
           data_ativacao: string | null
           data_expiracao: string | null
           id: string
+          plano: string
           status: string
           tipo: string
           updated_at: string
@@ -251,6 +237,7 @@ export type Database = {
           data_ativacao?: string | null
           data_expiracao?: string | null
           id?: string
+          plano?: string
           status?: string
           tipo?: string
           updated_at?: string
@@ -262,6 +249,7 @@ export type Database = {
           data_ativacao?: string | null
           data_expiracao?: string | null
           id?: string
+          plano?: string
           status?: string
           tipo?: string
           updated_at?: string
@@ -493,6 +481,29 @@ export type Database = {
         }
         Returns: string
       }
+      generate_activation_code: {
+        Args: { user_uuid: string }
+        Returns: string
+      }
+      get_budgets_with_spent: {
+        Args: { p_month: string }
+        Returns: {
+          amount: number
+          category_color: string
+          category_id: string
+          category_name: string
+          created_at: string
+          id: string
+          month: string
+          spent: number
+          updated_at: string
+          user_id: string
+        }[]
+      }
+      get_user_license_plan: {
+        Args: { target_user_id: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
@@ -625,4 +636,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

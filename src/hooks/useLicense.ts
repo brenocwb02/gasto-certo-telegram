@@ -8,6 +8,7 @@ interface License {
   codigo: string;
   status: 'ativo' | 'expirado' | 'cancelado';
   tipo: 'vitalicia' | 'mensal' | 'anual';
+  plano: 'gratuito' | 'premium';
   data_ativacao: string | null;
   data_expiracao: string | null;
   created_at: string;

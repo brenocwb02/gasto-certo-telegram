@@ -15,7 +15,7 @@ import Goals from "./pages/Goals";
 import Settings from "./pages/Settings";
 import Support from "./pages/Support";
 import License from "./pages/License";
-import TelegramSetup from "./pages/TelegramSetup";
+import TelegramIntegration from "./pages/TelegramIntegration";
 import TelegramBot from "./pages/TelegramBot";
 import Categories from "./pages/Categories";
 import Budget from "./pages/Budget";
@@ -115,7 +115,7 @@ const App = () => (
               path="/telegram"
               element={
                 <ProtectedRoute>
-                  <TelegramSetup />
+                  <TelegramIntegration />
                 </ProtectedRoute>
               }
             />

@@ -320,6 +320,19 @@ serve(async (req) => {
     if (text.startsWith('/')) {
       await handleCommand(supabaseAdmin, text.toLowerCase(), userId, chatId);
     } else {
+      // Verificar se o usuário tem licença premium
+      const { data: license } = await supabaseAdmin
+        .from('licenses')
+        .select('plano, status')
+        .eq('user_id', userId)
+        .eq('status', 'ativo')
+        .single();
+
+      if (!license || license.plano !== 'premium') {
+        await sendTelegramMessage(chatId, `🔒 *Funcionalidade Premium*\n\nOlá! A adição de transações pelo Telegram é uma funcionalidade exclusiva do plano Premium.\n\n✨ Com o Premium você terá:\n• Registro de transações por IA\n• Contas e categorias ilimitadas\n• Relatórios avançados\n• Metas e orçamentos\n\n📱 Visite nossa página de licenças para fazer upgrade e desbloquear todo o poder do Gasto Certo!\n\n🌐 Acesse: [Fazer Upgrade](${Deno.env.get('SUPABASE_URL')?.replace('supabase.co', 'lovable.app')}/license)`);
+        return new Response('Premium required', { status: 200, headers: corsHeaders });
+      }
+
       await sendTelegramMessage(chatId, "🧠 Analisando sua mensagem...");
       
       const { data: nlpData, error: nlpError } = await supabaseAdmin.functions.invoke('nlp-transaction', {
