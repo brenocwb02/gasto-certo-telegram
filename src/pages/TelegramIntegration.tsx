@@ -1,193 +1,148 @@
-// src/pages/TelegramIntegration.tsx
-
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
-import { Header } from '@/components/layout/Header';
-import { Sidebar } from '@/components/layout/Sidebar';
-import { useTelegramIntegration } from '@/hooks/useTelegramIntegration';
-import { useLicense } from '@/hooks/useLicense';
-import { useToast } from '@/hooks/use-toast';
-import { Bot, CheckCircle, XCircle, ExternalLink, Copy, QrCode } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { Header } from "@/components/layout/Header";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2, Copy, Check } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Sidebar } from "@/components/layout/Sidebar";
 
 export default function TelegramIntegration() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { getLicenseInfo } = useLicense();
-  const { config } = useTelegramIntegration();
+  const { user } = useAuth();
   const { toast } = useToast();
-  
-  const licenseInfo = getLicenseInfo();
-  const isLicenseValid = licenseInfo?.isValid || false;
-  const botUsername = "BoasContasBot"; // Defina o username do seu bot aqui
+  const [integrationCode, setIntegrationCode] = useState<string | null>(null);
+  const [botUsername, setBotUsername] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    document.title = "Integração Telegram | Boas Contas";
-  }, []);
-
-  const getLinkCode = () => {
-    return licenseInfo?.codigo || 'SEM-LICENCA';
-  };
-
-  const copyToClipboard = (text: string) => {
-    if (!text || text === 'SEM-LICENCA') {
-       toast({
-        title: 'Código Inválido',
-        description: 'A sua licença não foi encontrada. Não é possível copiar o código.',
-        variant: 'destructive',
-      });
-      return;
+    if (user) {
+      fetchIntegrationDetails();
     }
-    navigator.clipboard.writeText(text);
-    toast({
-      title: 'Copiado!',
-      description: 'Comando copiado para a área de transferência.',
-    });
+  }, [user]);
+
+  const fetchIntegrationDetails = async () => {
+    setLoading(true);
+    try {
+      // Chamar uma Supabase Function para obter os detalhes de integração
+      const { data, error } = await supabase.functions.invoke('telegram-bot-setup', {
+        method: 'GET',
+      });
+
+      if (error) throw error;
+
+      if (data.userCode) {
+        setIntegrationCode(data.userCode);
+      }
+      if (data.botUsername) {
+        setBotUsername(data.botUsername);
+      }
+
+    } catch (error: any) {
+      console.error("Erro ao carregar detalhes da integração:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os detalhes da integração. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const copyToClipboard = () => {
+    if (integrationCode) {
+      // A document.execCommand é usada para contornar restrições de iframe
+      const textArea = document.createElement("textarea");
+      textArea.value = integrationCode;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        setCopied(true);
+        toast({
+          title: "Copiado!",
+          description: "O código de ativação foi copiado para a área de transferência.",
+        });
+        setTimeout(() => setCopied(false), 2000); // Resetar ícone após 2 segundos
+      } catch (err) {
+        console.error('Falha ao copiar texto: ', err);
+        toast({
+            title: "Erro ao copiar",
+            description: "Não foi possível copiar o código.",
+            variant: "destructive"
+        });
+      }
+      document.body.removeChild(textArea);
+    }
+  };
+
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <Sidebar />
-      
-      <div className="lg:pl-64">
-        <Header onMenuClick={() => setSidebarOpen(true)} />
-        
-        <main className="p-6">
-          <div className="max-w-4xl mx-auto space-y-6">
-            <div className="flex items-center gap-3">
-              <Bot className="h-8 w-8 text-primary" />
-              <div>
-                <h1 className="text-3xl font-bold">Integração com Telegram</h1>
-                <p className="text-muted-foreground">
-                  Registe transações de forma rápida e fácil através de mensagens.
-                </p>
-              </div>
-            </div>
-
-            {/* License Status & Link Code */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  Status da Licença
-                  {isLicenseValid ? (
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                  ) : (
-                    <XCircle className="h-5 w-5 text-destructive" />
-                  )}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
+        <Header />
+        <main className="flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Integração com Telegram</CardTitle>
+              <CardDescription>
+                Conecte sua conta Gasto Certo ao nosso bot do Telegram para adicionar despesas usando apenas texto.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {loading ? (
+                <div className="flex justify-center items-center h-24">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : (
+                <div className="space-y-4">
                   <div>
-                    <Badge variant={isLicenseValid ? 'default' : 'destructive'}>
-                      {licenseInfo?.tipo ? licenseInfo.tipo.charAt(0).toUpperCase() + licenseInfo.tipo.slice(1) : 'Sem Licença'}
-                    </Badge>
-                    {licenseInfo?.daysUntilExpiration && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Expira em {licenseInfo.daysUntilExpiration} dias
-                      </p>
+                    <h3 className="font-semibold">Passo 1: Inicie uma conversa com o nosso bot</h3>
+                    {botUsername ? (
+                      <a 
+                        href={`https://t.me/${botUsername}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-block"
+                      >
+                        <Button>Abrir @{botUsername} no Telegram</Button>
+                      </a>
+                    ) : (
+                        <p className="text-sm text-destructive mt-2">Não foi possível carregar o nome do bot. Tente recarregar a página.</p>
                     )}
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">Seu Comando de Vinculação:</p>
-                    <div className="flex items-center gap-2">
-                      <code className="px-2 py-1 bg-muted rounded text-sm font-mono">
-                        /start {getLinkCode()}
-                      </code>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => copyToClipboard(`/start ${getLinkCode()}`)}
-                        disabled={!isLicenseValid}
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            {/* Tutorial */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Como Conectar a Sua Conta</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <div className="flex gap-3">
-                    <div className="flex-shrink-0 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm">
-                      1
-                    </div>
-                    <div>
-                      <p className="font-medium">Abra a conversa com o nosso bot</p>
-                      <p className="text-sm text-muted-foreground">
-                        Clique no botão abaixo para abrir o Telegram e encontrar o @{botUsername}.
-                      </p>
-                       <div className="flex gap-2 mt-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => window.open(`https://t.me/${botUsername}`, '_blank')}
-                        >
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                          Abrir @{botUsername}
-                        </Button>
-                        <Button 
-                          variant="secondary" 
-                          size="sm" 
-                          onClick={() => window.open('/telegram-bot', '_self')}
-                        >
-                          <Bot className="h-4 w-4 mr-2" />
-                          Bot Próprio
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
 
                   <Separator />
 
-                  <div className="flex gap-3">
-                    <div className="flex-shrink-0 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm">
-                      2
-                    </div>
-                    <div>
-                      <p className="font-medium">Envie o seu comando de vinculação</p>
-                      <p className="text-sm text-muted-foreground">
-                        Copie o seu comando de vinculação (acima) e cole na conversa com o bot para ligar a sua conta.
-                      </p>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex gap-3">
-                    <div className="flex-shrink-0 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm">
-                      3
-                    </div>
-                    <div>
-                      <p className="font-medium">Comece a usar!</p>
-                      <p className="text-sm text-muted-foreground">
-                        Após a confirmação, você já pode enviar mensagens como "Gastei 15 reais com almoço" 
-                        e o bot irá registar a transação automaticamente.
-                      </p>
+                  <div>
+                    <h3 className="font-semibold">Passo 2: Envie seu código de ativação</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Copie o código abaixo e envie como uma mensagem para o bot para vincular sua conta.
+                    </p>
+                    <div className="mt-2 flex items-center gap-2">
+                        <Input
+                            id="integration-code"
+                            readOnly
+                            value={integrationCode || "Gerando seu código..."}
+                            className="font-mono text-lg"
+                        />
+                        <Button variant="outline" size="icon" onClick={copyToClipboard} disabled={!integrationCode}>
+                            {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                        </Button>
                     </div>
                   </div>
                 </div>
-
-                <Alert>
-                  <QrCode className="h-4 w-4" />
-                  <AlertDescription>
-                    Use o comando /ajuda no bot a qualquer momento para ver a lista de comandos disponíveis.
-                  </AlertDescription>
-                </Alert>
-              </CardContent>
-            </Card>
-          </div>
+              )}
+            </CardContent>
+          </Card>
         </main>
       </div>
     </div>
   );
 }
+
