@@ -45,7 +45,7 @@ export function GoalForm({ goal, onSuccess }: GoalFormProps) {
       data_inicio: goal?.data_inicio || new Date().toISOString().split('T')[0],
       data_fim: goal?.data_fim || "",
       tipo_periodo: goal?.tipo_periodo || "mensal",
-      categoria_id: goal?.categoria_id || "",
+      categoria_id: goal?.categoria_id || undefined,
       status: goal?.status || "ativa",
     },
   });
@@ -250,7 +250,6 @@ export function GoalForm({ goal, onSuccess }: GoalFormProps) {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="">Nenhuma categoria</SelectItem>
                   {categories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
                       {category.nome}
