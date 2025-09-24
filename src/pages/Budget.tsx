@@ -11,7 +11,8 @@ import { Progress } from "@/components/ui/progress";
 
 const Budget = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { budgets, loading, refetchBudgets } = useBudgets();
+  const [currentMonth] = useState(new Date());
+  const { budgets, loading, refetchBudgets } = useBudgets(currentMonth);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {

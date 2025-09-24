@@ -379,12 +379,51 @@ export function useBudgets(month: Date) {
       setLoading(true);
       const monthString = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}-01`;
 
-      const { data, error } = await supabase.rpc('get_budgets_with_spent', {
-        p_month: monthString,
-      });
-      
-      if (error) throw error;
-      setBudgets(data || []);
+      // Get budgets for the month
+      const { data: budgetsData, error: budgetsError } = await supabase
+        .from('budgets')
+        .select(`
+          *,
+          categories (
+            id,
+            nome
+          )
+        `)
+        .eq('user_id', user.id)
+        .eq('month', monthString);
+
+      if (budgetsError) throw budgetsError;
+
+      // Get transactions for the month to calculate spent amounts
+      const startOfMonth = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}-01`;
+      const endOfMonth = `${month.getFullYear()}-${String(month.getMonth() + 2).padStart(2, '0')}-01`;
+
+      const { data: transactionsData, error: transactionsError } = await supabase
+        .from('transactions')
+        .select('category_id, valor')
+        .eq('user_id', user.id)
+        .eq('tipo', 'despesa')
+        .gte('data', startOfMonth)
+        .lt('data', endOfMonth);
+
+      if (transactionsError) throw transactionsError;
+
+      // Calculate spent amounts by category
+      const spentByCategory = transactionsData?.reduce((acc: any, transaction: any) => {
+        if (!acc[transaction.category_id]) {
+          acc[transaction.category_id] = 0;
+        }
+        acc[transaction.category_id] += Math.abs(transaction.valor);
+        return acc;
+      }, {}) || {};
+
+      // Combine budgets with spent amounts
+      const budgetsWithSpent = budgetsData?.map((budget: any) => ({
+        ...budget,
+        spent: spentByCategory[budget.category_id] || 0,
+      })) || [];
+
+      setBudgets(budgetsWithSpent);
     } catch (err) {
       console.error("Erro ao carregar orçamentos:", err);
       setError(err instanceof Error ? err.message : 'Erro ao carregar orçamentos');

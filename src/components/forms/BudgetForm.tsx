@@ -145,7 +145,7 @@ export function BudgetForm({ onSuccess }: BudgetFormProps) {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {expenseCategories.map((cat) => (
+                  {expenseCategories.filter(cat => cat.id && cat.id.trim() !== '').map((cat) => (
                     <SelectItem key={cat.id} value={cat.id}>
                       {cat.nome}
                     </SelectItem>
