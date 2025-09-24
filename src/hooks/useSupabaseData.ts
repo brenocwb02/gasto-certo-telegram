@@ -363,9 +363,9 @@ export function useGoals() {
   return { goals, loading, error, refetchGoals: fetchGoals };
 }
 
-export function useBudgets() {
+export function useBudgets(month: Date) {
   const { user } = useAuth();
-  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [budgets, setBudgets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -377,46 +377,28 @@ export function useBudgets() {
     }
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('budgets')
-        .select(`
-          *,
-          categories (
-            nome,
-            cor
-          )
-        `)
-        .eq('user_id', user.id);
+      const monthString = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}-01`;
 
+      const { data, error } = await supabase.rpc('get_budgets_with_spent', {
+        p_month: monthString,
+      });
+      
       if (error) throw error;
-      setBudgets(data as any[] || []);
+      setBudgets(data || []);
     } catch (err) {
+      console.error("Erro ao carregar orçamentos:", err);
       setError(err instanceof Error ? err.message : 'Erro ao carregar orçamentos');
     } finally {
       setLoading(false);
     }
-  },[user]);
+  }, [user, month]);
 
   useEffect(() => {
     fetchBudgets();
-
-    const channel = supabase
-      .channel('budgets-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'budgets', filter: `user_id=eq.${user.id}` },
-        () => fetchBudgets()
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, [user, fetchBudgets]);
-
+  
   return { budgets, loading, error, refetchBudgets: fetchBudgets };
 }
-
 
 export function useFinancialStats() {
   const { user } = useAuth();
