@@ -32,6 +32,62 @@ const Index = () => {
   const { profile } = useProfile();
   const { goals, loading: goalsLoading } = useGoals();
 
+  const GoalsSection = () => (
+    <Card className="financial-card">
+      <CardHeader>
+        <CardTitle>Metas Atuais</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {goalsLoading ? (
+          Array.from({ length: 2 }).map((_, i) => (
+            <div key={i} className="space-y-2">
+              <div className="flex justify-between items-center">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-12" />
+              </div>
+              <Skeleton className="h-2 w-full rounded-full" />
+              <Skeleton className="h-3 w-40" />
+            </div>
+          ))
+        ) : goals.length === 0 ? (
+          <div className="text-center py-4">
+            <Target className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">Nenhuma meta criada.</p>
+          </div>
+        ) : (
+          goals.slice(0, 3).map((goal) => {
+            const percentage = Number(goal.valor_meta) > 0 
+              ? (Number(goal.valor_atual) / Number(goal.valor_meta)) * 100 
+              : 0;
+            const isOverTarget = percentage > 100;
+
+            return (
+              <div key={goal.id} className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium flex items-center gap-2">
+                    <Target className="h-4 w-4 text-primary" />
+                    {goal.titulo}
+                  </span>
+                  <span className={`text-sm font-medium ${isOverTarget ? 'text-expense' : 'text-primary'}`}>
+                    {percentage.toFixed(0)}%
+                  </span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2">
+                  <div 
+                    className={`h-2 rounded-full transition-all duration-1000 ${
+                      isOverTarget ? 'bg-expense' : 'bg-primary'
+                    }`}
+                    style={{width: `${Math.min(percentage, 100)}%`}}
+                  ></div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
@@ -51,7 +107,7 @@ const Index = () => {
         <main className="flex-1 p-6 space-y-6 animate-fade-in">
           {/* Welcome Section */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <h1 className="text-3xl font-bold text-foreground">
                   Bem-vindo de volta{profile?.nome ? `, ${profile.nome}` : ''}! 👋
@@ -74,10 +130,6 @@ const Index = () => {
                     />
                   </DialogContent>
                 </Dialog>
-                <Badge variant="outline" className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
-                  Telegram conectado
-                </Badge>
               </div>
             </div>
           </div>
@@ -137,154 +189,21 @@ const Index = () => {
             )}
           </div>
 
-          {/* Telegram Integration Status */}
-          <Card className="financial-card border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <Bot className="h-5 w-5 text-primary" />
-                </div>
-                Integração Telegram
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-success" />
-                    <span className="text-sm font-medium">Bot conectado e ativo</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Envie uma mensagem para <strong>@GastoCertoBot</strong> para registrar transações
-                  </p>
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <span>✨ 23 transações via Telegram este mês</span>
-                    <span>⚡ Última atividade: há 2 horas</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm">
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Abrir Telegram
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Main Dashboard Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Financial Chart - Takes 2 columns */}
-            <div className="lg:col-span-2">
+            {/* Main Column */}
+            <div className="lg:col-span-2 space-y-6">
               <FinancialChart />
+              <RecentTransactions />
             </div>
             
-            {/* Quick Actions */}
-            <div>
+            {/* Sidebar Column */}
+            <div className="lg:col-span-1 space-y-6">
               <QuickActions />
+              <GoalsSection />
             </div>
           </div>
-
-          {/* Recent Transactions */}
-          <RecentTransactions />
-
-          {/* Metas Progress */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {goalsLoading ? (
-              Array.from({ length: 3 }).map((_, i) => (
-                <Card key={i} className="financial-card">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center gap-2">
-                      <Skeleton className="h-4 w-4" />
-                      <Skeleton className="h-5 w-32" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <Skeleton className="h-4 w-24" />
-                        <Skeleton className="h-4 w-12" />
-                      </div>
-                      <Skeleton className="h-2 w-full rounded-full" />
-                      <Skeleton className="h-3 w-40" />
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            ) : goals.length === 0 ? (
-              <Card className="financial-card col-span-full">
-                <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                  <Target className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Nenhuma meta criada</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Crie suas primeiras metas para acompanhar seus objetivos financeiros
-                  </p>
-                  <Button variant="outline">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Criar Meta
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              goals.slice(0, 3).map((goal) => {
-                const percentage = Number(goal.valor_meta) > 0 
-                  ? (Number(goal.valor_atual) / Number(goal.valor_meta)) * 100 
-                  : 0;
-                const isOverTarget = percentage > 100;
-                const remaining = Number(goal.valor_meta) - Number(goal.valor_atual);
-
-                return (
-                  <Card 
-                    key={goal.id} 
-                    className={`financial-card ${isOverTarget ? 'border-expense/20 bg-gradient-to-r from-expense/5 to-expense/10' : ''}`}
-                  >
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        {isOverTarget ? (
-                          <AlertCircle className="h-4 w-4 text-expense" />
-                        ) : percentage > 80 ? (
-                          <Target className="h-4 w-4 text-warning" />
-                        ) : (
-                          <Target className="h-4 w-4 text-primary" />
-                        )}
-                        {goal.titulo}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-muted-foreground">
-                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(goal.valor_atual))} / {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(goal.valor_meta))}
-                          </span>
-                          <span className={`text-sm font-medium ${
-                            isOverTarget ? 'text-expense' : percentage > 80 ? 'text-warning' : 'text-primary'
-                          }`}>
-                            {percentage.toFixed(0)}%
-                          </span>
-                        </div>
-                        <div className="w-full bg-muted rounded-full h-2">
-                          <div 
-                            className={`h-2 rounded-full transition-all duration-1000 ${
-                              isOverTarget ? 'bg-expense' : percentage > 80 ? 'bg-warning' : 'bg-primary'
-                            }`}
-                            style={{width: `${Math.min(percentage, 100)}%`}}
-                          ></div>
-                        </div>
-                        <p className={`text-xs ${
-                          isOverTarget ? 'text-expense' : 'text-muted-foreground'
-                        }`}>
-                          {isOverTarget 
-                            ? `Meta excedida em ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Math.abs(remaining))}`
-                            : `Faltam ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(remaining)} para atingir a meta`
-                          }
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })
-            )}
-          </div>
+          
         </main>
       </div>
     </div>
@@ -292,3 +211,4 @@ const Index = () => {
 };
 
 export default Index;
+
