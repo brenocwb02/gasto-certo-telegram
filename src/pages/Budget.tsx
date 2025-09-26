@@ -150,8 +150,8 @@ const Budget = () => {
                     <CardHeader>
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-base flex items-center gap-2">
-                           <div className="w-3 h-3 rounded-full" style={{ backgroundColor: budget.categories?.cor || '#6366f1' }} />
-                          {budget.categories?.nome || 'Categoria não encontrada'}
+                           <div className="w-3 h-3 rounded-full" style={{ backgroundColor: budget.category_color || '#6366f1' }} />
+                          {budget.category_name || 'Categoria não encontrada'}
                         </CardTitle>
                          <div className="flex items-center gap-2">
                            <span className="text-sm font-bold">{formatCurrency(budget.amount)}</span>

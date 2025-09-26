@@ -195,7 +195,7 @@ const Index = () => {
             {/* Main Column */}
             <div className="lg:col-span-2 space-y-6">
               <FinancialChart />
-              <RecentTransactions />
+              <RecentTransactions limit={5} />
             </div>
             
             {/* Sidebar Column */}

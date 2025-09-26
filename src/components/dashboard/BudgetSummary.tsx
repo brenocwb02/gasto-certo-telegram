@@ -77,8 +77,8 @@ export const BudgetSummary = () => {
       </CardHeader>
       <CardContent className="space-y-4">
         {topBudgets.map((budget) => {
-          const percentage = Number(budget.limite) > 0 
-            ? (Number(budget.gasto_atual) / Number(budget.limite)) * 100 
+          const percentage = Number(budget.amount) > 0 
+            ? (Number(budget.spent) / Number(budget.amount)) * 100 
             : 0;
           const isOverBudget = percentage > 100;
           const isNearLimit = percentage > 80 && percentage <= 100;
@@ -87,14 +87,14 @@ export const BudgetSummary = () => {
             <div key={budget.id} className="space-y-2">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">{budget.categoria_nome}</span>
+                  <span className="text-sm font-medium">{budget.category_name}</span>
                   {isOverBudget && (
                     <AlertTriangle className="h-4 w-4 text-expense" />
                   )}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">
-                    R$ {Number(budget.gasto_atual).toFixed(2)} / R$ {Number(budget.limite).toFixed(2)}
+                    R$ {Number(budget.spent).toFixed(2)} / R$ {Number(budget.amount).toFixed(2)}
                   </span>
                   <Badge variant={isOverBudget ? "destructive" : isNearLimit ? "secondary" : "outline"}>
                     {percentage.toFixed(0)}%
@@ -115,7 +115,7 @@ export const BudgetSummary = () => {
               </div>
               {isOverBudget && (
                 <p className="text-xs text-expense">
-                  Excedeu o orçamento em R$ {(Number(budget.gasto_atual) - Number(budget.limite)).toFixed(2)}
+                  Excedeu o orçamento em R$ {(Number(budget.spent) - Number(budget.amount)).toFixed(2)}
                 </p>
               )}
             </div>

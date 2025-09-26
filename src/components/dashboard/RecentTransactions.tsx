@@ -13,8 +13,11 @@ import { TransactionForm } from "@/components/forms/TransactionForm";
 import { toast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 
-export function RecentTransactions({ showViewAllButton = true, title = "Transações Recentes" }: { showViewAllButton?: boolean; title?: string }) {
-  const { transactions, loading, deleteTransaction } = useTransactions();
+export function RecentTransactions({ showViewAllButton = true, title = "Transações Recentes", limit = 5 }: { showViewAllButton?: boolean; title?: string; limit?: number }) {
+  const { transactions: allTransactions, loading, deleteTransaction } = useTransactions();
+  
+  // Limit transactions for dashboard view
+  const transactions = allTransactions.slice(0, limit);
   const { accounts } = useAccounts();
   const { categories } = useCategories();
 
