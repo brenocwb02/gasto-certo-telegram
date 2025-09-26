@@ -5,6 +5,7 @@ import { StatsCard } from "@/components/dashboard/StatsCard";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { FinancialChart } from "@/components/dashboard/FinancialChart";
+import { BudgetSummary } from "@/components/dashboard/BudgetSummary";
 import { TransactionForm } from "@/components/forms/TransactionForm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -92,12 +93,12 @@ const Index = () => {
     <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
       <div className="hidden lg:block">
-        <Sidebar isOpen={sidebarOpen} />
+        <Sidebar />
       </div>
       
       {/* Mobile Sidebar Overlay */}
       <div className="lg:hidden">
-        <Sidebar isOpen={false} />
+        <Sidebar />
       </div>
 
       {/* Main Content */}
@@ -110,9 +111,9 @@ const Index = () => {
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <h1 className="text-3xl font-bold text-foreground">
-                  Bem-vindo de volta{profile?.nome ? `, ${profile.nome}` : ''}! 👋
+                  Bem-vindo ao Zac - Boas Contas{profile?.nome ? `, ${profile.nome}` : ''}! 👋
                 </h1>
-                <p className="text-muted-foreground">Aqui está o resumo das suas finanças hoje</p>
+                <p className="text-muted-foreground">Controle financeiro familiar com propósito - Aqui está o resumo das suas finanças hoje</p>
               </div>
               <div className="flex items-center gap-3">
                 <LicenseStatus />
@@ -200,6 +201,7 @@ const Index = () => {
             {/* Sidebar Column */}
             <div className="lg:col-span-1 space-y-6">
               <QuickActions />
+              <BudgetSummary />
               <GoalsSection />
             </div>
           </div>

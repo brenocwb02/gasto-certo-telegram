@@ -27,10 +27,10 @@ const Transactions = () => {
   return (
     <div className="min-h-screen bg-background flex">
       <div className="hidden lg:block">
-        <Sidebar isOpen={sidebarOpen} />
+        <Sidebar />
       </div>
       <div className="lg:hidden">
-        <Sidebar isOpen={false} />
+        <Sidebar />
       </div>
       <div className="flex-1 flex flex-col">
         <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />

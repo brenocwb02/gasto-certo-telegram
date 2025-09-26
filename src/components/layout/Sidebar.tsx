@@ -11,6 +11,7 @@ import {
   Bot,
   KeyRound,
   LogOut,
+  Calculator,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "../../contexts/AuthContext";
@@ -104,6 +105,22 @@ export function Sidebar() {
               </NavLink>
             </TooltipTrigger>
             <TooltipContent side="right">Categorias</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <NavLink
+                to="/orcamento"
+                className={({ isActive }) =>
+                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
+                    isActive ? "bg-accent text-accent-foreground" : ""
+                  }`
+                }
+              >
+                <Calculator className="h-5 w-5" />
+                <span className="sr-only">Orçamento</span>
+              </NavLink>
+            </TooltipTrigger>
+            <TooltipContent side="right">Orçamento</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
