@@ -24,7 +24,15 @@ serve(async (req) => {
     const user = data.user;
     if (!user?.email) throw new Error("User not authenticated or email not available");
 
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", { apiVersion: "2025-08-27.basil" });
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    const priceId = Deno.env.get("STRIPE_PRICE_ID");
+    const siteUrl = Deno.env.get("SITE_URL") || "http://localhost:8080";
+
+    if (!stripeKey || !priceId) {
+      throw new Error("Stripe environment variables are not set.");
+    }
+
+    const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     let customerId;
     if (customers.data.length > 0) {
@@ -36,13 +44,13 @@ serve(async (req) => {
       customer_email: customerId ? undefined : user.email,
       line_items: [
         {
-          price: "price_1SBpdyA3xmI9jS0uyz1HGGBW",
+          price: priceId,
           quantity: 1,
         },
       ],
       mode: "subscription",
-      success_url: `${req.headers.get("origin")}/license?success=true`,
-      cancel_url: `${req.headers.get("origin")}/license?canceled=true`,
+      success_url: `${siteUrl}/license?success=true`,
+      cancel_url: `${siteUrl}/license?canceled=true`,
     });
 
     return new Response(JSON.stringify({ url: session.url }), {
