@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { TagInput } from "@/components/ui/TagInput"; // Importar o novo componente
 
 const categorySchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
@@ -17,7 +18,7 @@ const categorySchema = z.object({
   parent_id: z.string().optional().nullable(),
   cor: z.string().min(1, "Cor é obrigatória"),
   icone: z.string().min(1, "Ícone é obrigatório"),
-  keywords: z.string().optional(),
+  keywords: z.array(z.string()).optional(), // Tipo alterado para array de strings
 });
 
 interface CategoryFormProps {
@@ -39,7 +40,8 @@ export function CategoryForm({ category, parentCategories = [], onSuccess }: Cat
       parent_id: category?.parent_id || null,
       cor: category?.cor || "#6366f1",
       icone: category?.icone || "shopping-bag",
-      keywords: category?.keywords?.join(', ') || '',
+      // Converter de string separada por vírgulas (antigo) ou array (novo) para array
+      keywords: Array.isArray(category?.keywords) ? category.keywords : [],
     },
   });
 
@@ -50,9 +52,8 @@ export function CategoryForm({ category, parentCategories = [], onSuccess }: Cat
 
     setLoading(true);
     try {
-      const keywordsArray = values.keywords
-        ? values.keywords.split(',').map(k => k.trim().toLowerCase()).filter(Boolean)
-        : [];
+      // O TagInput já retorna um array de strings limpas e em lowercase
+      const keywordsArray = values.keywords?.filter(Boolean) || [];
 
       const categoryData = {
         nome: values.nome,
@@ -61,7 +62,7 @@ export function CategoryForm({ category, parentCategories = [], onSuccess }: Cat
         cor: values.cor,
         icone: values.icone,
         user_id: user.id,
-        keywords: keywordsArray,
+        keywords: keywordsArray, // Já é um array
       };
 
       if (category) {
@@ -231,9 +232,10 @@ export function CategoryForm({ category, parentCategories = [], onSuccess }: Cat
             <FormItem>
               <FormLabel>Palavras-chave</FormLabel>
               <FormControl>
-                <Textarea
-                  placeholder="Ex: mercado, ifood, almoço (separado por vírgulas)"
-                  {...field}
+                <TagInput
+                    value={field.value || []}
+                    onChange={field.onChange}
+                    placeholder="Adicione palavras-chave (ex: mercado, ifood)"
                 />
               </FormControl>
               <FormDescription>
@@ -251,4 +253,3 @@ export function CategoryForm({ category, parentCategories = [], onSuccess }: Cat
     </Form>
   );
 }
-
