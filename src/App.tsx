@@ -2,10 +2,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import Index from "@/pages/Index";
+import { AppLayout } from "@/components/layout/AppLayout";
+
+import Dashboard from "@/pages/Dashboard";
 import Landing from "@/pages/Landing";
 import Auth from "@/pages/Auth";
 import NotFound from "@/pages/NotFound";
@@ -21,9 +23,159 @@ import TelegramBot from "@/pages/TelegramBot";
 import Categories from "@/pages/Categories";
 import Budget from "@/pages/Budget";
 import CheckoutPage from "@/pages/Checkout";
-import FamilySettings from "@/pages/FamilySettings"; // Adicionado
 
 const queryClient = new QueryClient();
+
+const AppRoutes = () => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div></div>; // Pode ser um spinner de tela cheia
+  }
+
+  return (
+    <Routes>
+      <Route path="/landing" element={<Landing />} />
+      <Route path="/auth" element={user ? <Navigate to="/" replace /> : <Auth />} />
+
+      {/* Rotas Protegidas com Layout */}
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <Dashboard />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/transactions"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <Transactions />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/accounts"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <Accounts />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+       <Route
+        path="/reports"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <Reports />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/goals"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <Goals />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/orcamento"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <Budget />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <Settings />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+       <Route
+        path="/support"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <Support />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+       <Route
+        path="/license"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <License />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+       <Route
+        path="/categories"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <Categories />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/telegram"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <TelegramIntegration />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/telegram-bot"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <TelegramBot />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/checkout"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <CheckoutPage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Rota não encontrada */}
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
+
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -32,124 +184,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            <Route path="/landing" element={<Landing />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Index />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/transactions"
-              element={
-                <ProtectedRoute>
-                  <Transactions />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/accounts"
-              element={
-                <ProtectedRoute>
-                  <Accounts />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/reports"
-              element={
-                <ProtectedRoute>
-                  <Reports />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/goals"
-              element={
-                <ProtectedRoute>
-                  <Goals />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/orcamento"
-              element={
-                <ProtectedRoute>
-                  <Budget />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute>
-                  <Settings />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/support"
-              element={
-                <ProtectedRoute>
-                  <Support />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/license"
-              element={
-                <ProtectedRoute>
-                  <License />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/categories"
-              element={
-                <ProtectedRoute>
-                  <Categories />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/telegram"
-              element={
-                <ProtectedRoute>
-                  <TelegramIntegration />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/telegram-bot"
-              element={
-                <ProtectedRoute>
-                  <TelegramBot />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/checkout"
-              element={
-                <ProtectedRoute>
-                  <CheckoutPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/family-settings"
-              element={
-                <ProtectedRoute>
-                  <FamilySettings />
-                </ProtectedRoute>
-              }
-            />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AppRoutes />
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
