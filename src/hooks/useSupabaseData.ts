@@ -85,7 +85,7 @@ export function useTransactions() {
       .channel('transactions-changes')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` },
+        { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user?.id}` },
         () => fetchTransactions()
       )
       .subscribe();
@@ -361,6 +361,7 @@ export function useGoals() {
   }, [user, fetchGoals]);
 
   const deleteGoal = async (goalId: string) => {
+    if (!user) return;
     try {
       const { error } = await supabase
         .from('goals')
@@ -417,7 +418,7 @@ export function useBudgets(month: Date) {
 
   useEffect(() => {
     fetchBudgets();
-  }, [user, fetchBudgets]);
+  }, [fetchBudgets]);
   
   return { budgets, loading, error, refetchBudgets: fetchBudgets };
 }
@@ -497,12 +498,12 @@ export function useFinancialStats() {
       .channel('financial-stats-changes')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` },
+        { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user?.id}` },
         () => fetchStats()
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'accounts', filter: `user_id=eq.${user.id}` },
+        { event: '*', schema: 'public', table: 'accounts', filter: `user_id=eq.${user?.id}` },
         () => fetchStats()
       )
       .subscribe();
