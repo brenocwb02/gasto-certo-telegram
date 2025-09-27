@@ -22,6 +22,7 @@ serve(async (req) => {
     logStep("Function started");
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    const siteUrl = Deno.env.get("SITE_URL") || "http://localhost:8080";
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
     logStep("Stripe key verified");
 
@@ -51,10 +52,9 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     logStep("Found Stripe customer", { customerId });
 
-    const origin = req.headers.get("origin") || "http://localhost:3000";
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: `${origin}/license`,
+      return_url: `${siteUrl}/license`,
     });
     logStep("Customer portal session created", { sessionId: portalSession.id, url: portalSession.url });
 
