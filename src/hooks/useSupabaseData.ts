@@ -388,6 +388,9 @@ export function useBudgets(month: Date) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Create a stable string representation of the month to use in dependencies
+  const monthString = month.toISOString().slice(0, 7); // YYYY-MM
+
   const fetchBudgets = useCallback(async () => {
     if (!user) {
       setBudgets([]);
@@ -396,11 +399,11 @@ export function useBudgets(month: Date) {
     }
     try {
       setLoading(true);
-      const monthString = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}-01`;
+      const monthDate = `${monthString}-01`;
 
       const { data: budgetsData, error: budgetsError } = await supabase
         .rpc('get_budgets_with_spent', { 
-          p_month: monthString 
+          p_month: monthDate
         });
 
       if (budgetsError) {
@@ -415,7 +418,7 @@ export function useBudgets(month: Date) {
     } finally {
       setLoading(false);
     }
-  }, [user, month]);
+  }, [user, monthString]); // Dependency array is now stable
 
   useEffect(() => {
     if (!user) return;
@@ -423,7 +426,7 @@ export function useBudgets(month: Date) {
     fetchBudgets();
     
     const channel = supabase
-      .channel('budgets-changes')
+      .channel('budgets-transactions-changes')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'budgets', filter: `user_id=eq.${user.id}` },
@@ -440,7 +443,7 @@ export function useBudgets(month: Date) {
       supabase.removeChannel(channel);
     };
 
-  }, [user, fetchBudgets]);
+  }, [user, fetchBudgets]); // fetchBudgets is now stable
   
   return { budgets, loading, error, refetchBudgets: fetchBudgets };
 }
@@ -537,3 +540,4 @@ export function useFinancialStats() {
 
   return { stats, loading, error };
 }
+
