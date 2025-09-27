@@ -67,7 +67,7 @@ async function processTransactionWithGemini(text: string, userId: string, supaba
   `;
 
   // 5. Fazer a chamada para a API do Gemini
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GOOGLE_AI_API_KEY}`;
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GOOGLE_AI_API_KEY}`;
   
   const requestBody = {
     contents: [{ parts: [{ text: prompt }] }],
@@ -186,3 +186,4 @@ serve(async (req) => {
     )
   }
 })
+
