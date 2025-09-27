@@ -87,7 +87,7 @@ export default function License() {
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
-      <div className="lg:pl-64">
+      <div className="flex-1 flex flex-col sm:pl-14">
         <Header />
         <main className="p-6">
           <div className="max-w-6xl mx-auto space-y-6">

@@ -32,7 +32,7 @@ const Transactions = () => {
       <div className="lg:hidden">
         <Sidebar />
       </div>
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col sm:pl-14">
         <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
         <main className="flex-1 p-6 space-y-6 animate-fade-in">
           <h1 className="text-3xl font-bold text-foreground">Transações</h1>

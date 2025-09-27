@@ -88,7 +88,7 @@ const Goals = () => {
       <div className="hidden lg:block">
         <Sidebar />
       </div>
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col sm:pl-14">
         <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
         <main className="flex-1 p-6 space-y-6 animate-fade-in">
           <div className="flex justify-between items-center">
