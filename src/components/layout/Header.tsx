@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
-import { Bell, Settings, User, Menu, LogOut, Shield } from "lucide-react";
+import { Bell, Settings, User, Menu, LogOut, Shield, Crown } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { LicenseStatus } from "@/components/LicenseGuard";
+import { SubscriptionStatus } from "@/components/SubscriptionStatus";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -78,13 +79,19 @@ export function Header({ onMenuClick }: HeaderProps) {
                     {user?.email}
                   </p>
                 </div>
-                <LicenseStatus />
+                <div className="flex items-center justify-between">
+                  <SubscriptionStatus />
+                </div>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
               <User className="mr-2 h-4 w-4" />
               Meu Perfil
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/checkout')}>
+              <Crown className="mr-2 h-4 w-4" />
+              Planos
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate('/license')}>
               <Shield className="mr-2 h-4 w-4" />

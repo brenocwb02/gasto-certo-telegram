@@ -7,6 +7,7 @@ import { Header } from '@/components/layout/Header';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { useLicense } from '@/hooks/useLicense';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSubscription } from '@/hooks/useSubscription';
 import { 
   Loader2, 
   ShieldAlert, 
@@ -28,10 +29,27 @@ import {
 export default function License() {
   const { user } = useAuth();
   const { license, loading, error, isLicenseValid, getLicenseInfo } = useLicense();
+  const { isPremium, createCheckout, openCustomerPortal } = useSubscription();
 
   useEffect(() => {
     document.title = 'Licença - Gasto Certo';
   }, []);
+
+  const handleUpgrade = async () => {
+    try {
+      await createCheckout();
+    } catch (error) {
+      console.error('Error creating checkout:', error);
+    }
+  };
+
+  const handleCustomerPortal = async () => {
+    try {
+      await openCustomerPortal();
+    } catch (error) {
+      console.error('Error opening customer portal:', error);
+    }
+  };
 
   if (loading) {
     return (
@@ -82,7 +100,8 @@ export default function License() {
   }
 
   const licenseInfo = getLicenseInfo();
-  const isPremium = licenseInfo?.plano === 'premium';
+  const isPremiumFromLicense = licenseInfo?.plano === 'premium';
+  const isCurrentlyPremium = isPremium || isPremiumFromLicense;
 
   return (
     <div className="min-h-screen bg-background">
@@ -102,10 +121,10 @@ export default function License() {
             </div>
 
             {/* Status Atual */}
-            <Card className={isPremium ? "border-success bg-success/5" : "border-warning bg-warning/5"}>
+            <Card className={isCurrentlyPremium ? "border-success bg-success/5" : "border-warning bg-warning/5"}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  {isPremium ? (
+                  {isCurrentlyPremium ? (
                     <Crown className="h-5 w-5 text-success" />
                   ) : (
                     <ShieldAlert className="h-5 w-5 text-warning" />
@@ -116,8 +135,8 @@ export default function License() {
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <Badge variant={isPremium ? "default" : "outline"} className={isPremium ? "bg-success text-success-foreground" : "text-warning border-warning"}>
-                      {isPremium ? "Premium" : "Gratuito"}
+                    <Badge variant={isCurrentlyPremium ? "default" : "outline"} className={isCurrentlyPremium ? "bg-success text-success-foreground" : "text-warning border-warning"}>
+                      {isCurrentlyPremium ? "Premium" : "Gratuito"}
                     </Badge>
                     <p className="text-sm text-muted-foreground">
                       Código: {license?.codigo || "N/A"}
@@ -130,10 +149,10 @@ export default function License() {
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-bold text-success">
-                      {isPremium ? "Premium" : "Gratuito"}
+                      {isCurrentlyPremium ? "Premium" : "Gratuito"}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {isPremium ? "Recursos completos" : "Recursos limitados"}
+                      {isCurrentlyPremium ? "Recursos completos" : "Recursos limitados"}
                     </p>
                   </div>
                 </div>
@@ -183,7 +202,7 @@ export default function License() {
                       <span className="text-sm text-muted-foreground">Integração Telegram (NLP)</span>
                     </div>
                   </div>
-                  {!isPremium && (
+                  {!isCurrentlyPremium && (
                     <Badge variant="secondary" className="w-fit">Plano Atual</Badge>
                   )}
                 </CardContent>
@@ -233,10 +252,19 @@ export default function License() {
                       <span className="text-sm">Suporte prioritário</span>
                     </div>
                   </div>
-                  {isPremium ? (
-                    <Badge variant="default" className="w-fit bg-success text-success-foreground">Plano Atual</Badge>
+                  {isCurrentlyPremium ? (
+                    <div className="space-y-2">
+                      <Badge variant="default" className="w-fit bg-success text-success-foreground">Plano Atual</Badge>
+                      <Button 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={handleCustomerPortal}
+                      >
+                        Gerenciar Assinatura
+                      </Button>
+                    </div>
                   ) : (
-                    <Button className="w-full" onClick={() => window.open('/support', '_self')}>
+                    <Button className="w-full" onClick={handleUpgrade}>
                       Fazer Upgrade
                     </Button>
                   )}
