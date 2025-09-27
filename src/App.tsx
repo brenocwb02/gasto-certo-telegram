@@ -1,10 +1,10 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "./components/ui/toaster";
+import { Toaster as Sonner } from "./components/ui/sonner";
+import { TooltipProvider } from "./components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AuthProvider } from "./contexts/AuthContext";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 import Index from "./pages/Index";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
@@ -20,6 +20,7 @@ import TelegramIntegration from "./pages/TelegramIntegration";
 import TelegramBot from "./pages/TelegramBot";
 import Categories from "./pages/Categories";
 import Budget from "./pages/Budget";
+import CheckoutPage from "./pages/Checkout";
 
 const queryClient = new QueryClient();
 
@@ -126,6 +127,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <TelegramBot />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/checkout"
+              element={
+                <ProtectedRoute>
+                  <CheckoutPage />
                 </ProtectedRoute>
               }
             />
