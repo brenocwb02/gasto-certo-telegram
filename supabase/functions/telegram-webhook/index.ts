@@ -407,6 +407,7 @@ serve(async (req) => {
 
       try {
         if (voice) {
+          console.log('Iniciando transcrição do áudio...');
           text = await getTranscriptFromAudio(voice.file_id);
           if (analyzingMessage?.message_id) {
             await editTelegramMessage(chatId, analyzingMessage.message_id, `🗣️ *Você disse:* "${text}"\n\n🧠 Agora, estou a analisar o conteúdo...`);
