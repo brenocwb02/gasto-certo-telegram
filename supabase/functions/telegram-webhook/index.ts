@@ -315,7 +315,6 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // --- Tratamento de Callback (botões) ---
     if (body.callback_query) {
       const callbackQuery = body.callback_query;
       const [action, sessionId] = callbackQuery.data.split(':');
@@ -343,13 +342,11 @@ serve(async (req) => {
         await editTelegramMessage(chatId, messageId, "❌ Registo cancelado.");
       }
 
-      // Limpa a sessão
       await supabaseAdmin.from('telegram_sessions').delete().eq('id', sessionId);
       
       return new Response('OK', { status: 200, headers: corsHeaders });
     }
     
-    // --- Tratamento de Mensagens de Texto e Voz ---
     const message = body.message;
     if (!message || !message.chat?.id) {
         return new Response('Payload inválido', { status: 400, headers: corsHeaders });
@@ -390,7 +387,6 @@ serve(async (req) => {
     if (text && text.startsWith('/')) {
       await handleCommand(supabaseAdmin, text.toLowerCase(), userId, chatId);
     } else {
-      // Verificar se o usuário tem licença premium
       const { data: license } = await supabaseAdmin
         .from('licenses')
         .select('plano, status')
@@ -435,7 +431,6 @@ serve(async (req) => {
       
       const { valor, descricao, tipo, categoria, conta, ...rest } = nlpData;
       
-      // Armazena a transação pendente na sessão
       const transactionData = {
         user_id: userId,
         valor,
@@ -451,7 +446,7 @@ serve(async (req) => {
         .from('telegram_sessions')
         .upsert({
             user_id: userId,
-            telegram_id: message.from.id.toString(), // This is the conflict column
+            telegram_id: message.from.id.toString(),
             chat_id: chatId.toString(),
             contexto: transactionData,
             status: 'ativo'
@@ -461,7 +456,6 @@ serve(async (req) => {
       
       if (sessionError) throw sessionError;
       
-      // Cria a mensagem de confirmação
       let confirmationMessage = `✅ *Entendido! Registado.*\nPor favor, confirme se está tudo certo:\n\n`;
       confirmationMessage += `*Tipo:* ${tipo.charAt(0).toUpperCase() + tipo.slice(1)}\n`;
       confirmationMessage += `*Descrição:* ${descricao}\n`;
@@ -487,3 +481,4 @@ serve(async (req) => {
     })
   }
 })
+
