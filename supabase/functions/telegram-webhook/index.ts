@@ -186,8 +186,8 @@ async function handleCommand(supabase: SupabaseClient, command: string, userId: 
         .eq('ativo', true);
       let saldoMessage = '💰 *Seus Saldos:*\n\n';
       if (accounts && accounts.length > 0) {
-        accounts.forEach(account => {
           // Ajustado para 'cartao' caso a migração do enum da conta não tenha sido finalizada para 'cartao_credito'
+        accounts.forEach(account => {
           const emoji = account.tipo.includes('cartao') ? '💳' : account.tipo === 'poupanca' ? '🏦' : '💵';
           saldoMessage += `${emoji} *${account.nome}*: ${formatCurrency(account.saldo_atual)}\n`;
         });
