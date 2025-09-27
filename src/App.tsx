@@ -21,6 +21,7 @@ import TelegramBot from "@/pages/TelegramBot";
 import Categories from "@/pages/Categories";
 import Budget from "@/pages/Budget";
 import CheckoutPage from "@/pages/Checkout";
+import FamilySettings from "@/pages/FamilySettings"; // Adicionado
 
 const queryClient = new QueryClient();
 
@@ -138,6 +139,14 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/family-settings"
+              element={
+                <ProtectedRoute>
+                  <FamilySettings />
+                </ProtectedRoute>
+              }
+            />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
@@ -148,4 +157,3 @@ const App = () => (
 );
 
 export default App;
-
