@@ -89,7 +89,7 @@ async function getTranscriptFromAudio(fileId: string): Promise<string> {
   const mimeType = audioBlob.type || 'audio/ogg';
 
   // 4. Chamar a API do Gemini para transcrição
-  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${googleApiKey}`;
+  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=${googleApiKey}`;
   const prompt = "Transcreva este áudio em português:";
 
   const requestBody = {
