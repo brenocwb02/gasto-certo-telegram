@@ -418,20 +418,20 @@ export function useBudgets(month: Date) {
   }, [user, month]);
 
   useEffect(() => {
-    if (user) {
-      fetchBudgets();
-    }
+    if (!user) return;
+    
+    fetchBudgets();
     
     const channel = supabase
       .channel('budgets-changes')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'budgets', filter: `user_id=eq.${user?.id}` },
+        { event: '*', schema: 'public', table: 'budgets', filter: `user_id=eq.${user.id}` },
         () => fetchBudgets()
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user?.id}` },
+        { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` },
         () => fetchBudgets()
       )
       .subscribe();
@@ -537,4 +537,3 @@ export function useFinancialStats() {
 
   return { stats, loading, error };
 }
-
