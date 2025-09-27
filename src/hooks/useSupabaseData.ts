@@ -79,13 +79,14 @@ export function useTransactions() {
 
 
   useEffect(() => {
+    if(!user) return;
     fetchTransactions();
 
     const channel = supabase
       .channel('transactions-changes')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user?.id}` },
+        { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` },
         () => fetchTransactions()
       )
       .subscribe();
@@ -344,6 +345,7 @@ export function useGoals() {
   }, [user]);
 
   useEffect(() => {
+    if(!user) return;
     fetchGoals();
 
     const channel = supabase
@@ -417,8 +419,10 @@ export function useBudgets(month: Date) {
   }, [user, month]);
 
   useEffect(() => {
-    fetchBudgets();
-  }, [fetchBudgets]);
+    if (user) {
+      fetchBudgets();
+    }
+  }, [user, fetchBudgets]);
   
   return { budgets, loading, error, refetchBudgets: fetchBudgets };
 }
