@@ -398,7 +398,6 @@ export function useBudgets(month: Date) {
       setLoading(true);
       const monthString = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}-01`;
 
-      // Use the database function to get budgets with spent amounts
       const { data: budgetsData, error: budgetsError } = await supabase
         .rpc('get_budgets_with_spent', { 
           p_month: monthString 
@@ -422,6 +421,25 @@ export function useBudgets(month: Date) {
     if (user) {
       fetchBudgets();
     }
+    
+    const channel = supabase
+      .channel('budgets-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'budgets', filter: `user_id=eq.${user?.id}` },
+        () => fetchBudgets()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user?.id}` },
+        () => fetchBudgets()
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+
   }, [user, fetchBudgets]);
   
   return { budgets, loading, error, refetchBudgets: fetchBudgets };
