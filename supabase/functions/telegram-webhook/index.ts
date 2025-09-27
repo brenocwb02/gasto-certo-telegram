@@ -1,5 +1,3 @@
-// supabase/functions/telegram-webhook/index.ts
-
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
@@ -32,14 +30,18 @@ async function sendTelegramMessage(chatId: number, text: string, options: object
     });
     if (!response.ok) {
       console.error("Erro na API do Telegram:", await response.json());
+      return null;
     }
+    const data = await response.json();
+    return data.result;
   } catch (e) {
     console.error("Falha ao enviar mensagem para o Telegram:", e);
+    return null;
   }
 }
 
 /**
- * Edita uma mensagem existente no Telegram (útil para atualizar após clique em botão).
+ * Edita uma mensagem existente no Telegram.
  */
 async function editTelegramMessage(chatId: number, messageId: number, text: string) {
   const telegramApiUrl = `https://api.telegram.org/bot${Deno.env.get('TELEGRAM_BOT_TOKEN')}/editMessageText`;
@@ -58,6 +60,69 @@ async function editTelegramMessage(chatId: number, messageId: number, text: stri
     console.error("Falha ao editar mensagem do Telegram:", e);
   }
 }
+
+/**
+ * Transcreve um áudio do Telegram usando a API do Gemini.
+ */
+async function getTranscriptFromAudio(fileId: string): Promise<string> {
+  const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
+  const googleApiKey = Deno.env.get('GOOGLE_AI_API_KEY');
+
+  if (!botToken || !googleApiKey) {
+    throw new Error("As chaves de API do Telegram ou do Google AI não estão configuradas.");
+  }
+
+  // 1. Obter o caminho do ficheiro do Telegram
+  const fileInfoResponse = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${fileId}`);
+  const fileInfo = await fileInfoResponse.json();
+  if (!fileInfo.ok) throw new Error("Não foi possível obter informações do ficheiro de áudio do Telegram.");
+  const filePath = fileInfo.result.file_path;
+
+  // 2. Descarregar o ficheiro de áudio
+  const fileUrl = `https://api.telegram.org/file/bot${botToken}/${filePath}`;
+  const audioResponse = await fetch(fileUrl);
+  const audioBlob = await audioResponse.blob();
+  const audioArrayBuffer = await audioBlob.arrayBuffer();
+
+  // 3. Converter para Base64
+  const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioArrayBuffer)));
+  const mimeType = audioBlob.type || 'audio/ogg';
+
+  // 4. Chamar a API do Gemini para transcrição
+  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${googleApiKey}`;
+  const prompt = "Transcreva este áudio em português:";
+
+  const requestBody = {
+    contents: [{
+      parts: [
+        { text: prompt },
+        { inline_data: { mime_type: mimeType, data: base64Audio } }
+      ]
+    }]
+  };
+
+  const geminiResponse = await fetch(geminiUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(requestBody)
+  });
+
+  if (!geminiResponse.ok) {
+    const errorBody = await geminiResponse.json();
+    console.error('Google AI API Error (Audio):', errorBody);
+    throw new Error(`Erro ao transcrever áudio: ${errorBody.error.message}`);
+  }
+
+  const result = await geminiResponse.json();
+  const transcript = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+  if (!transcript) {
+    throw new Error("A IA não conseguiu transcrever o áudio.");
+  }
+
+  return transcript;
+}
+
 
 /**
  * Vincula a conta de um utilizador do Telegram à sua licença.
@@ -284,16 +349,21 @@ serve(async (req) => {
       return new Response('OK', { status: 200, headers: corsHeaders });
     }
     
-    // --- Tratamento de Mensagens de Texto ---
+    // --- Tratamento de Mensagens de Texto e Voz ---
     const message = body.message;
-    const text = (message?.text || "").trim();
-    const chatId = message?.chat?.id;
+    if (!message || !message.chat?.id) {
+        return new Response('Payload inválido', { status: 400, headers: corsHeaders });
+    }
+    
+    const chatId = message.chat.id;
+    let text = message.text ? message.text.trim() : null;
+    const voice = message.voice;
 
-    if (!chatId || !text) {
-      return new Response('Payload inválido', { status: 400, headers: corsHeaders });
+    if (!text && !voice) {
+        return new Response('Nenhuma mensagem de texto ou voz encontrada', { status: 200, headers: corsHeaders });
     }
 
-    if (text.startsWith('/start')) {
+    if (text && text.startsWith('/start')) {
       const licenseCode = text.split(' ')[1]
       if (!licenseCode) {
         await sendTelegramMessage(chatId, '👋 *Bem-vindo ao Gasto Certo!*\n\nPara vincular sua conta, use o comando:\n`/start SEU_CODIGO_DE_LICENCA`\n\n📍 Você encontra seu código na aba "Licença" do aplicativo web.\n\n❓ Use /ajuda para ver todos os comandos disponíveis.')
@@ -317,7 +387,7 @@ serve(async (req) => {
     
     const userId = integration.user_id;
 
-    if (text.startsWith('/')) {
+    if (text && text.startsWith('/')) {
       await handleCommand(supabaseAdmin, text.toLowerCase(), userId, chatId);
     } else {
       // Verificar se o usuário tem licença premium
@@ -333,11 +403,27 @@ serve(async (req) => {
         return new Response('Premium required', { status: 200, headers: corsHeaders });
       }
 
-      await sendTelegramMessage(chatId, "🧠 Analisando sua mensagem...");
+      const analyzingMessage = await sendTelegramMessage(chatId, voice ? "🎤 Ouvindo e analisando seu áudio..." : "🧠 Analisando sua mensagem...");
+
+      try {
+        if (voice) {
+          text = await getTranscriptFromAudio(voice.file_id);
+          if (analyzingMessage?.message_id) {
+            await editTelegramMessage(chatId, analyzingMessage.message_id, `🗣️ *Você disse:* "${text}"\n\n🧠 Agora, estou a analisar o conteúdo...`);
+          }
+        }
+      } catch (transcriptionError) {
+          await sendTelegramMessage(chatId, `😥 Desculpe, não consegui transcrever o seu áudio. Tente novamente ou envie uma mensagem de texto.`);
+          return new Response('OK', { status: 200, headers: corsHeaders });
+      }
       
       const { data: nlpData, error: nlpError } = await supabaseAdmin.functions.invoke('nlp-transaction', {
           body: { text, userId },
       })
+
+      if (analyzingMessage?.message_id && !voice) {
+        await editTelegramMessage(chatId, analyzingMessage.message_id, "✅ Análise concluída. A preparar confirmação...");
+      }
 
       if (nlpError || !nlpData || (nlpData.validation_errors && nlpData.validation_errors.length > 0)) {
         const errorMsg = nlpData?.validation_errors?.join('\n') || "Não consegui entender sua mensagem.";
@@ -393,4 +479,3 @@ serve(async (req) => {
     })
   }
 })
-
