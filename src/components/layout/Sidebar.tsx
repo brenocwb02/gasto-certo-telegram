@@ -12,6 +12,7 @@ import {
   KeyRound,
   LogOut,
   Calculator,
+  Users, // Importado
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "../../contexts/AuthContext";
@@ -161,6 +162,22 @@ export function Sidebar() {
           <Tooltip>
             <TooltipTrigger asChild>
               <NavLink
+                to="/family-settings"
+                className={({ isActive }) =>
+                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
+                    isActive ? "bg-accent text-accent-foreground" : ""
+                  }`
+                }
+              >
+                <Users className="h-5 w-5" />
+                <span className="sr-only">Família</span>
+              </NavLink>
+            </TooltipTrigger>
+            <TooltipContent side="right">Família</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <NavLink
                 to="/telegram-integration"
                 className={({ isActive }) =>
                   `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
@@ -241,4 +258,3 @@ export function Sidebar() {
     </aside>
   );
 }
-
