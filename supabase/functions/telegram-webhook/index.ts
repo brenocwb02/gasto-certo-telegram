@@ -449,7 +449,13 @@ serve(async (req) => {
 
       const { data: sessionData, error: sessionError } = await supabaseAdmin
         .from('telegram_sessions')
-        .insert({ user_id: userId, telegram_id: message.from.id.toString(), chat_id: chatId.toString(), contexto: transactionData })
+        .upsert({
+            user_id: userId,
+            telegram_id: message.from.id.toString(), // This is the conflict column
+            chat_id: chatId.toString(),
+            contexto: transactionData,
+            status: 'ativo'
+        }, { onConflict: 'telegram_id' })
         .select('id')
         .single();
       
