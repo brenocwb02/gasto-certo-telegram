@@ -67,7 +67,7 @@ async function processTransactionWithGemini(text: string, userId: string, supaba
   `;
 
   // 5. Fazer a chamada para a API do Gemini
-  // CORRIGIDO: Usando o nome de modelo mais estável para evitar erros de endpoint.
+  // CORREÇÃO APLICADA AQUI.
   const GEMINI_MODEL_NAME = 'gemini-2.5-flash-preview-05-20';
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL_NAME}:generateContent?key=${GOOGLE_AI_API_KEY}`;
   
