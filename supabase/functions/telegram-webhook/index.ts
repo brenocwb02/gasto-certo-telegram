@@ -90,7 +90,7 @@ async function getTranscriptFromAudio(fileId: string): Promise<string> {
 
   // 4. Chamar a API do Gemini para transcrição
   // CORREÇÃO AQUI: O modelo gemini-1.5-flash-latest deve ser o nome correto no URL
-  const GEMINI_MODEL_NAME = 'gemini-1.5-flash-latest';
+  const GEMINI_MODEL_NAME = 'gemini-2.5-flash';
   const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL_NAME}:generateContent?key=${googleApiKey}`;
   const prompt = "Transcreva este áudio em português:";
 
