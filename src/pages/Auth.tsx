@@ -28,7 +28,7 @@ export default function Auth() {
   // Redirect authenticated users
   useEffect(() => {
     if (user && !loading) {
-      navigate('/');
+      navigate('/', { replace: true });
     }
   }, [user, loading, navigate]);
 
@@ -138,7 +138,7 @@ export default function Auth() {
     }
   };
 
-  if (loading) {
+  if (loading || user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background/95 to-primary/5">
         <Loader2 className="h-8 w-8 animate-spin" />
