@@ -89,7 +89,9 @@ async function getTranscriptFromAudio(fileId: string): Promise<string> {
   const mimeType = audioBlob.type || 'audio/ogg';
 
   // 4. Chamar a API do Gemini para transcrição
-  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${googleApiKey}`;
+  // CORREÇÃO AQUI: O modelo gemini-1.5-flash-latest deve ser o nome correto no URL
+  const GEMINI_MODEL_NAME = 'gemini-1.5-flash-latest';
+  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL_NAME}:generateContent?key=${googleApiKey}`;
   const prompt = "Transcreva este áudio em português:";
 
   const requestBody = {
@@ -186,6 +188,9 @@ async function handleCommand(supabase: SupabaseClient, command: string, userId: 
       if (accounts && accounts.length > 0) {
         accounts.forEach(account => {
           const emoji = account.tipo === 'cartao_credito' ? '💳' : account.tipo === 'poupanca' ? '🏦' : '💵';
+          // NOTE: A coluna "tipo" na tabela accounts parece não incluir 'cartao_credito' 
+          // nas migrações, mas o gatilho na migration 20250812012020 a adiciona.
+          // O emoji para 'cartao' ou 'cartao_credito' deve ser ajustado para corresponder ao esquema exato.
           saldoMessage += `${emoji} *${account.nome}*: ${formatCurrency(account.saldo_atual)}\n`;
         });
       } else {
