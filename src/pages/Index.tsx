@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { NavLink } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { StatsCard } from "@/components/dashboard/StatsCard";
@@ -12,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { useFinancialStats, useProfile, useGoals } from "@/hooks/useSupabaseData";
+import { useSubscription } from "@/hooks/useSubscription";
 import { LicenseStatus } from "@/components/LicenseGuard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
@@ -19,10 +21,7 @@ import {
   TrendingUp, 
   TrendingDown, 
   Target,
-  MessageSquare,
-  Bot,
-  CheckCircle2,
-  AlertCircle,
+  Sparkles,
   Plus
 } from "lucide-react";
 
@@ -32,6 +31,7 @@ const Index = () => {
   const { stats, loading: statsLoading } = useFinancialStats();
   const { profile } = useProfile();
   const { goals, loading: goalsLoading } = useGoals();
+  const { isPremium, loading: subscriptionLoading } = useSubscription();
 
   const GoalsSection = () => (
     <Card className="financial-card">
@@ -191,6 +191,24 @@ const Index = () => {
             {/* Sidebar Column */}
             <div className="lg:col-span-1 space-y-6">
               <QuickActions />
+              {!subscriptionLoading && !isPremium && (
+                <Card className="financial-card bg-primary/5 border-primary/20">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-primary">
+                      <Sparkles className="h-5 w-5" />
+                      Desbloqueie o Poder da IA
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      Assine o Premium e registre despesas com uma simples mensagem no Telegram, como "gastei 50 reais no mercado".
+                    </p>
+                    <Button asChild className="w-full">
+                      <NavLink to="/checkout">Fazer Upgrade Agora</NavLink>
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
               <BudgetSummary />
               <GoalsSection />
             </div>
@@ -203,4 +221,3 @@ const Index = () => {
 };
 
 export default Index;
-
