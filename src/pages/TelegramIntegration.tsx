@@ -6,7 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Copy, Check, Bot, ExternalLink, MessageSquare, Info } from "lucide-react";
+import { Loader2, Bot, ExternalLink, MessageSquare, Info } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useLicense } from "@/hooks/useLicense";
@@ -18,7 +18,6 @@ export default function TelegramIntegration() {
   const [integrationCode, setIntegrationCode] = useState<string | null>(null);
   const [botUsername, setBotUsername] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
 
   const licenseInfo = getLicenseInfo();
   const isPremium = licenseInfo?.plano === 'premium';
@@ -54,33 +53,6 @@ export default function TelegramIntegration() {
       setLoading(false);
     }
   };
-
-  const copyToClipboard = (text: string) => {
-    if (!text) return;
-    
-    const textArea = document.createElement("textarea");
-    textArea.value = text;
-    document.body.appendChild(textArea);
-    textArea.select();
-    try {
-      document.execCommand('copy');
-      setCopied(true);
-      toast({
-        title: "Copiado!",
-        description: "Comando copiado para a área de transferência.",
-      });
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Falha ao copiar texto: ', err);
-      toast({
-          title: "Erro ao copiar",
-          description: "Não foi possível copiar o código.",
-          variant: "destructive"
-      });
-    }
-    document.body.removeChild(textArea);
-  };
-
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -131,17 +103,22 @@ export default function TelegramIntegration() {
                         1
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-semibold mb-2">Abra o nosso bot no Telegram</h3>
-                        {botUsername ? (
+                        <h3 className="font-semibold mb-2">Conecte sua conta com um clique</h3>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Clique no botão abaixo para abrir o Telegram e vincular sua conta automaticamente.
+                        </p>
+                        {botUsername && integrationCode ? (
                           <Button 
-                            variant="outline" 
-                            onClick={() => window.open(`https://t.me/${botUsername}`, '_blank')}
+                            onClick={() => window.open(`https://t.me/${botUsername}?start=${integrationCode}`, '_blank')}
                           >
                             <ExternalLink className="h-4 w-4 mr-2" />
-                            Abrir @{botUsername}
+                            Conectar com Telegram com 1 Clique
                           </Button>
                         ) : (
-                          <p className="text-sm text-destructive">Não foi possível carregar o bot. Tente recarregar a página.</p>
+                          <Button disabled>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Carregando...
+                          </Button>
                         )}
                       </div>
                     </div>
@@ -151,33 +128,6 @@ export default function TelegramIntegration() {
                     <div className="flex gap-4">
                       <div className="flex-shrink-0 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">
                         2
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold mb-2">Envie seu código de vinculação</h3>
-                        <p className="text-sm text-muted-foreground mb-3">
-                          Copie e envie o comando abaixo para o bot:
-                        </p>
-                        <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-                          <code className="text-sm font-mono flex-1">
-                            /start {integrationCode || "Carregando..."}
-                          </code>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => copyToClipboard(`/start ${integrationCode}`)}
-                            disabled={!integrationCode}
-                          >
-                            {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <Separator />
-
-                    <div className="flex gap-4">
-                      <div className="flex-shrink-0 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">
-                        3
                       </div>
                       <div className="flex-1">
                         <h3 className="font-semibold mb-2">Comece a usar!</h3>
@@ -252,4 +202,3 @@ export default function TelegramIntegration() {
     </div>
   );
 }
-
