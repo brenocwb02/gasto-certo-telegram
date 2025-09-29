@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -12,9 +12,9 @@ export const useSubscription = () => {
   const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
+  const { user, session } = useAuth(); // Usar a sessão para revalidar
 
-  const checkSubscription = async () => {
+  const checkSubscription = useCallback(async () => {
     if (!user) {
       setSubscriptionInfo(null);
       setLoading(false);
@@ -39,7 +39,7 @@ export const useSubscription = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]); // Manter user como dependência primária
 
   const createCheckout = async () => {
     if (!user) {
@@ -84,19 +84,11 @@ export const useSubscription = () => {
   };
 
   useEffect(() => {
-    checkSubscription();
-  }, [user]);
-
-  // Auto-refresh subscription status every minute
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (user) {
-        checkSubscription();
-      }
-    }, 60000);
-
-    return () => clearInterval(interval);
-  }, [user]);
+    // Re-executa a verificação sempre que a sessão do usuário mudar
+    if (session) {
+      checkSubscription();
+    }
+  }, [session, checkSubscription]);
 
   const isPremium = subscriptionInfo?.subscribed && subscriptionInfo?.product_id === 'prod_T85pcP4M0yhBaG';
 
