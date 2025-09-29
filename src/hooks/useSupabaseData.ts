@@ -519,3 +519,5 @@ export function useFinancialStats() {
 
   return { stats, loading, error };
 }
+
+
