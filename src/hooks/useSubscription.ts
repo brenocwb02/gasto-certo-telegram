@@ -12,10 +12,10 @@ export const useSubscription = () => {
   const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { user, session } = useAuth(); // Usar a sessão para revalidar
+  const { user } = useAuth();
 
   const checkSubscription = useCallback(async () => {
-    // Se não houver utilizador, definimos como não subscrito e paramos o carregamento.
+    // If there is no user, we can immediately determine they are not subscribed.
     if (!user) {
       setSubscriptionInfo({ subscribed: false });
       setLoading(false);
@@ -36,18 +36,24 @@ export const useSubscription = () => {
     } catch (err) {
       console.error('Error checking subscription:', err);
       setError(err instanceof Error ? err.message : 'Failed to check subscription');
-      // Em caso de erro, assumimos que não é premium para evitar bloqueios indevidos.
+      // In case of any error, default to a non-subscribed state.
       setSubscriptionInfo({ subscribed: false });
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user]); // The check is dependent on the user object.
+
+  // This effect runs whenever the user object changes (e.g., on login/logout).
+  useEffect(() => {
+    checkSubscription();
+  }, [user, checkSubscription]);
 
   const createCheckout = async () => {
     if (!user) {
       throw new Error('User must be authenticated to create checkout');
     }
-
+    // ... (rest of the function remains the same)
+// ... (rest of the file content is the same)
     try {
       const { data, error } = await supabase.functions.invoke('create-checkout');
       
@@ -85,12 +91,7 @@ export const useSubscription = () => {
     }
   };
 
-  useEffect(() => {
-    // Executa a verificação sempre que a sessão ou o utilizador mudar
-    checkSubscription();
-  }, [session, user, checkSubscription]);
-
-  const isPremium = subscriptionInfo?.subscribed && subscriptionInfo?.product_id === 'prod_T85pcP4M0yhBaG';
+  const isPremium = subscriptionInfo?.subscribed === true;
 
   return {
     subscriptionInfo,
