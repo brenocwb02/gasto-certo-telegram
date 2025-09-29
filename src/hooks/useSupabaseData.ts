@@ -388,8 +388,7 @@ export function useBudgets(month: Date) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Create a stable string representation of the month to use in dependencies
-  const monthString = month.toISOString().slice(0, 7); // YYYY-MM
+  const monthString = month.toISOString().slice(0, 7);
 
   const fetchBudgets = useCallback(async () => {
     if (!user) {
@@ -418,7 +417,7 @@ export function useBudgets(month: Date) {
     } finally {
       setLoading(false);
     }
-  }, [user, monthString]); // Dependency array is now stable
+  }, [user, monthString]);
 
   useEffect(() => {
     if (!user) return;
@@ -443,7 +442,7 @@ export function useBudgets(month: Date) {
       supabase.removeChannel(channel);
     };
 
-  }, [user, fetchBudgets]); // fetchBudgets is now stable
+  }, [user, fetchBudgets]);
   
   return { budgets, loading, error, refetchBudgets: fetchBudgets };
 }
@@ -474,7 +473,7 @@ export function useFinancialStats() {
 
       if (data && data.length > 0) {
         const result = data[0];
-        const trend = result.monthly_savings > 0 ? 12 : -5; // Lógica de trend simplificada
+        const trend = result.monthly_savings > 0 ? 12 : -5;
 
         setStats({
           totalBalance: result.total_balance,
@@ -482,6 +481,15 @@ export function useFinancialStats() {
           monthlyExpenses: result.monthly_expenses,
           monthlySavings: result.monthly_savings,
           trend,
+        });
+      } else {
+        // Define um estado padrão caso a RPC não retorne dados (ex: novo usuário)
+        setStats({
+          totalBalance: 0,
+          monthlyIncome: 0,
+          monthlyExpenses: 0,
+          monthlySavings: 0,
+          trend: 0
         });
       }
 
@@ -497,7 +505,6 @@ export function useFinancialStats() {
     if (!user) return;
     fetchStats();
 
-    // Re-fetch when transactions or accounts change to keep stats fresh
     const channel = supabase
       .channel('financial-stats-changes')
       .on(
@@ -519,5 +526,4 @@ export function useFinancialStats() {
 
   return { stats, loading, error };
 }
-
 
