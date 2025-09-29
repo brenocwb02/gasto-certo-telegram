@@ -191,7 +191,10 @@ const Index = () => {
             {/* Sidebar Column */}
             <div className="lg:col-span-1 space-y-6">
               <QuickActions />
-              {!subscriptionLoading && !isPremium && (
+              {/* Card Premium - Lógica ajustada */}
+              {subscriptionLoading ? (
+                <Skeleton className="h-40 w-full" />
+              ) : !isPremium ? (
                 <Card className="financial-card bg-primary/5 border-primary/20">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-primary">
@@ -208,7 +211,7 @@ const Index = () => {
                     </Button>
                   </CardContent>
                 </Card>
-              )}
+              ) : null}
               <BudgetSummary />
               <GoalsSection />
             </div>
@@ -219,7 +222,5 @@ const Index = () => {
     </div>
   );
 };
-
-export default Index;
 
 
