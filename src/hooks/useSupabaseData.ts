@@ -460,65 +460,44 @@ export function useFinancialStats() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchStats = useCallback(async () => {
     if (!user) {
       setLoading(false);
       return;
     }
+    
+    setLoading(true);
+    try {
+      const { data, error: rpcError } = await supabase.rpc('get_dashboard_stats');
+      
+      if (rpcError) throw rpcError;
 
-    const fetchStats = async () => {
-      try {
-        const currentMonth = new Date();
-        const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-        const lastDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-        
-        const { data: accounts, error: accountsError } = await supabase
-          .from('accounts')
-          .select('saldo_atual')
-          .eq('user_id', user.id)
-          .eq('ativo', true);
-
-        if (accountsError) throw accountsError;
-
-        const totalBalance = accounts?.reduce((sum, acc) => sum + Number(acc.saldo_atual), 0) || 0;
-
-        const { data: transactions, error: transactionsError } = await supabase
-          .from('transactions')
-          .select('valor, tipo')
-          .eq('user_id', user.id)
-          .gte('data_transacao', firstDayOfMonth.toISOString().split('T')[0])
-          .lte('data_transacao', lastDayOfMonth.toISOString().split('T')[0]);
-
-        if (transactionsError) throw transactionsError;
-
-        const monthlyIncome = transactions
-          ?.filter(t => t.tipo === 'receita')
-          .reduce((sum, t) => sum + Number(t.valor), 0) || 0;
-
-        const monthlyExpenses = transactions
-          ?.filter(t => t.tipo === 'despesa')
-          .reduce((sum, t) => sum + Number(t.valor), 0) || 0;
-
-        const monthlySavings = monthlyIncome - monthlyExpenses;
-
-        const trend = monthlySavings > 0 ? 12 : -5;
+      if (data && data.length > 0) {
+        const result = data[0];
+        const trend = result.monthly_savings > 0 ? 12 : -5; // Lógica de trend simplificada
 
         setStats({
-          totalBalance,
-          monthlyIncome,
-          monthlyExpenses,
-          monthlySavings,
-          trend
+          totalBalance: result.total_balance,
+          monthlyIncome: result.monthly_income,
+          monthlyExpenses: result.monthly_expenses,
+          monthlySavings: result.monthly_savings,
+          trend,
         });
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erro ao carregar estatísticas');
-      } finally {
-        setLoading(false);
       }
-    };
 
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao carregar estatísticas');
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+
+  useEffect(() => {
+    if (!user) return;
     fetchStats();
 
+    // Re-fetch when transactions or accounts change to keep stats fresh
     const channel = supabase
       .channel('financial-stats-changes')
       .on(
@@ -536,8 +515,7 @@ export function useFinancialStats() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, fetchStats]);
 
   return { stats, loading, error };
 }
-
