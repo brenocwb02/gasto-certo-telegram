@@ -15,8 +15,9 @@ export const useSubscription = () => {
   const { user, session } = useAuth(); // Usar a sessão para revalidar
 
   const checkSubscription = useCallback(async () => {
+    // Se não houver utilizador, definimos como não subscrito e paramos o carregamento.
     if (!user) {
-      setSubscriptionInfo(null);
+      setSubscriptionInfo({ subscribed: false });
       setLoading(false);
       return;
     }
@@ -35,11 +36,12 @@ export const useSubscription = () => {
     } catch (err) {
       console.error('Error checking subscription:', err);
       setError(err instanceof Error ? err.message : 'Failed to check subscription');
+      // Em caso de erro, assumimos que não é premium para evitar bloqueios indevidos.
       setSubscriptionInfo({ subscribed: false });
     } finally {
       setLoading(false);
     }
-  }, [user]); // Manter user como dependência primária
+  }, [user]);
 
   const createCheckout = async () => {
     if (!user) {
@@ -84,11 +86,9 @@ export const useSubscription = () => {
   };
 
   useEffect(() => {
-    // Re-executa a verificação sempre que a sessão do usuário mudar
-    if (session) {
-      checkSubscription();
-    }
-  }, [session, checkSubscription]);
+    // Executa a verificação sempre que a sessão ou o utilizador mudar
+    checkSubscription();
+  }, [session, user, checkSubscription]);
 
   const isPremium = subscriptionInfo?.subscribed && subscriptionInfo?.product_id === 'prod_T85pcP4M0yhBaG';
 
@@ -102,3 +102,4 @@ export const useSubscription = () => {
     openCustomerPortal,
   };
 };
+
