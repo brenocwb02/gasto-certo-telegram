@@ -1,224 +1,171 @@
-import { useEffect, useState } from "react";
-import { Header } from "@/components/layout/Header";
-import { Sidebar } from "@/components/layout/Sidebar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, PiggyBank, Edit, Trash2 } from "lucide-react";
-import { useBudgets } from "@/hooks/useSupabaseData";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { BudgetForm } from "@/components/forms/BudgetForm";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { useToast } from "@/components/ui/use-toast";
+import { BudgetForm } from "@/components/forms/BudgetForm";
+import { useSupabaseData } from "@/hooks/useSupabaseData";
+import { PlusCircle, Edit, Trash2 } from "lucide-react";
+import type { Database } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
-const Budget = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [currentMonth] = useState(new Date());
-  const { budgets, loading, refetchBudgets } = useBudgets(currentMonth);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingBudget, setEditingBudget] = useState(null);
+type Budget = Database["public"]["Tables"]["budgets"]["Row"] & {
+  categories: { name: string } | null;
+  spent: number;
+};
+
+export default function BudgetPage() {
+  const [isDialogOpen, setDialogOpen] = useState(false);
+  const [selectedBudget, setSelectedBudget] = useState<Budget | null>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
 
-  useEffect(() => {
-    document.title = "Orçamento | Boas Contas";
-  }, []);
+  // This hook now uses the RPC function to get spent amount
+  const { data: budgets, isLoading } = useSupabaseData<Budget>(
+    "get_budgets_with_spent"
+  );
 
-  const formatCurrency = (value: number | null | undefined) => {
-    if (value === null || value === undefined) return "R$ 0,00";
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
-  };
-  
-  const handleSuccess = () => {
-    setDialogOpen(false);
-    setEditingBudget(null);
-    refetchBudgets();
-  };
-
-  const handleEdit = (budget: any) => {
-    setEditingBudget(budget);
+  const handleEdit = (budget: Budget) => {
+    setSelectedBudget(budget);
     setDialogOpen(true);
   };
 
-  const handleDelete = async (budgetId: string) => {
-    if (!confirm("Tem certeza que deseja excluir este orçamento?")) return;
-    
-    try {
-      const { error } = await supabase
-        .from('budgets')
-        .delete()
-        .eq('id', budgetId);
+  const handleAddNew = () => {
+    setSelectedBudget(null);
+    setDialogOpen(true);
+  };
 
-      if (error) throw error;
-
-      toast({
-        title: "Orçamento excluído",
-        description: "O orçamento foi excluído com sucesso.",
-      });
-      refetchBudgets();
-    } catch (error) {
-      console.error("Erro ao excluir orçamento:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível excluir o orçamento.",
-        variant: "destructive",
-      });
+  const handleDelete = async (budgetId: number) => {
+    const { error } = await supabase.from("budgets").delete().match({ id: budgetId });
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Sucesso", description: "Orçamento deletado." });
+      queryClient.invalidateQueries({ queryKey: ["budgets", user?.id] });
+      // Also invalidate the RPC function data
+      queryClient.invalidateQueries({ queryKey: ["get_budgets_with_spent", user?.id] });
     }
   };
 
-  return (
-    <div className="min-h-screen bg-background flex">
-      <div className="hidden lg:block">
-        <Sidebar />
-      </div>
-      <div className="flex-1 flex flex-col sm:pl-14">
-        <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-        <main className="flex-1 p-6 space-y-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Orçamento Mensal</h1>
-              <p className="text-muted-foreground">Gerencie seus limites de gastos por categoria.</p>
-            </div>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={() => setEditingBudget(null)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Orçamento
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{editingBudget ? 'Editar Orçamento' : 'Novo Orçamento'}</DialogTitle>
-                </DialogHeader>
-                <BudgetForm budget={editingBudget} onSuccess={handleSuccess} />
-              </DialogContent>
-            </Dialog>
-          </div>
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
+  };
 
-          {loading ? (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {[1, 2, 3].map((i) => (
-                <Card key={i} className="animate-pulse">
-                  <CardHeader className="space-y-2">
-                    <div className="h-4 bg-muted rounded w-2/3"></div>
-                    <div className="h-3 bg-muted rounded w-1/2"></div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="h-3 bg-muted rounded w-full"></div>
-                    <div className="h-6 bg-muted rounded w-3/4"></div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : budgets.length === 0 ? (
-            <Card className="text-center py-12">
-              <CardContent>
-                <PiggyBank className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Nenhum orçamento definido</h3>
-                <p className="text-muted-foreground mb-4">
-                  Comece definindo limites de gastos para suas categorias de despesa.
-                </p>
-                 <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button onClick={() => setEditingBudget(null)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Criar Primeiro Orçamento
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Novo Orçamento</DialogTitle>
-                    </DialogHeader>
-                    <BudgetForm onSuccess={handleSuccess} />
-                  </DialogContent>
-                </Dialog>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {budgets.map((budget: any) => {
-                const spent = budget.spent || 0; 
-                const progress = budget.amount > 0 ? (spent / budget.amount) * 100 : 0;
-                const remaining = budget.amount - spent;
-                const isOverBudget = progress > 100;
-                const isNearLimit = progress > 80 && progress <= 100;
-                
-                return (
-                  <Card key={budget.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base flex items-center gap-2">
-                           <div className="w-3 h-3 rounded-full" style={{ backgroundColor: budget.category_color || '#6366f1' }} />
-                          {budget.category_name || 'Categoria não encontrada'}
-                        </CardTitle>
-                         <div className="flex items-center gap-2">
-                           <span className="text-sm font-bold">{formatCurrency(budget.amount)}</span>
-                           <div className="flex space-x-1">
-                             <Button
-                               variant="ghost"
-                               size="sm"
-                               onClick={() => handleEdit(budget)}
-                             >
-                               <Edit className="h-4 w-4" />
-                             </Button>
-                             <Button
-                               variant="ghost"
-                               size="sm"
-                               onClick={() => handleDelete(budget.id)}
-                               className="text-destructive hover:text-destructive"
-                             >
-                               <Trash2 className="h-4 w-4" />
-                             </Button>
-                           </div>
-                         </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                       <div className="space-y-2">
-                         <div className="flex justify-between text-sm">
-                           <span>Progresso</span>
-                           <span className={`font-medium ${
-                             isOverBudget ? 'text-destructive' : 
-                             isNearLimit ? 'text-orange-500' : 
-                             'text-muted-foreground'
-                           }`}>
-                             {progress.toFixed(1)}%
-                           </span>
-                         </div>
-                         <Progress 
-                           value={Math.min(progress, 100)} 
-                           className={`h-2 ${
-                             isOverBudget ? '[&>div]:bg-destructive' :
-                             isNearLimit ? '[&>div]:bg-orange-500' : 
-                             '[&>div]:bg-primary'
-                           }`}
-                         />
-                       </div>
-                       <div className="flex justify-between text-xs text-muted-foreground">
-                           <span>Gasto: <span className="font-medium">{formatCurrency(spent)}</span></span>
-                           <span className={remaining >= 0 ? '' : 'text-destructive font-medium'}>
-                             {remaining >= 0 ? 'Restante: ' : 'Excesso: '}
-                             {formatCurrency(Math.abs(remaining))}
-                           </span>
-                       </div>
-                       {isOverBudget && (
-                         <div className="text-xs text-destructive bg-destructive/10 p-2 rounded">
-                           ⚠️ Orçamento ultrapassado em {formatCurrency(spent - budget.amount)}
-                         </div>
-                       )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </main>
+  return (
+    <div className="container mx-auto p-4">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Orçamentos</h1>
+        <Dialog open={isDialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={handleAddNew}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Novo Orçamento
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{selectedBudget ? "Editar" : "Novo"} Orçamento</DialogTitle>
+            </DialogHeader>
+            <BudgetForm
+              budget={selectedBudget}
+              onSave={() => setDialogOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
+
+      {isLoading ? (
+        <p>Carregando orçamentos...</p>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {budgets?.map((budget) => {
+            const spent = budget.spent || 0;
+            const percentage = budget.amount > 0 ? (spent / budget.amount) * 100 : 0;
+            const remaining = budget.amount - spent;
+            return (
+              <Card key={budget.id}>
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle>{budget.categories?.name}</CardTitle>
+                      <CardDescription>
+                        {formatCurrency(spent)} de {formatCurrency(budget.amount)}
+                      </CardDescription>
+                    </div>
+                    <div className="flex space-x-2">
+                       <Button variant="ghost" size="icon" onClick={() => handleEdit(budget)}>
+                         <Edit className="h-4 w-4" />
+                       </Button>
+                       <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Essa ação não pode ser desfeita. Isso irá deletar permanentemente o seu orçamento.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(budget.id)}>
+                                Deletar
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Progress value={percentage} className="mb-2" />
+                  <p className={`text-sm ${remaining < 0 ? 'text-red-500' : 'text-gray-500'}`}>
+                    {remaining >= 0 ? `${formatCurrency(remaining)} restantes` : `${formatCurrency(Math.abs(remaining))} acima`}
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+       { !isLoading && budgets?.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-gray-500">Nenhum orçamento encontrado.</p>
+            <p className="text-gray-400 mt-2">Crie seu primeiro orçamento para começar a organizar suas finanças.</p>
+          </div>
+        )}
     </div>
   );
-};
-
-export default Budget;
-
+}
