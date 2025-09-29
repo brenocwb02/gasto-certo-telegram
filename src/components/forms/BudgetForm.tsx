@@ -1,158 +1,125 @@
-import { useState } from "react";
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
+import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useCategories } from "@/hooks/useSupabaseData";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
+import type { Database } from "@/integrations/supabase/types";
 
-const budgetSchema = z.object({
-  category_id: z.string().min(1, "Categoria é obrigatória"),
-  amount: z.string().min(1, "Valor é obrigatório").regex(/^\d+(\.\d{1,2})?$/, "Valor inválido"),
-  month: z.object({
-    month: z.string().min(1, "Mês é obrigatório"),
-    year: z.string().min(1, "Ano é obrigatório"),
-  }),
+// Define schema for form validation
+const formSchema = z.object({
+  category_id: z.string().min(1, { message: "Category is required." }),
+  amount: z.coerce.number().positive({ message: "Amount must be positive." }),
+  period: z.enum(["monthly", "weekly", "daily"]),
 });
 
+type BudgetFormData = z.infer<typeof formSchema>;
+type Budget = Database["public"]["Tables"]["budgets"]["Row"];
+
 interface BudgetFormProps {
-  budget?: any;
-  onSuccess?: () => void;
+  budget?: Budget | null;
+  onSave?: () => void;
 }
 
-export function BudgetForm({ budget, onSuccess }: BudgetFormProps) {
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
+// The async function to save the budget
+const createOrUpdateBudget = async ({
+  values,
+  user_id,
+  budget_id,
+}: {
+  values: BudgetFormData;
+  user_id: string;
+  budget_id?: number | null;
+}) => {
+  const dataToUpsert = {
+    id: budget_id || undefined,
+    user_id: user_id,
+    category_id: parseInt(values.category_id, 10),
+    amount: values.amount,
+    period: values.period,
+  };
+
+  const { error } = await supabase.from("budgets").upsert(dataToUpsert);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+};
+
+export function BudgetForm({ budget, onSave }: BudgetFormProps) {
   const { user } = useAuth();
-  const { categories } = useCategories();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth() + 1;
+  const { data: categories, isLoading: isLoadingCategories } = useSupabaseData(
+    "categories",
+    "id, name"
+  );
 
-  // Parse budget month if editing
-  const budgetDate = budget?.month ? new Date(budget.month) : null;
-
-  const form = useForm<z.infer<typeof budgetSchema>>({
-    resolver: zodResolver(budgetSchema),
+  const form = useForm<BudgetFormData>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
-      category_id: budget?.category_id || "",
-      amount: budget?.amount?.toString() || "",
-      month: {
-        month: budgetDate ? String(budgetDate.getMonth() + 1).padStart(2, '0') : String(currentMonth).padStart(2, '0'),
-        year: budgetDate ? String(budgetDate.getFullYear()) : String(currentYear)
-      },
+      category_id: budget?.category_id?.toString() || "",
+      amount: budget?.amount || 0,
+      period: budget?.period || "monthly",
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof budgetSchema>) => {
-    if (!user) return;
-    setLoading(true);
-    try {
-      const budgetData = {
-        user_id: user.id,
-        category_id: values.category_id,
-        amount: parseFloat(values.amount),
-        month: `${values.month.year}-${values.month.month}-01`,
-      };
-
-      if (budget) {
-        // Update existing budget
-        const { error } = await supabase
-          .from("budgets")
-          .update(budgetData)
-          .eq('id', budget.id);
-
-        if (error) throw error;
-
-        toast({
-          title: "Orçamento atualizado",
-          description: "Seu orçamento foi atualizado com sucesso.",
-        });
-      } else {
-        // Create new budget
-        const { error } = await supabase.from("budgets").insert(budgetData);
-
-        if (error) {
-          if (error.code === '23505') { // unique_violation
-            throw new Error("Já existe um orçamento para esta categoria neste mês.");
-          }
-          console.error("Supabase error:", error);
-          throw error;
-        }
-
-        toast({
-          title: "Orçamento criado",
-          description: "Seu novo orçamento foi criado com sucesso.",
-        });
-      }
-
-      onSuccess?.();
-    } catch (error) {
-      console.error("Erro ao salvar orçamento:", error);
+  const { mutate, isPending } = useMutation({
+    mutationFn: createOrUpdateBudget,
+    onSuccess: () => {
+      toast({
+        title: "Sucesso!",
+        description: "Orçamento salvo com sucesso.",
+      });
+      // This is the magic! It tells React Query to refetch the budgets.
+      queryClient.invalidateQueries({ queryKey: ["budgets", user?.id] });
+      onSave?.(); // Closes the modal/dialog
+    },
+    onError: (error) => {
       toast({
         title: "Erro",
-        description: error instanceof Error ? error.message : "Não foi possível salvar o orçamento.",
+        description: error.message,
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
+    },
+  });
+
+  function onSubmit(values: BudgetFormData) {
+    if (!user) {
+      toast({
+        title: "Erro",
+        description: "Você precisa estar logado para salvar um orçamento.",
+        variant: "destructive",
+      });
+      return;
     }
-  };
-
-  const expenseCategories = categories.filter(c => c.tipo === 'despesa');
-
-  const months = [
-    { value: '01', label: 'Janeiro' }, { value: '02', label: 'Fevereiro' },
-    { value: '03', label: 'Março' }, { value: '04', label: 'Abril' },
-    { value: '05', label: 'Maio' }, { value: '06', label: 'Junho' },
-    { value: '07', label: 'Julho' }, { value: '08', label: 'Agosto' },
-    { value: '09', label: 'Setembro' }, { value: '10', label: 'Outubro' },
-    { value: '11', label: 'Novembro' }, { value: '12', label: 'Dezembro' },
-  ];
-  const years = [currentYear, currentYear + 1];
-
+    mutate({ values, user_id: user.id, budget_id: budget?.id });
+  }
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="month"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Mês do Orçamento</FormLabel>
-              <div className="flex gap-2">
-                <Select onValueChange={(value) => field.onChange({ ...field.value, month: value })} defaultValue={field.value.month}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Mês" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {months.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                 <Select onValueChange={(value) => field.onChange({ ...field.value, year: value })} defaultValue={field.value.year}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Ano" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {years.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <FormField
           control={form.control}
           name="category_id"
@@ -161,14 +128,14 @@ export function BudgetForm({ budget, onSuccess }: BudgetFormProps) {
               <FormLabel>Categoria</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma categoria de despesa" />
+                  <SelectTrigger disabled={isLoadingCategories}>
+                    <SelectValue placeholder="Selecione uma categoria" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {expenseCategories.filter(cat => cat.id && cat.id.trim() !== '').map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.nome}
+                  {categories?.map((category) => (
+                    <SelectItem key={category.id} value={category.id.toString()}>
+                      {category.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -177,26 +144,46 @@ export function BudgetForm({ budget, onSuccess }: BudgetFormProps) {
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="amount"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Valor Orçado</FormLabel>
+              <FormLabel>Valor</FormLabel>
               <FormControl>
-                <Input type="number" step="0.01" placeholder="R$ 0,00" {...field} />
+                <Input type="number" placeholder="150.00" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-
-        <Button type="submit" disabled={loading} className="w-full">
-          {loading ? "Salvando..." : budget ? "Atualizar Orçamento" : "Criar Orçamento"}
+        <FormField
+          control={form.control}
+          name="period"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Período</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o período" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="monthly">Mensal</SelectItem>
+                  <SelectItem value="weekly">Semanal</SelectItem>
+                  <SelectItem value="daily">Diário</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit" disabled={isPending}>
+          {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {isPending ? "Salvando..." : "Salvar Orçamento"}
         </Button>
       </form>
     </Form>
   );
 }
-
