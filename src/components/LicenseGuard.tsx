@@ -1,9 +1,8 @@
-import React from 'react';
 import { useLicense } from '@/hooks/useLicense';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Shield, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Loader2, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface LicenseGuardProps {

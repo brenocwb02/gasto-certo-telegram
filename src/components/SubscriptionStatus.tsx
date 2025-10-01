@@ -1,11 +1,11 @@
-import { Crown, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Crown, AlertCircle, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useToast } from '@/hooks/use-toast';
 
 export const SubscriptionStatus = () => {
-  const { subscriptionInfo, loading, isPremium, createCheckout } = useSubscription();
+  const { loading, isPremium, createCheckout } = useSubscription();
   const { toast } = useToast();
 
   const handleUpgrade = async () => {

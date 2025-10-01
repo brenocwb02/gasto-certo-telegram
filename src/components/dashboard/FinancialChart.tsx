@@ -1,6 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, PieChart } from "lucide-react";
+import { PieChart } from "lucide-react";
 import { useFinancialStats } from "@/hooks/useSupabaseData";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -123,7 +122,7 @@ export function FinancialChart() {
             <>
               {/* Category Chart */}
               <div className="space-y-3">
-                {categoryExpenses.map((category, index) => (
+                {categoryExpenses.map((category) => (
                   <div 
                     key={category.category_name}
                     className="flex items-center gap-3 cursor-pointer hover:bg-card-hover p-2 rounded-lg transition-colors"

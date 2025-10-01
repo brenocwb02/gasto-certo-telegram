@@ -9,7 +9,6 @@ type Account = Tables['accounts']['Row'];
 type Category = Tables['categories']['Row'];
 type Profile = Tables['profiles']['Row'];
 type Goal = Tables['goals']['Row'];
-type Budget = Tables['budgets']['Row'];
 
 
 export function useProfile() {

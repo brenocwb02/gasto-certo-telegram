@@ -173,8 +173,9 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in NLP transaction function:', error)
+    const err = error as Error;
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: err.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

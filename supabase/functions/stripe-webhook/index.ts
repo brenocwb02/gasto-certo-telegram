@@ -57,6 +57,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ received: true }), { status: 200 })
   } catch (err) {
-    return new Response(`Webhook Error: ${err.message}`, { status: 400 })
+    const error = err as Error;
+    return new Response(`Webhook Error: ${error.message}`, { status: 400 })
   }
 })
