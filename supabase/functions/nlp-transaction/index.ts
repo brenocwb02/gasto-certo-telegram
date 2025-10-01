@@ -63,7 +63,7 @@ async function processTransactionWithGemini(text: string, userId: string, supaba
     7.  Retorne APENAS o objeto JSON, sem nenhum texto ou formatação adicional.
   `;
 
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GOOGLE_AI_API_KEY}`;
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GOOGLE_AI_API_KEY}`;
   
   const requestBody = {
     contents: [{ parts: [{ text: prompt }] }],

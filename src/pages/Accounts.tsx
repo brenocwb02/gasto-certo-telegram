@@ -4,16 +4,14 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Wallet, CreditCard, PiggyBank, Trash2, Edit } from "lucide-react";
+import { Plus, Wallet, CreditCard, PiggyBank, Edit } from "lucide-react";
 import { useAccounts } from "@/hooks/useSupabaseData";
-import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AccountForm } from "@/components/forms/AccountForm";
 
 const Accounts = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { accounts, loading, error, getTotalBalance } = useAccounts();
-  const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState(null);
 
@@ -32,7 +30,7 @@ const Accounts = () => {
     link.setAttribute("href", window.location.origin + "/accounts");
   }, []);
 
-  const getAccountIcon = (tipo) => {
+  const getAccountIcon = (tipo: string) => {
     switch (tipo) {
       case 'dinheiro': return <Wallet className="h-5 w-5" />;
       case 'corrente': return <CreditCard className="h-5 w-5" />;
@@ -41,14 +39,14 @@ const Accounts = () => {
     }
   };
 
-  const formatCurrency = (value) => {
+  const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
     }).format(value);
   };
 
-  const handleEdit = (account) => {
+  const handleEdit = (account: any) => {
     setEditingAccount(account);
     setDialogOpen(true);
   };
@@ -162,7 +160,7 @@ const Accounts = () => {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold" style={{ color: account.cor }}>
+                    <div className="text-2xl font-bold" style={{ color: account.cor || undefined }}>
                       {formatCurrency(account.saldo_atual)}
                     </div>
                     <p className="text-xs text-muted-foreground">

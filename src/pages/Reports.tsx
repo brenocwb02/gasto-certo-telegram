@@ -2,19 +2,16 @@ import { useEffect, useState } from "react";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
 import { Calendar, TrendingUp, TrendingDown, DollarSign, Activity } from "lucide-react";
-import { useTransactions, useCategories, useAccounts } from "@/hooks/useSupabaseData";
+import { useTransactions, useCategories } from "@/hooks/useSupabaseData";
 
 const Reports = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState("month");
   const { transactions, loading } = useTransactions();
   const { categories } = useCategories();
-  const { accounts } = useAccounts();
 
   useEffect(() => {
     document.title = "Relatórios | Boas Contas";
@@ -31,7 +28,7 @@ const Reports = () => {
     link.setAttribute("href", window.location.origin + "/reports");
   }, []);
 
-  const formatCurrency = (value) => {
+  const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
@@ -66,8 +63,8 @@ const Reports = () => {
   };
 
   // Calculate monthly data for trends
-  const getMonthlyData = () => {
-    const monthlyData = {};
+  const getMonthlyData = (): Array<{ receitas: number; despesas: number; month: string }> => {
+    const monthlyData: Record<string, { receitas: number; despesas: number; month: string }> = {};
     const filteredTransactions = getFilteredTransactions();
     
     filteredTransactions.forEach(transaction => {
@@ -85,12 +82,12 @@ const Reports = () => {
       }
     });
     
-    return Object.values(monthlyData).sort((a: any, b: any) => a.month.localeCompare(b.month));
+    return Object.values(monthlyData).sort((a, b) => a.month.localeCompare(b.month));
   };
 
   // Calculate category data for pie chart
-  const getCategoryData = () => {
-    const categoryData = {};
+  const getCategoryData = (): Array<{ name: string; value: number }> => {
+    const categoryData: Record<string, number> = {};
     const filteredTransactions = getFilteredTransactions();
     
     filteredTransactions.forEach(transaction => {
@@ -234,7 +231,7 @@ const Reports = () => {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="month" />
                       <YAxis />
-                      <Tooltip formatter={(value) => formatCurrency(value)} />
+                      <Tooltip formatter={(value: number | string) => formatCurrency(Number(value))} />
                       <Legend />
                       <Line 
                         type="monotone" 
@@ -274,11 +271,11 @@ const Reports = () => {
                         fill="#8884d8"
                         dataKey="value"
                       >
-                        {categoryData.map((entry, index) => (
+                        {categoryData.map((_entry, index) => (
                           <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value) => formatCurrency(value)} />
+                      <Tooltip formatter={(value: number | string) => formatCurrency(Number(value))} />
                     </PieChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -296,7 +293,7 @@ const Reports = () => {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="month" />
                       <YAxis />
-                      <Tooltip formatter={(value) => formatCurrency(value)} />
+                      <Tooltip formatter={(value: number | string) => formatCurrency(Number(value))} />
                       <Legend />
                       <Bar dataKey="receitas" fill="#22c55e" name="Receitas" />
                       <Bar dataKey="despesas" fill="#ef4444" name="Despesas" />

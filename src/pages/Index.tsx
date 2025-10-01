@@ -9,7 +9,6 @@ import { BudgetSummary } from "@/components/dashboard/BudgetSummary";
 import { TransactionForm } from "@/components/forms/TransactionForm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { useFinancialStats, useProfile, useGoals } from "@/hooks/useSupabaseData";
 import { LicenseStatus } from "@/components/LicenseGuard";
@@ -19,10 +18,6 @@ import {
   TrendingUp, 
   TrendingDown, 
   Target,
-  MessageSquare,
-  Bot,
-  CheckCircle2,
-  AlertCircle,
   Plus
 } from "lucide-react";
 

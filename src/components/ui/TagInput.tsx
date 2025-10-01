@@ -1,9 +1,10 @@
 import * as React from "react"
 import { X, Plus } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-import { toast } from "@/hooks/use-toast"
+import { useToast } from "@/hooks/use-toast"
 
 interface TagInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'> {
   value: string[]
@@ -13,10 +14,10 @@ interface TagInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>
 }
 
 const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>(
-  ({ className, value, onChange, placeholder, limit = 10, ...props }, ref) => {
+  ({ className, value, onChange, placeholder, limit = 10, ...props }, _ref) => {
     const [inputValue, setInputValue] = React.useState("")
     const inputRef = React.useRef<HTMLInputElement>(null)
-    const { toast: showToast } = toast();
+    const { toast: showToast } = useToast();
 
     const addTag = (tag: string) => {
       const lowerCaseTag = tag.toLowerCase().trim();

@@ -9,10 +9,9 @@ import { Separator } from '@/components/ui/separator';
 import { Header } from '@/components/layout/Header';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { useTelegramIntegration } from '@/hooks/useTelegramIntegration';
-import { Bot, CheckCircle, XCircle, ExternalLink, Copy, AlertTriangle, Trash2 } from 'lucide-react';
+import { Bot, CheckCircle, ExternalLink, AlertTriangle, Trash2 } from 'lucide-react';
 
 export default function TelegramBot() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [botToken, setBotToken] = useState('');
   const { config, loading, error, validateAndSaveBot, sendTestMessage, deactivateBot } = useTelegramIntegration();
 
@@ -39,8 +38,8 @@ export default function TelegramBot() {
     <div className="min-h-screen bg-background">
       <Sidebar />
       
-      <div className="lg:pl-64">
-        <Header onMenuClick={() => setSidebarOpen(true)} />
+      <div className="lg:pl-14 sm:pl-14">
+        <Header />
         
         <main className="p-6">
           <div className="max-w-4xl mx-auto space-y-6">

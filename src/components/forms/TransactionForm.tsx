@@ -11,7 +11,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useTransactions, useAccounts, useCategories } from '@/hooks/useSupabaseData';
 import { Loader2, Plus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { supabase } from "@/integrations/supabase/client"; // Importar supabase
 
 const transactionSchema = z.object({
   descricao: z.string().min(1, 'Descrição é obrigatória'),
@@ -68,61 +67,11 @@ export function TransactionForm({ onSuccess, onCancel, mode = 'create', initialD
   });
 
   const watchedType = form.watch('tipo');
-  const watchedCategoryId = form.watch('categoria_id');
 
-  // Função para limpar e extrair a primeira palavra-chave da descrição (primeira palavra)
-  const getKeywordFromDescription = (description: string) => {
-    // Tenta pegar a primeira palavra ou token significativo
-    // Ex: "Ifood" de "Ifood 50.00"
-    const match = description.trim().toLowerCase().match(/(\w+)/);
-    return match ? match[1] : null;
-  };
-
-  const handleAutoLearn = async (newCategoryId: string, newDescription: string) => {
-    // A lógica de auto-aprendizado deve se concentrar na primeira palavra da descrição
-    if (watchedType === 'transferencia') return;
-
-    const keyword = getKeywordFromDescription(newDescription);
-    if (!keyword) return;
-
-    // Busca a categoria para evitar adicionar a mesma palavra
-    const targetCategory = categories.find(c => c.id === newCategoryId);
-    const existingKeywords = targetCategory?.keywords || [];
-    
-    // Se a palavra-chave (em lowercase) já estiver na lista, não faz nada
-    if (existingKeywords.map(k => k.toLowerCase()).includes(keyword)) {
-        return;
-    }
-    
-    try {
-        // Chama a função RPC de auto-aprendizado para adicionar a nova palavra-chave
-        const { error } = await supabase.rpc('auto_learn_category', {
-            p_category_id: newCategoryId,
-            p_new_keyword: keyword,
-            p_user_id: supabase.auth.currentUser?.id,
-        });
-
-        if (error) {
-            console.error("Erro no auto-aprendizado RPC:", error);
-            return;
-        }
-        
-        toast({
-            title: "Aprendizado de Categoria",
-            description: `A palavra-chave "${keyword}" foi adicionada à categoria para futuras classificações.`,
-            variant: "secondary"
-        });
-
-    } catch (error) {
-        console.error("Erro inesperado no auto-aprendizado:", error);
-    }
-  };
 
   const onSubmit = async (data: TransactionFormData) => {
     setIsSubmitting(true);
     try {
-      const categoryChanged = initialData?.categoria_id !== data.categoria_id;
-      
       const transactionPayload = {
           descricao: data.descricao,
           valor: parseFloat(data.valor),
@@ -141,11 +90,6 @@ export function TransactionForm({ onSuccess, onCancel, mode = 'create', initialD
           title: 'Transação atualizada',
           description: 'As alterações foram salvas com sucesso.',
         });
-        
-        // Se a categoria foi alterada e a transação não é transferência, tenta auto-aprender
-        if (categoryChanged && data.categoria_id && data.tipo !== 'transferencia') {
-            handleAutoLearn(data.categoria_id, data.descricao);
-        }
 
       } else {
         await addTransaction({
@@ -160,11 +104,6 @@ export function TransactionForm({ onSuccess, onCancel, mode = 'create', initialD
           title: 'Transação criada',
           description: 'A transação foi registrada com sucesso.',
         });
-
-        // Tenta auto-aprender após a criação se não for transferência
-        if (data.categoria_id && data.tipo !== 'transferencia') {
-            handleAutoLearn(data.categoria_id, data.descricao);
-        }
 
         form.reset();
       }
@@ -262,30 +201,30 @@ export function TransactionForm({ onSuccess, onCancel, mode = 'create', initialD
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="categoria_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Categoria</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a categoria" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {filteredCategories.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {category.nome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="categoria_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Categoria</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a categoria" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {filteredCategories.map((category) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.nome}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
               <FormField
                 control={form.control}
@@ -311,7 +250,7 @@ export function TransactionForm({ onSuccess, onCancel, mode = 'create', initialD
                     <FormLabel>
                       {watchedType === 'transferencia' ? 'Conta Origem' : 'Conta'}
                     </FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione a conta" />
@@ -337,7 +276,7 @@ export function TransactionForm({ onSuccess, onCancel, mode = 'create', initialD
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Conta Destino</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione a conta destino" />

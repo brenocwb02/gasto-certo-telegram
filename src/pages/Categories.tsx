@@ -16,8 +16,8 @@ interface Category {
   id: string;
   nome: string;
   tipo: string;
-  cor: string;
-  icone: string;
+  cor: string | null;
+  icone: string | null;
   parent_id: string | null;
   subcategories?: Category[];
   keywords: string[] | null;
@@ -30,7 +30,6 @@ export default function Categories() {
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -57,10 +56,12 @@ export default function Categories() {
       const parentCategories = (data || []).filter(cat => !cat.parent_id);
       const childCategories = (data || []).filter(cat => cat.parent_id);
 
-      const organizedCategories = parentCategories.map(parent => ({
+      const organizedCategories: Category[] = parentCategories.map(parent => ({
         ...parent,
+        cor: parent.cor || null,
         subcategories: childCategories.filter(child => child.parent_id === parent.id).map(child => ({
           ...child,
+          cor: child.cor || null,
           keywords: child.keywords || []
         })),
         keywords: parent.keywords || []
@@ -97,7 +98,6 @@ export default function Categories() {
       });
 
       fetchCategories();
-      setDeletingCategory(null);
     } catch (error) {
       console.error('Erro ao excluir categoria:', error);
       toast({
@@ -143,7 +143,7 @@ export default function Categories() {
             
             <div
               className="w-4 h-4 rounded-full flex-shrink-0"
-              style={{ backgroundColor: category.cor }}
+              style={{ backgroundColor: category.cor || '#6366f1' }}
             />
             
             <div>

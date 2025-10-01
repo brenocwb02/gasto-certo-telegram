@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Header } from '../components/layout/Header';
@@ -11,7 +11,7 @@ import { Separator } from '../components/ui/separator';
 
 const CheckoutPage = () => {
   const { toast } = useToast();
-  const { subscriptionInfo, loading, isPremium, createCheckout, openCustomerPortal } = useSubscription();
+  const { loading, isPremium, createCheckout, openCustomerPortal } = useSubscription();
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
 

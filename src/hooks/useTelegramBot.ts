@@ -5,8 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 interface TelegramBotConfig {
   id: string;
   bot_token: string;
-  bot_username: string;
-  webhook_url: string;
+  bot_username: string | null;
+  webhook_url: string | null;
   is_active: boolean;
 }
 

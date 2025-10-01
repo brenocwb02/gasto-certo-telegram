@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/tooltip";
 
 export function Sidebar() {
-  const { user, signOut } = useAuth();
+  const { signOut } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {

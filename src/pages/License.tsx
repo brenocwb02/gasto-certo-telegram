@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { Header } from '@/components/layout/Header';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { useLicense } from '@/hooks/useLicense';
@@ -12,8 +11,7 @@ import {
   Loader2, 
   ShieldAlert, 
   ShieldCheck, 
-  Crown, 
-  Calendar,
+  Crown,
   User,
   Mail,
   MessageSquare,
@@ -28,7 +26,7 @@ import {
 
 export default function License() {
   const { user } = useAuth();
-  const { license, loading, error, isLicenseValid, getLicenseInfo } = useLicense();
+  const { license, loading, error, getLicenseInfo } = useLicense();
   const { isPremium, createCheckout, openCustomerPortal } = useSubscription();
 
   useEffect(() => {

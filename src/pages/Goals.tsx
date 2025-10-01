@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Plus, Target, Calendar, TrendingUp, Edit, Trash2 } from "lucide-react";
+import { Plus, Calendar, TrendingUp, Edit, Trash2 } from "lucide-react";
 import { useGoals } from "@/hooks/useSupabaseData";
 import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";

@@ -3,7 +3,6 @@ import { Bell, Settings, User, Menu, LogOut, Shield, Crown } from "lucide-react"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { LicenseStatus } from "@/components/LicenseGuard";
 import { SubscriptionStatus } from "@/components/SubscriptionStatus";
 import {
   DropdownMenu,
