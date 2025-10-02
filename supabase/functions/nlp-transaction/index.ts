@@ -3,7 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 
 const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
-const model = 'gemini-pro'; // CORREÇÃO: Usando o modelo 'gemini-pro' que é estável e compatível.
+const model = 'gemini-1.0-pro'; // CORREÇÃO FINAL: Usando o modelo 'gemini-1.0-pro' que é a versão estável e compatível.
 
 // Helper function to call Google AI API
 async function callGoogleAi(prompt) {
