@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
+import { MozillaCA } from "https://deno.land/x/mozilla_ca@0.3.0/mod.ts";
 import { corsHeaders } from '../_shared/cors.ts';
 
 // --- Funções Auxiliares ---
@@ -71,16 +72,22 @@ async function getTranscriptFromAudio(fileId: string): Promise<string> {
     if (!botToken || !googleApiKey) {
         throw new Error("As chaves de API do Telegram ou do Google AI não estão configuradas.");
     }
+    
+    // CORREÇÃO: Criar um cliente HTTP com um pacote de certificados CA explícito
+    // para resolver problemas de 'UnknownIssuer' no ambiente Deno.
+    const client = Deno.createHttpClient({
+      caCerts: [MozillaCA],
+    });
 
     // 1. Obter o caminho do ficheiro do Telegram
-    const fileInfoResponse = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${fileId}`);
+    const fileInfoResponse = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${fileId}`, { client });
     const fileInfo = await fileInfoResponse.json();
     if (!fileInfo.ok) throw new Error("Não foi possível obter informações do ficheiro de áudio do Telegram.");
     const filePath = fileInfo.result.file_path;
 
     // 2. Descarregar o ficheiro de áudio
     const fileUrl = `https://api.telegram.org/file/bot${botToken}/${filePath}`;
-    const audioResponse = await fetch(fileUrl);
+    const audioResponse = await fetch(fileUrl, { client });
     const audioBlob = await audioResponse.blob();
     const audioArrayBuffer = await audioBlob.arrayBuffer();
 
@@ -105,7 +112,8 @@ async function getTranscriptFromAudio(fileId: string): Promise<string> {
     const geminiResponse = await fetch(geminiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
+        client, // Adicionar o cliente aqui
     });
 
     if (!geminiResponse.ok) {
