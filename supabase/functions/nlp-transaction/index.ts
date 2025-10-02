@@ -23,7 +23,26 @@ async function callGoogleAi(prompt) {
         contents: [{ parts: [{ text: prompt }] }],
         generation_config: {
           response_mime_type: "application/json",
-        }
+        },
+        // CORREÇÃO: Adicionando configurações de segurança para evitar bloqueios desnecessários.
+        safetySettings: [
+            {
+                "category": "HARM_CATEGORY_HARASSMENT",
+                "threshold": "BLOCK_NONE"
+            },
+            {
+                "category": "HARM_CATEGORY_HATE_SPEECH",
+                "threshold": "BLOCK_NONE"
+            },
+            {
+                "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                "threshold": "BLOCK_NONE"
+            },
+            {
+                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                "threshold": "BLOCK_NONE"
+            }
+        ]
       }),
     });
 
@@ -34,9 +53,17 @@ async function callGoogleAi(prompt) {
     }
 
     const data = await response.json();
+    // Adiciona log para depurar a resposta completa da IA
+    console.log('Resposta completa da Google AI:', JSON.stringify(data, null, 2));
+
     const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!jsonText) {
-        throw new Error("A resposta da IA não contém o texto esperado.");
+        // Verifica se a resposta foi bloqueada por segurança
+        if (data.candidates?.[0]?.finishReason === 'SAFETY') {
+            console.error('Resposta bloqueada por configurações de segurança.', data.candidates[0].safetyRatings);
+            throw new Error("A resposta da IA foi bloqueada por filtros de segurança.");
+        }
+        throw new Error("A resposta da IA não contém o texto JSON esperado.");
     }
     
     return JSON.parse(jsonText);
@@ -169,3 +196,4 @@ serve(async (req) => {
         });
     }
 });
+
