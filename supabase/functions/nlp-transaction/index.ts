@@ -1,183 +1,171 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { corsHeaders } from '../_shared/cors.ts'
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { corsHeaders } from '../_shared/cors.ts';
 
-async function processTransactionWithGemini(text: string, userId: string, supabase: SupabaseClient) {
-  console.log(`Processing with Gemini: "${text}" for user ${userId}`)
-  const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
+const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
+const model = 'gemini-1.5-pro-latest'; // CORREÇÃO: Usando o modelo correto e mais poderoso.
+
+// Helper function to call Google AI API
+async function callGoogleAi(prompt) {
   if (!GOOGLE_AI_API_KEY) {
-    console.error('GOOGLE_AI_API_KEY is not set in Supabase secrets.');
-    return { validation_errors: ['A integração com a IA não está configurada corretamente.'] };
+    throw new Error('A chave da API da Google AI não está configurada.');
   }
 
-  const { data: userAccounts, error: accountsError } = await supabase
-    .from('accounts')
-    .select('id, nome, tipo')
-    .eq('user_id', userId)
-    .eq('ativo', true);
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GOOGLE_AI_API_KEY}`;
 
-  const { data: userCategories, error: categoriesError } = await supabase
-    .from('categories')
-    .select('id, nome, tipo, parent_id')
-    .eq('user_id', userId);
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generation_config: {
+          response_mime_type: "application/json",
+        }
+      }),
+    });
 
-  if (accountsError || categoriesError) {
-    console.error('Error fetching user data:', accountsError || categoriesError);
-    return { validation_errors: ['Não foi possível buscar os dados da sua conta para processar a transação.'] };
-  }
-
-  const transactionSchema = {
-    type: "OBJECT",
-    properties: {
-      "valor": { "type": "NUMBER", "description": "O valor numérico da transação." },
-      "descricao": { "type": "STRING", "description": "Uma breve descrição da transação. Ex: 'Almoço com amigos'." },
-      "tipo": { "type": "STRING", "enum": ["receita", "despesa", "transferencia"], "description": "O tipo de transação." },
-      "nome_categoria": { "type": "STRING", "description": "O nome da categoria que melhor corresponde à transação, baseado na lista fornecida." },
-      "nome_conta_origem": { "type": "STRING", "description": "O nome da conta de origem do dinheiro, baseado na lista fornecida." },
-      "nome_conta_destino": { "type": "STRING", "description": "O nome da conta de destino, APENAS se for uma transferência." }
-    },
-    required: ["valor", "descricao", "tipo", "nome_conta_origem"]
-  };
-
-  const prompt = `
-    Você é um assistente financeiro especialista em extrair dados de transações a partir de texto em português.
-    Analise o texto do usuário e extraia os detalhes da transação no formato JSON especificado.
-
-    **Texto do Usuário:** "${text}"
-
-    **Contexto Disponível:**
-    - Hoje é ${new Date().toLocaleDateString('pt-BR')}.
-    - Contas do usuário: ${JSON.stringify(userAccounts?.map(a => a.nome))}
-    - Categorias do usuário: ${JSON.stringify(userCategories?.map(c => c.nome))}
-
-    **Instruções Cruciais:**
-    1.  Determine o **valor** da transação.
-    2.  Crie uma **descrição** curta e clara. Se o texto for apenas "ifood 50", a descrição deve ser "Ifood".
-    3.  Identifique o **tipo**:
-        - Use 'receita' para palavras como "recebi", "salário", "ganhei", "vendi", "depósito de", "entrada de", "ganho".
-        - Use 'despesa' para palavras como "gastei", "paguei", "comprei", "saída de".
-        - Use 'transferencia' para "transferi", "enviei de", "passei de".
-    4.  Associe à **categoria** mais apropriada da lista. Se nenhuma se encaixar, use "Outros". Para transferências, a categoria pode ser nula.
-    5.  Identifique a **conta de origem**.
-    6.  Se for uma transferência, identifique a **conta de destino**. Caso contrário, deixe este campo nulo.
-    7.  Retorne APENAS o objeto JSON, sem nenhum texto ou formatação adicional.
-  `;
-
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GOOGLE_AI_API_KEY}`;
-  
-  const requestBody = {
-    contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: {
-      response_mime_type: "application/json",
-      response_schema: transactionSchema,
+    if (!response.ok) {
+        const errorBody = await response.json();
+        console.error('Google AI API Error:', errorBody);
+        throw new Error(errorBody.error.message);
     }
-  };
 
-  const response = await fetch(apiUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(requestBody)
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.json();
-    console.error('Google AI API Error:', errorBody);
-    return { validation_errors: [`Erro na IA: ${errorBody.error.message}`] };
-  }
-
-  const result = await response.json();
-  const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-  
-  if (!jsonText) {
-    return { validation_errors: ['A IA não conseguiu processar a transação.'] };
-  }
-
-  const extractedData = JSON.parse(jsonText);
-
-  const validationErrors = [];
-  if (!extractedData.valor || extractedData.valor <= 0) validationErrors.push('Valor inválido ou não encontrado pela IA.');
-  if (!extractedData.descricao) validationErrors.push('Descrição não encontrada pela IA.');
-
-  const accountOrigin = userAccounts?.find(a => a.nome.toLowerCase() === extractedData.nome_conta_origem?.toLowerCase());
-  if (!accountOrigin) validationErrors.push(`Conta de origem "${extractedData.nome_conta_origem}" não encontrada.`);
-  
-  let accountDestination = null;
-  if (extractedData.tipo === 'transferencia') {
-    if (!extractedData.nome_conta_destino) {
-      validationErrors.push('Conta de destino não informada para transferência.');
-    } else {
-      accountDestination = userAccounts?.find(a => a.nome.toLowerCase() === extractedData.nome_conta_destino?.toLowerCase());
-      if (!accountDestination) validationErrors.push(`Conta de destino "${extractedData.nome_conta_destino}" não encontrada.`);
+    const data = await response.json();
+    const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!jsonText) {
+        throw new Error("A resposta da IA não contém o texto esperado.");
     }
-  }
+    
+    return JSON.parse(jsonText);
 
-  const category = userCategories?.find(c => c.nome.toLowerCase() === extractedData.nome_categoria?.toLowerCase());
-  if (!category && extractedData.tipo !== 'transferencia' && extractedData.nome_categoria?.toLowerCase() !== 'outros') {
-    validationErrors.push(`Categoria "${extractedData.nome_categoria}" não encontrada.`);
+  } catch (error) {
+    console.error('Erro ao chamar a API do Google AI:', error);
+    throw new Error(`Erro na IA: ${error.message}`);
   }
-
-  if (validationErrors.length > 0) {
-    return { validation_errors: validationErrors };
-  }
-
-  return {
-    valor: extractedData.valor,
-    descricao: extractedData.descricao,
-    tipo: extractedData.tipo,
-    categoria: category?.nome,
-    categoria_id: category?.id,
-    conta: accountOrigin?.nome,
-    conta_origem_id: accountOrigin?.id,
-    conta_destino: accountDestination?.nome,
-    conta_destino_id: accountDestination?.id,
-    validation_errors: [],
-    confidence: 'high'
-  };
 }
 
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
-  }
-
-  try {
-    const { text, userId } = await req.json();
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    const { data: license, error: licenseError } = await supabase
-      .from('licenses')
-      .select('plano, status')
-      .eq('user_id', userId)
-      .eq('status', 'ativo')
-      .single();
-
-    if (licenseError || !license || license.plano !== 'premium') {
-      return new Response(JSON.stringify({
-        validation_errors: ['Esta funcionalidade requer um plano Premium. Faça upgrade para usar a integração com Telegram.']
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 403,
-      });
+    if (req.method === 'OPTIONS') {
+        return new Response('ok', { headers: corsHeaders });
     }
-    
-    const processedText = await processTransactionWithGemini(text.toLowerCase(), userId, supabase)
 
-    return new Response(
-      JSON.stringify(processedText),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    try {
+        const { text, userId } = await req.json();
 
-  } catch (error) {
-    console.error('Error in NLP transaction function:', error)
-    const err = error as Error;
-    return new Response(
-      JSON.stringify({ error: err.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
-  }
-})
+        if (!text || !userId) {
+            return new Response(JSON.stringify({ error: 'Texto e ID do usuário são obrigatórios.' }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 400,
+            });
+        }
+        
+        const supabaseAdmin = createClient(
+            Deno.env.get('SUPABASE_URL') ?? '',
+            Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+        );
 
+        // Buscar contas e categorias do usuário
+        const { data: accounts, error: accountsError } = await supabaseAdmin
+            .from('accounts')
+            .select('id, nome, tipo')
+            .eq('user_id', userId);
+
+        const { data: categories, error: categoriesError } = await supabaseAdmin
+            .from('categories')
+            .select('id, nome')
+            .eq('user_id', userId);
+
+        if (accountsError || categoriesError) {
+            throw new Error('Erro ao buscar dados do usuário.');
+        }
+
+        const accountsList = accounts.map(a => a.nome).join(', ');
+        const categoriesList = categories.map(c => c.nome).join(', ');
+
+        // Construir o prompt para a IA
+        const prompt = `
+            Analise a frase a seguir e extraia as informações de uma transação financeira no formato JSON.
+            Frase: "${text}"
+
+            Siga estas regras estritamente:
+            1.  **tipo**: Identifique se é 'receita', 'despesa' ou 'transferencia'. Se não for claro, assuma 'despesa'.
+            2.  **valor**: Extraia o valor numérico. Deve ser um número, não texto.
+            3.  **descricao**: Crie uma descrição curta e objetiva para a transação.
+            4.  **conta**: Identifique a conta usada. O nome da conta DEVE ser um dos seguintes: [${accountsList}]. Se nenhuma conta for mencionada ou se a conta mencionada não estiver na lista, retorne um erro claro no campo 'validation_errors'.
+            5.  **categoria**: Identifique a categoria. O nome da categoria DEVE ser um dos seguintes: [${categoriesList}]. Se nenhuma categoria for mencionada, deixe nulo. Se uma categoria for mencionada mas não estiver na lista, tente encontrar a mais próxima ou deixe nulo.
+            6.  **conta_destino**: Apenas para 'transferencia', identifique a conta de destino. O nome DEVE ser um dos seguintes: [${accountsList}]. Se não for uma transferência, deixe nulo.
+            7.  **validation_errors**: Use este array de strings para retornar mensagens de erro se alguma regra não for cumprida (ex: conta não encontrada, valor ausente). Se estiver tudo certo, retorne um array vazio [].
+
+            Exemplo de JSON de saída para despesa:
+            {
+              "tipo": "despesa",
+              "valor": 50.00,
+              "descricao": "Almoço no restaurante",
+              "conta": "Cartão Nubank",
+              "categoria": "Alimentação",
+              "conta_destino": null,
+              "validation_errors": []
+            }
+
+            Exemplo de JSON de saída para transferência:
+            {
+              "tipo": "transferencia",
+              "valor": 200.00,
+              "descricao": "Transferência para João",
+              "conta": "Itaú",
+              "categoria": null,
+              "conta_destino": "PicPay",
+              "validation_errors": []
+            }
+            
+            Exemplo de JSON de saída com erro:
+            {
+              "tipo": "despesa",
+              "valor": 75.50,
+              "descricao": "Compras no mercado",
+              "conta": "Cartão American Express",
+              "categoria": "Mercado",
+              "conta_destino": null,
+              "validation_errors": ["A conta 'Cartão American Express' não foi encontrada. Contas disponíveis: ${accountsList}"]
+            }
+
+            Agora, analise a frase e retorne o JSON.
+        `;
+        
+        const extractedData = await callGoogleAi(prompt);
+        
+        if (extractedData.validation_errors && extractedData.validation_errors.length > 0) {
+             return new Response(JSON.stringify(extractedData), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 200,
+            });
+        }
+        
+        // Mapear nomes para IDs
+        const account = accounts.find(a => a.nome.toLowerCase() === extractedData.conta?.toLowerCase());
+        const category = categories.find(c => c.nome.toLowerCase() === extractedData.categoria?.toLowerCase());
+        const destinationAccount = accounts.find(a => a.nome.toLowerCase() === extractedData.conta_destino?.toLowerCase());
+
+        const responseData = {
+          ...extractedData,
+          conta_origem_id: account?.id ?? null,
+          categoria_id: category?.id ?? null,
+          conta_destino_id: destinationAccount?.id ?? null,
+        };
+        
+        return new Response(JSON.stringify(responseData), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+        });
+
+    } catch (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 500,
+        });
+    }
+});
