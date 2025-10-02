@@ -1,8 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { encode } from "https://deno.land/std@0.224.0/encoding/base64.ts";
-// CORREÇÃO: Atualizando a URL de importação do módulo de certificados para a versão mais recente.
-import { MozillaCA } from "https://deno.land/x/mozilla_ca@v1.0.0/mod.ts";
 import { corsHeaders } from '../_shared/cors.ts';
 
 // --- Funções Auxiliares ---
@@ -73,20 +71,16 @@ async function getTranscriptFromAudio(fileId: string): Promise<string> {
     if (!botToken || !googleApiKey) {
         throw new Error("As chaves de API do Telegram ou do Google AI não estão configuradas.");
     }
-    
-    const client = Deno.createHttpClient({
-      caCerts: [MozillaCA],
-    });
 
     // 1. Obter o caminho do ficheiro do Telegram
-    const fileInfoResponse = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${fileId}`, { client });
+    const fileInfoResponse = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${fileId}`);
     const fileInfo = await fileInfoResponse.json();
     if (!fileInfo.ok) throw new Error("Não foi possível obter informações do ficheiro de áudio do Telegram.");
     const filePath = fileInfo.result.file_path;
 
     // 2. Descarregar o ficheiro de áudio
     const fileUrl = `https://api.telegram.org/file/bot${botToken}/${filePath}`;
-    const audioResponse = await fetch(fileUrl, { client });
+    const audioResponse = await fetch(fileUrl);
     const audioBlob = await audioResponse.blob();
     const audioArrayBuffer = await audioBlob.arrayBuffer();
 
@@ -112,7 +106,6 @@ async function getTranscriptFromAudio(fileId: string): Promise<string> {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
-        client,
     });
 
     if (!geminiResponse.ok) {
