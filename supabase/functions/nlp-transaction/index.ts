@@ -3,10 +3,10 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 
 const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
-const model = 'gemini-1.0-pro'; // CORREÇÃO FINAL: Usando o modelo 'gemini-1.0-pro' que é a versão estável e compatível.
+const model = 'gemini-1.5-flash'; // Modelo atualizado e estável
 
 // Helper function to call Google AI API
-async function callGoogleAi(prompt) {
+async function callGoogleAi(prompt: string) {
   if (!GOOGLE_AI_API_KEY) {
     throw new Error('A chave da API da Google AI não está configurada.');
   }
@@ -70,7 +70,8 @@ async function callGoogleAi(prompt) {
 
   } catch (error) {
     console.error('Erro ao chamar a API do Google AI:', error);
-    throw new Error(`Erro na IA: ${error.message}`);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(`Erro na IA: ${errorMessage}`);
   }
 }
 
@@ -113,55 +114,32 @@ serve(async (req) => {
         const accountsList = accounts.map(a => a.nome).join(', ');
         const categoriesList = categories.map(c => c.nome).join(', ');
 
-        // Construir o prompt para a IA
-        const prompt = `
-            Analise a frase a seguir e extraia as informações de uma transação financeira no formato JSON.
-            Frase: "${text}"
+        // Construir o prompt melhorado para a IA
+        const prompt = `Você é um assistente financeiro que extrai informações de transações.
 
-            Siga estas regras estritamente:
-            1.  **tipo**: Identifique se é 'receita', 'despesa' ou 'transferencia'. Se não for claro, assuma 'despesa'.
-            2.  **valor**: Extraia o valor numérico. Deve ser um número, não texto.
-            3.  **descricao**: Crie uma descrição curta e objetiva para a transação.
-            4.  **conta**: Identifique a conta usada. O nome da conta DEVE ser um dos seguintes: [${accountsList}]. Se nenhuma conta for mencionada ou se a conta mencionada não estiver na lista, retorne um erro claro no campo 'validation_errors'.
-            5.  **categoria**: Identifique a categoria. O nome da categoria DEVE ser um dos seguintes: [${categoriesList}]. Se nenhuma categoria for mencionada, deixe nulo. Se uma categoria for mencionada mas não estiver na lista, tente encontrar a mais próxima ou deixe nulo.
-            6.  **conta_destino**: Apenas para 'transferencia', identifique a conta de destino. O nome DEVE ser um dos seguintes: [${accountsList}]. Se não for uma transferência, deixe nulo.
-            7.  **validation_errors**: Use este array de strings para retornar mensagens de erro se alguma regra não for cumprida (ex: conta não encontrada, valor ausente). Se estiver tudo certo, retorne um array vazio [].
+Analise esta frase: "${text}"
 
-            Exemplo de JSON de saída para despesa:
-            {
-              "tipo": "despesa",
-              "valor": 50.00,
-              "descricao": "Almoço no restaurante",
-              "conta": "Cartão Nubank",
-              "categoria": "Alimentação",
-              "conta_destino": null,
-              "validation_errors": []
-            }
+Contas disponíveis: ${accountsList}
+Categorias disponíveis: ${categoriesList}
 
-            Exemplo de JSON de saída para transferência:
-            {
-              "tipo": "transferencia",
-              "valor": 200.00,
-              "descricao": "Transferência para João",
-              "conta": "Itaú",
-              "categoria": null,
-              "conta_destino": "PicPay",
-              "validation_errors": []
-            }
-            
-            Exemplo de JSON de saída com erro:
-            {
-              "tipo": "despesa",
-              "valor": 75.50,
-              "descricao": "Compras no mercado",
-              "conta": "Cartão American Express",
-              "categoria": "Mercado",
-              "conta_destino": null,
-              "validation_errors": ["A conta 'Cartão American Express' não foi encontrada. Contas disponíveis: ${accountsList}"]
-            }
+Regras OBRIGATÓRIAS:
+1. Tipo: identifique se é 'receita', 'despesa' ou 'transferencia'
+2. Valor: extraia APENAS o número (ex: 50, 25.50)
+3. Descrição: crie uma descrição curta
+4. Conta: escolha UMA conta da lista de contas disponíveis. Se não mencionar conta, use a primeira da lista
+5. Categoria: escolha UMA categoria da lista. Se não mencionar, escolha a mais apropriada
+6. validation_errors: [] (vazio se tudo ok)
 
-            Agora, analise a frase e retorne o JSON.
-        `;
+Retorne APENAS o JSON (sem markdown, sem explicações):
+{
+  "tipo": "despesa",
+  "valor": 50.00,
+  "descricao": "Compra no mercado",
+  "conta": "Cartão Nubank",
+  "categoria": "Alimentação",
+  "conta_destino": null,
+  "validation_errors": []
+}`;
         
         const extractedData = await callGoogleAi(prompt);
         
@@ -190,7 +168,9 @@ serve(async (req) => {
         });
 
     } catch (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
+        console.error('Error in nlp-transaction function:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return new Response(JSON.stringify({ error: errorMessage }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 500,
         });

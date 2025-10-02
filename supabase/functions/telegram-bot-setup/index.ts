@@ -66,8 +66,9 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Erro na função telegram-bot-setup:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(JSON.stringify({ 
-      error: error.message,
+      error: errorMessage,
       success: false 
     }), {
       status: 500,

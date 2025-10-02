@@ -128,7 +128,7 @@ async function getTranscriptFromAudio(fileId: string): Promise<string> {
 /**
  * Vincula a conta de um utilizador do Telegram à sua licença.
  */
-async function linkUserWithLicense(supabase, telegramChatId: number, licenseCode: string) {
+async function linkUserWithLicense(supabase: any, telegramChatId: number, licenseCode: string) {
   console.log(`Tentando vincular a licença ${licenseCode} ao chat ${telegramChatId}`);
   const { data: license, error: licenseError } = await supabase.from('licenses').select('user_id, status').eq('codigo', licenseCode).single();
 
@@ -160,13 +160,13 @@ async function linkUserWithLicense(supabase, telegramChatId: number, licenseCode
 }
 
 // --- Funções de Manipulação de Comandos ---
-async function handleCommand(supabase, command: string, userId: string, chatId: number) {
+async function handleCommand(supabase: any, command: string, userId: string, chatId: number) {
     switch (command) {
         case '/saldo': {
             const { data: accounts } = await supabase.from('accounts').select('nome, saldo_atual, tipo').eq('user_id', userId).eq('ativo', true);
             let saldoMessage = '💰 *Seus Saldos:*\n\n';
             if (accounts && accounts.length > 0) {
-                accounts.forEach(account => {
+                accounts.forEach((account: any) => {
                     const emoji = account.tipo === 'cartao_credito' ? '💳' : account.tipo === 'poupanca' ? '🏦' : '💵';
                     saldoMessage += `${emoji} *${account.nome}*: ${formatCurrency(account.saldo_atual)}\n`;
                 });
@@ -180,7 +180,7 @@ async function handleCommand(supabase, command: string, userId: string, chatId: 
             const { data: transactions } = await supabase.from('transactions').select('data_transacao, descricao, valor, tipo').eq('user_id', userId).order('data_transacao', { ascending: false }).limit(10);
             let extratoMessage = '📄 *Últimas Transações:*\n\n';
             if (transactions && transactions.length > 0) {
-                transactions.forEach(t => {
+                transactions.forEach((t: any) => {
                     const emoji = t.tipo === 'receita' ? '🟢' : '🔴';
                     const valor = formatCurrency(t.valor);
                     const data = new Date(t.data_transacao).toLocaleDateString('pt-BR');
@@ -201,7 +201,7 @@ async function handleCommand(supabase, command: string, userId: string, chatId: 
             let receitas = 0;
             let despesas = 0;
             if (transactions) {
-                transactions.forEach(t => {
+                transactions.forEach((t: any) => {
                     if (t.tipo === 'receita') receitas += Number(t.valor);
                     if (t.tipo === 'despesa') despesas += Number(t.valor);
                 });
@@ -215,7 +215,7 @@ async function handleCommand(supabase, command: string, userId: string, chatId: 
             const { data: goals } = await supabase.from('goals').select('titulo, valor_meta, valor_atual').eq('user_id', userId).eq('status', 'ativa');
             let metasMessage = '🎯 *Suas Metas:*\n\n';
             if (goals && goals.length > 0) {
-                goals.forEach(goal => {
+                goals.forEach((goal: any) => {
                     const progresso = (Number(goal.valor_atual) / Number(goal.valor_meta)) * 100;
                     metasMessage += `📈 *${goal.titulo}*\nMeta: ${formatCurrency(goal.valor_meta)}\nAtual: ${formatCurrency(goal.valor_atual)}\nProgresso: ${progresso.toFixed(1)}%\n\n`;
                 });
@@ -422,7 +422,8 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Erro no webhook:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return new Response(JSON.stringify({ error: errorMessage }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     });
