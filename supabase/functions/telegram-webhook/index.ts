@@ -1,7 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
-import { MozillaCA } from "https://deno.land/x/mozilla_ca@0.3.0/mod.ts";
+import { encode } from "https://deno.land/std@0.224.0/encoding/base64.ts";
+// CORREÇÃO: Atualizando a URL de importação do módulo de certificados para a versão mais recente.
+import { MozillaCA } from "https://deno.land/x/mozilla_ca@v1.0.0/mod.ts";
 import { corsHeaders } from '../_shared/cors.ts';
 
 // --- Funções Auxiliares ---
@@ -73,8 +74,6 @@ async function getTranscriptFromAudio(fileId: string): Promise<string> {
         throw new Error("As chaves de API do Telegram ou do Google AI não estão configuradas.");
     }
     
-    // CORREÇÃO: Criar um cliente HTTP com um pacote de certificados CA explícito
-    // para resolver problemas de 'UnknownIssuer' no ambiente Deno.
     const client = Deno.createHttpClient({
       caCerts: [MozillaCA],
     });
@@ -91,7 +90,7 @@ async function getTranscriptFromAudio(fileId: string): Promise<string> {
     const audioBlob = await audioResponse.blob();
     const audioArrayBuffer = await audioBlob.arrayBuffer();
 
-    // 3. Converter para Base64 (Usando a função 'encode' do Deno)
+    // 3. Converter para Base64
     const base64Audio = encode(audioArrayBuffer);
     const mimeType = audioBlob.type || 'audio/ogg';
 
@@ -113,7 +112,7 @@ async function getTranscriptFromAudio(fileId: string): Promise<string> {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
-        client, // Adicionar o cliente aqui
+        client,
     });
 
     if (!geminiResponse.ok) {
@@ -313,19 +312,11 @@ serve(async (req) => {
       await supabaseAdmin.from('telegram_sessions').delete().eq('id', sessionId);
       return new Response('OK', { status: 200, headers: corsHeaders });
     }
-
-    // =================================================================================
-    //  INÍCIO DA CORREÇÃO
-    //  Verifica se o evento recebido é uma mensagem. Se não for (ex: bot sendo
-    //  adicionado a um grupo), ignora o evento para evitar o erro.
-    // =================================================================================
+    
     if (!body.message) {
       console.log("Evento do Telegram recebido não é uma mensagem. Ignorando.", body);
       return new Response('OK', { status: 200, headers: corsHeaders });
     }
-    // =================================================================================
-    //  FIM DA CORREÇÃO
-    // =================================================================================
 
     const message = body.message;
     const chatId = message.chat.id;
