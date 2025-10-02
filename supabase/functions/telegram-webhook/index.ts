@@ -1,7 +1,7 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+// CORREÇÃO: Harmonizando todas as importações da biblioteca padrão para a mesma versão (0.224.0)
+import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-// CORREÇÃO FINAL: Harmonizando a versão da biblioteca e usando a função 'encode' correta para esta versão.
-import { encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
+import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 import { corsHeaders } from '../_shared/cors.ts';
 
 // --- Funções Auxiliares ---
@@ -86,7 +86,7 @@ async function getTranscriptFromAudio(fileId: string): Promise<string> {
     const audioArrayBuffer = await audioBlob.arrayBuffer();
 
     // 3. Converter para Base64
-    const base64Audio = encode(audioArrayBuffer);
+    const base64Audio = encodeBase64(audioArrayBuffer);
     const mimeType = audioBlob.type || 'audio/ogg';
 
     // 4. Chamar a API do Gemini para transcrição
@@ -428,4 +428,6 @@ serve(async (req) => {
     });
   }
 });
+
+
 
