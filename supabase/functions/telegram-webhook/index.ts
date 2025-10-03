@@ -43,7 +43,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 }
 /**
  * Edita uma mensagem existente no Telegram.
- */ async function editTelegramMessage(chatId: number, messageId: number, text: string): Promise<void> {
+ */ async function editTelegramMessage(chatId: number, messageId: number, text: string, options: any = {}): Promise<void> {
   const telegramApiUrl = `https://api.telegram.org/bot${Deno.env.get('TELEGRAM_BOT_TOKEN')}/editMessageText`;
   try {
     await fetch(telegramApiUrl, {
@@ -55,7 +55,8 @@ import { corsHeaders } from '../_shared/cors.ts';
         chat_id: chatId,
         message_id: messageId,
         text,
-        parse_mode: 'Markdown'
+        parse_mode: 'Markdown',
+        ...options
       })
     });
   } catch (e) {
@@ -209,115 +210,308 @@ import { corsHeaders } from '../_shared/cors.ts';
   };
 }
 // --- Funções de Manipulação de Comandos ---
-async function handleCommand(supabase: any, command: string, userId: string, chatId: number): Promise<void> {
-  switch(command){
-    case '/saldo':
-      {
-        const { data: accounts } = await supabase.from('accounts').select('nome, saldo_atual, tipo').eq('user_id', userId).eq('ativo', true);
-        let saldoMessage = '💰 *Seus Saldos:*\n\n';
-        if (accounts && accounts.length > 0) {
-          accounts.forEach((account: any)=>{
-            const emoji = account.tipo === 'cartao_credito' ? '💳' : account.tipo === 'poupanca' ? '🏦' : '💵';
-            saldoMessage += `${emoji} *${account.nome}*: ${formatCurrency(account.saldo_atual)}\n`;
-          });
-        } else {
-          saldoMessage += 'Nenhuma conta encontrada.';
-        }
-        await sendTelegramMessage(chatId, saldoMessage);
-        break;
+async function handleCommand(supabase: any, command: string, userId: string, chatId: number, messageId?: number): Promise<void> {
+  const [cmd, ...args] = command.split(' ');
+  const argument = args.join(' ');
+
+  switch (cmd.toLowerCase()) {
+    case '/start': {
+      const message = `👋 Olá! Bem-vindo ao Gasto Certo!
+
+🎯 Comandos disponíveis:
+
+💰 *Finanças*
+• Registre gastos naturalmente (ex: "Almoço 25 reais")
+• /saldo - Ver saldo das contas
+• /extrato - Últimas transações
+• /resumo - Resumo do mês
+
+📊 *Análises Inteligentes*
+• /perguntar [pergunta] - Pergunte sobre seus gastos
+• /top_gastos - Top 5 categorias do mês
+• /comparar_meses - Compare mês atual vs anterior
+• /previsao - Previsão de gastos
+
+✏️ *Edição*
+• /editar_ultima - Editar última transação
+
+🎯 *Metas e Orçamento*
+• /metas - Ver progresso das metas
+• /orcamento - Status do orçamento
+
+💡 /ajuda - Ver este menu`;
+      
+      await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
+      break;
+    }
+
+    case '/saldo': {
+      const { data: accounts } = await supabase
+        .from('accounts')
+        .select('nome, saldo_atual, tipo')
+        .eq('user_id', userId)
+        .eq('ativo', true);
+
+      if (!accounts || accounts.length === 0) {
+        await sendTelegramMessage(chatId, '📭 Você ainda não tem contas cadastradas.');
+        return;
       }
-    case '/extrato':
-      {
-        const { data: transactions } = await supabase.from('transactions').select('data_transacao, descricao, valor, tipo').eq('user_id', userId).order('data_transacao', {
-          ascending: false
-        }).limit(10);
-        let extratoMessage = '📄 *Últimas Transações:*\n\n';
-        if (transactions && transactions.length > 0) {
-          transactions.forEach((t: any)=>{
-            const emoji = t.tipo === 'receita' ? '🟢' : '🔴';
-            const valor = formatCurrency(t.valor);
-            const data = new Date(t.data_transacao).toLocaleDateString('pt-BR');
-            extratoMessage += `${emoji} *${t.descricao}* - ${valor} [${data}]\n`;
-          });
-        } else {
-          extratoMessage += 'Nenhuma transação encontrada.';
-        }
-        await sendTelegramMessage(chatId, extratoMessage);
-        break;
+
+      const total = accounts.reduce((sum: number, acc: any) => sum + parseFloat(acc.saldo_atual || 0), 0);
+      const accountsList = accounts
+        .map((acc: any) => `  • ${acc.nome}: ${formatCurrency(parseFloat(acc.saldo_atual || 0))}`)
+        .join('\n');
+
+      const message = `💰 *Seus Saldos*\n\n${accountsList}\n\n━━━━━━━━━━━━━━━━\n*Total:* ${formatCurrency(total)}`;
+      await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
+      break;
+    }
+
+    case '/extrato': {
+      const { data: transactions } = await supabase
+        .from('transactions')
+        .select(`
+          *,
+          category:categories(nome, cor),
+          account:accounts!transactions_conta_origem_id_fkey(nome)
+        `)
+        .eq('user_id', userId)
+        .order('data_transacao', { ascending: false })
+        .limit(10);
+
+      if (!transactions || transactions.length === 0) {
+        await sendTelegramMessage(chatId, '📭 Nenhuma transação encontrada.');
+        return;
       }
-    case '/resumo':
-      {
-        const currentDate = new Date();
-        const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-        const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-        const { data: transactions } = await supabase.from('transactions').select('tipo, valor').eq('user_id', userId).gte('data_transacao', firstDay.toISOString().split('T')[0]).lte('data_transacao', lastDay.toISOString().split('T')[0]);
-        let receitas = 0;
-        let despesas = 0;
-        if (transactions) {
-          transactions.forEach((t: any)=>{
-            if (t.tipo === 'receita') receitas += Number(t.valor);
-            if (t.tipo === 'despesa') despesas += Number(t.valor);
-          });
-        }
-        const saldo = receitas - despesas;
-        const resumoMessage = `📊 *Resumo do Mês:*\n\n💚 Receitas: ${formatCurrency(receitas)}\n❌ Despesas: ${formatCurrency(despesas)}\n💰 Saldo: ${formatCurrency(saldo)}`;
-        await sendTelegramMessage(chatId, resumoMessage);
-        break;
+
+      const list = transactions.map((t: any) => {
+        const icon = t.tipo === 'receita' ? '💚' : '💸';
+        const date = new Date(t.data_transacao).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+        return `${icon} ${date} - ${t.descricao}\n  ${formatCurrency(parseFloat(t.valor))} • ${t.category?.nome || 'Sem categoria'}`;
+      }).join('\n\n');
+
+      await sendTelegramMessage(chatId, `📋 *Últimas Transações*\n\n${list}`, { parse_mode: 'Markdown' });
+      break;
+    }
+
+    case '/resumo': {
+      const firstDay = new Date();
+      firstDay.setDate(1);
+      const lastDay = new Date(firstDay.getFullYear(), firstDay.getMonth() + 1, 0);
+
+      const { data: transactions } = await supabase
+        .from('transactions')
+        .select('tipo, valor')
+        .eq('user_id', userId)
+        .gte('data_transacao', firstDay.toISOString().split('T')[0])
+        .lte('data_transacao', lastDay.toISOString().split('T')[0]);
+
+      const receitas = transactions?.filter((t: any) => t.tipo === 'receita')
+        .reduce((sum: number, t: any) => sum + parseFloat(t.valor), 0) || 0;
+      const despesas = transactions?.filter((t: any) => t.tipo === 'despesa')
+        .reduce((sum: number, t: any) => sum + parseFloat(t.valor), 0) || 0;
+      const saldo = receitas - despesas;
+
+      const message = `📊 *Resumo do Mês*\n\n💚 Receitas: ${formatCurrency(receitas)}\n💸 Despesas: ${formatCurrency(despesas)}\n━━━━━━━━━━━━━━━━\n${saldo >= 0 ? '✅' : '⚠️'} Saldo: ${formatCurrency(saldo)}`;
+      await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
+      break;
+    }
+
+    case '/metas': {
+      const { data: goals } = await supabase
+        .from('goals')
+        .select('titulo, valor_meta, valor_atual, data_fim')
+        .eq('user_id', userId)
+        .eq('status', 'ativa');
+
+      if (!goals || goals.length === 0) {
+        await sendTelegramMessage(chatId, '🎯 Você ainda não tem metas ativas.');
+        return;
       }
-    case '/metas':
-      {
-        const { data: goals } = await supabase.from('goals').select('titulo, valor_meta, valor_atual').eq('user_id', userId).eq('status', 'ativa');
-        let metasMessage = '🎯 *Suas Metas:*\n\n';
-        if (goals && goals.length > 0) {
-          goals.forEach((goal: any)=>{
-            const progresso = Number(goal.valor_atual) / Number(goal.valor_meta) * 100;
-            metasMessage += `📈 *${goal.titulo}*\nMeta: ${formatCurrency(goal.valor_meta)}\nAtual: ${formatCurrency(goal.valor_atual)}\nProgresso: ${progresso.toFixed(1)}%\n\n`;
-          });
-        } else {
-          metasMessage += 'Nenhuma meta ativa encontrada.';
-        }
-        await sendTelegramMessage(chatId, metasMessage);
-        break;
+
+      const list = goals.map((g: any) => {
+        const progress = (parseFloat(g.valor_atual) / parseFloat(g.valor_meta)) * 100;
+        const progressBar = '█'.repeat(Math.floor(progress / 10)) + '░'.repeat(10 - Math.floor(progress / 10));
+        return `🎯 *${g.titulo}*\n${progressBar} ${progress.toFixed(0)}%\n${formatCurrency(parseFloat(g.valor_atual))} / ${formatCurrency(parseFloat(g.valor_meta))}`;
+      }).join('\n\n');
+
+      await sendTelegramMessage(chatId, `🎯 *Suas Metas*\n\n${list}`, { parse_mode: 'Markdown' });
+      break;
+    }
+
+    case '/perguntar': {
+      if (!argument) {
+        await sendTelegramMessage(chatId, '❓ Use: /perguntar [sua pergunta]\n\nExemplos:\n• quanto gastei com iFood em setembro?\n• minhas receitas de freelance\n• quantas vezes gastei mais de 100 reais?');
+        return;
       }
+
+      const thinking = await sendTelegramMessage(chatId, '🤔 Analisando seus dados...');
+
+      try {
+        const response = await supabase.functions.invoke('query-engine', {
+          body: { question: argument, userId }
+        });
+
+        if (response.error) throw response.error;
+
+        await editTelegramMessage(chatId, thinking.result.message_id, `❓ *Pergunta:* ${argument}\n\n${response.data.answer}`, { parse_mode: 'Markdown' });
+      } catch (error) {
+        console.error('Erro no /perguntar:', error);
+        await editTelegramMessage(chatId, thinking.result.message_id, '❌ Desculpe, ocorreu um erro ao processar sua pergunta.');
+      }
+      break;
+    }
+
+    case '/top_gastos': {
+      const firstDay = new Date();
+      firstDay.setDate(1);
+      const lastDay = new Date(firstDay.getFullYear(), firstDay.getMonth() + 1, 0);
+
+      const { data: transactions } = await supabase
+        .from('transactions')
+        .select('valor, category:categories(nome)')
+        .eq('user_id', userId)
+        .eq('tipo', 'despesa')
+        .gte('data_transacao', firstDay.toISOString().split('T')[0])
+        .lte('data_transacao', lastDay.toISOString().split('T')[0]);
+
+      if (!transactions || transactions.length === 0) {
+        await sendTelegramMessage(chatId, '📭 Nenhum gasto registrado este mês.');
+        return;
+      }
+
+      const grouped = transactions.reduce((acc: any, t: any) => {
+        const cat = t.category?.nome || 'Sem categoria';
+        acc[cat] = (acc[cat] || 0) + parseFloat(t.valor);
+        return acc;
+      }, {});
+
+      const sorted = Object.entries(grouped)
+        .sort(([, a]: any, [, b]: any) => b - a)
+        .slice(0, 5);
+
+      const list = sorted.map(([cat, val]: any, i: number) => 
+        `${i + 1}. *${cat}*: ${formatCurrency(val)}`
+      ).join('\n');
+
+      await sendTelegramMessage(chatId, `🔥 *Top 5 Gastos deste Mês*\n\n${list}`, { parse_mode: 'Markdown' });
+      break;
+    }
+
+    case '/comparar_meses': {
+      const thisMonth = new Date();
+      thisMonth.setDate(1);
+      const lastMonth = new Date(thisMonth);
+      lastMonth.setMonth(lastMonth.getMonth() - 1);
+
+      const [thisMonthData, lastMonthData] = await Promise.all([
+        supabase.from('transactions').select('valor').eq('user_id', userId).eq('tipo', 'despesa')
+          .gte('data_transacao', thisMonth.toISOString().split('T')[0]),
+        supabase.from('transactions').select('valor').eq('user_id', userId).eq('tipo', 'despesa')
+          .gte('data_transacao', lastMonth.toISOString().split('T')[0])
+          .lt('data_transacao', thisMonth.toISOString().split('T')[0])
+      ]);
+
+      const thisTotal = thisMonthData.data?.reduce((sum: number, t: any) => sum + parseFloat(t.valor), 0) || 0;
+      const lastTotal = lastMonthData.data?.reduce((sum: number, t: any) => sum + parseFloat(t.valor), 0) || 0;
+      const diff = thisTotal - lastTotal;
+      const diffPercent = lastTotal > 0 ? ((diff / lastTotal) * 100).toFixed(1) : '0';
+
+      const icon = diff > 0 ? '📈' : diff < 0 ? '📉' : '➡️';
+      const trend = diff > 0 ? 'aumentaram' : diff < 0 ? 'diminuíram' : 'permaneceram iguais';
+
+      const message = `📊 *Comparativo de Gastos*\n\n📅 Mês Anterior: ${formatCurrency(lastTotal)}\n📅 Mês Atual: ${formatCurrency(thisTotal)}\n\n${icon} Seus gastos ${trend} ${diffPercent}%\n(${diff >= 0 ? '+' : ''}${formatCurrency(Math.abs(diff))})`;
+      await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
+      break;
+    }
+
+    case '/previsao': {
+      const firstDay = new Date();
+      firstDay.setDate(1);
+      const today = new Date();
+      const daysInMonth = new Date(firstDay.getFullYear(), firstDay.getMonth() + 1, 0).getDate();
+      const daysPassed = today.getDate();
+
+      const { data: transactions } = await supabase
+        .from('transactions')
+        .select('valor')
+        .eq('user_id', userId)
+        .eq('tipo', 'despesa')
+        .gte('data_transacao', firstDay.toISOString().split('T')[0]);
+
+      const totalSoFar = transactions?.reduce((sum: number, t: any) => sum + parseFloat(t.valor), 0) || 0;
+      const dailyAverage = totalSoFar / daysPassed;
+      const projection = dailyAverage * daysInMonth;
+
+      const message = `🔮 *Previsão de Gastos*\n\n📊 Gasto até agora: ${formatCurrency(totalSoFar)}\n📈 Média diária: ${formatCurrency(dailyAverage)}\n\n💡 Projeção para o mês:\n*${formatCurrency(projection)}*\n\n(baseado em ${daysPassed} dias de ${daysInMonth})`;
+      await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
+      break;
+    }
+
+    case '/editar_ultima': {
+      const { data: lastTransaction } = await supabase
+        .from('transactions')
+        .select(`
+          *,
+          category:categories(nome),
+          account:accounts!transactions_conta_origem_id_fkey(nome)
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (!lastTransaction) {
+        await sendTelegramMessage(chatId, '📭 Você ainda não tem transações para editar.');
+        return;
+      }
+
+      // Salvar ID da transação na sessão
+      await supabase
+        .from('telegram_sessions')
+        .upsert({
+          user_id: userId,
+          telegram_id: chatId.toString(),
+          chat_id: chatId.toString(),
+          contexto: { editing_transaction_id: lastTransaction.id }
+        }, { onConflict: 'user_id,telegram_id' });
+
+      const date = new Date(lastTransaction.data_transacao).toLocaleDateString('pt-BR');
+      const message = `✏️ *Editar Transação*\n\n📝 ${lastTransaction.descricao}\n💰 ${formatCurrency(parseFloat(lastTransaction.valor))}\n📁 ${lastTransaction.category?.nome || 'Sem categoria'}\n🏦 ${lastTransaction.account?.nome || 'Sem conta'}\n📅 ${date}\n\nO que deseja editar?`;
+
+      const keyboard = {
+        inline_keyboard: [
+          [
+            { text: '✏️ Descrição', callback_data: 'edit_description' },
+            { text: '💰 Valor', callback_data: 'edit_amount' }
+          ],
+          [
+            { text: '📁 Categoria', callback_data: 'edit_category' },
+            { text: '🏦 Conta', callback_data: 'edit_account' }
+          ],
+          [
+            { text: '📅 Data', callback_data: 'edit_date' },
+            { text: '🗑️ Deletar', callback_data: 'edit_delete' }
+          ],
+          [
+            { text: '❌ Cancelar', callback_data: 'edit_cancel' }
+          ]
+        ]
+      };
+
+      await sendTelegramMessage(chatId, message, { 
+        parse_mode: 'Markdown',
+        reply_markup: keyboard
+      });
+      break;
+    }
+
     case '/ajuda':
-      {
-        const helpMessage = `
-👋 *Bem-vindo ao Boas Contas!*
-
-Aqui está um guia completo das minhas funcionalidades.
-
----
-*LANÇAMENTOS (LINGUAGEM NATURAL)*
----
-Para registrar, basta enviar uma mensagem como se estivesse a conversar.
-*Gastos:* \`gastei 50 no mercado com Cartão Nubank\`
-*Receitas:* \`recebi 3000 de salario no Itau\`
-*Transferências:* \`transferi 200 do Itau para o PicPay\`
-
----
-*ANÁLISES E RELATÓRIOS*
----
-• \`/resumo\` – Visão geral financeira do mês.
-• \`/saldo\` – Saldos de todas as suas contas.
-• \`/extrato\` – Mostra as últimas transações.
-• \`/dashboard\` – Aceder ao dashboard web completo.
-
----
-*PLANEAMENTO*
----
-• \`/metas\` – Veja o progresso das suas metas.
-
----
-*PRODUTIVIDADE*
----
-• \`/tarefa DESCRIÇÃO\` – Cria uma nova tarefa.
-• \`/tarefas\` – Lista as suas tarefas pendentes.
-      `;
-        await sendTelegramMessage(chatId, helpMessage);
-        break;
-      }
-    default:
-      await sendTelegramMessage(chatId, "Comando não reconhecido. Use /ajuda para ver a lista de comandos.");
+    default: {
+      const message = `💡 *Comandos Disponíveis*\n\n💰 *Finanças*\n• Registre gastos naturalmente\n• /saldo - Saldo das contas\n• /extrato - Últimas transações\n• /resumo - Resumo do mês\n\n📊 *Análises*\n• /perguntar - Pergunte sobre gastos\n• /top_gastos - Top 5 categorias\n• /comparar_meses - Comparativo\n• /previsao - Projeção de gastos\n\n✏️ *Edição*\n• /editar_ultima - Editar transação\n\n🎯 *Metas*\n• /metas - Ver progresso`;
+      await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
+      break;
+    }
   }
 }
 // --- Lógica Principal do Webhook ---
@@ -330,12 +524,77 @@ serve(async (req)=>{
   try {
     const body = await req.json();
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
-    // Trata cliques em botões de confirmação
+    // Trata cliques em botões de confirmação e edição
     if (body.callback_query) {
       const callbackQuery = body.callback_query;
-      const [action, sessionId] = callbackQuery.data.split(':');
       const chatId = callbackQuery.message.chat.id;
       const messageId = callbackQuery.message.message_id;
+      const data = callbackQuery.data;
+
+      // Buscar integração para pegar userId
+      const { data: integration } = await supabaseAdmin.from('telegram_integration').select('user_id').eq('telegram_chat_id', chatId).single();
+      if (!integration) {
+        return new Response('OK', { status: 200, headers: corsHeaders });
+      }
+      const userId = integration.user_id;
+
+      // Ações de edição de transação
+      if (data.startsWith('edit_')) {
+        const { data: session } = await supabaseAdmin
+          .from('telegram_sessions')
+          .select('contexto')
+          .eq('user_id', userId)
+          .eq('telegram_id', callbackQuery.from.id.toString())
+          .single();
+
+        const transactionId = session?.contexto?.editing_transaction_id;
+        
+        if (!transactionId) {
+          await editTelegramMessage(chatId, messageId, '❌ Sessão expirada. Use /editar_ultima novamente.');
+          return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+        }
+
+        if (data === 'edit_cancel') {
+          await supabaseAdmin
+            .from('telegram_sessions')
+            .update({ contexto: {} })
+            .eq('user_id', userId);
+          await editTelegramMessage(chatId, messageId, '✅ Edição cancelada.');
+          return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+        }
+
+        if (data === 'edit_delete') {
+          await supabaseAdmin.from('transactions').delete().eq('id', transactionId);
+          await supabaseAdmin.from('telegram_sessions').update({ contexto: {} }).eq('user_id', userId);
+          await editTelegramMessage(chatId, messageId, '🗑️ Transação deletada com sucesso!');
+          return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+        }
+
+        // Salvar campo a editar
+        await supabaseAdmin
+          .from('telegram_sessions')
+          .update({ 
+            contexto: { 
+              editing_transaction_id: transactionId,
+              editing_field: data.replace('edit_', '')
+            }
+          })
+          .eq('user_id', userId);
+
+        const fieldMessages: Record<string, string> = {
+          edit_description: '✏️ Digite a nova descrição:',
+          edit_amount: '💰 Digite o novo valor:',
+          edit_category: '📁 Digite o nome da nova categoria:',
+          edit_account: '🏦 Digite o nome da nova conta:',
+          edit_date: '📅 Digite a nova data (DD/MM/AAAA):'
+        };
+
+        await editTelegramMessage(chatId, messageId, fieldMessages[data] || 'Digite o novo valor:');
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      // Ações de confirmação de transações (sistema antigo)
+      const [action, sessionId] = data.split(':');
       const { data: session } = await supabaseAdmin.from('telegram_sessions').select('contexto').eq('id', sessionId).single();
       if (!session || !session.contexto) {
         await editTelegramMessage(chatId, messageId, "Esta confirmação expirou.");
@@ -397,9 +656,130 @@ serve(async (req)=>{
       });
     }
     const userId = integration.user_id;
+
+    // Verificar se está em modo de edição
+    const { data: session } = await supabaseAdmin
+      .from('telegram_sessions')
+      .select('contexto')
+      .eq('user_id', userId)
+      .eq('telegram_id', message.from.id.toString())
+      .single();
+
+    if (session?.contexto?.editing_field && text) {
+      const transactionId = session.contexto.editing_transaction_id;
+      const field = session.contexto.editing_field;
+
+      const { data: transaction } = await supabaseAdmin
+        .from('transactions')
+        .select('*')
+        .eq('id', transactionId)
+        .single();
+
+      if (!transaction) {
+        await sendTelegramMessage(chatId, '❌ Transação não encontrada.');
+        await supabaseAdmin.from('telegram_sessions').update({ contexto: {} }).eq('user_id', userId);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      let updateData: any = {};
+
+      try {
+        switch (field) {
+          case 'description':
+            updateData.descricao = text;
+            break;
+          case 'amount':
+            const amount = parseFloat(text.replace(',', '.').replace(/[^\d.]/g, ''));
+            if (isNaN(amount)) throw new Error('Valor inválido');
+            updateData.valor = amount;
+            break;
+          case 'category':
+            const { data: category } = await supabaseAdmin
+              .from('categories')
+              .select('id')
+              .eq('user_id', userId)
+              .ilike('nome', `%${text}%`)
+              .single();
+            if (!category) throw new Error('Categoria não encontrada');
+            updateData.categoria_id = category.id;
+            break;
+          case 'account':
+            const { data: account } = await supabaseAdmin
+              .from('accounts')
+              .select('id')
+              .eq('user_id', userId)
+              .ilike('nome', `%${text}%`)
+              .single();
+            if (!account) throw new Error('Conta não encontrada');
+            updateData.conta_origem_id = account.id;
+            break;
+          case 'date':
+            const [day, month, year] = text.split('/');
+            const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+            if (isNaN(date.getTime())) throw new Error('Data inválida');
+            updateData.data_transacao = date.toISOString().split('T')[0];
+            break;
+        }
+
+        await supabaseAdmin
+          .from('transactions')
+          .update(updateData)
+          .eq('id', transactionId);
+
+        await supabaseAdmin
+          .from('telegram_sessions')
+          .update({ contexto: {} })
+          .eq('user_id', userId);
+
+        await sendTelegramMessage(chatId, '✅ Transação atualizada com sucesso!');
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Erro desconhecido';
+        await sendTelegramMessage(chatId, `❌ Erro: ${errorMsg}\n\nTente novamente ou use /editar_ultima para recomeçar.`);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+    }
+
     if (text && text.startsWith('/')) {
       await handleCommand(supabaseAdmin, text.toLowerCase(), userId, chatId);
-    } else {
+      return new Response('OK', { status: 200, headers: corsHeaders });
+    }
+
+    // Detectar perguntas em linguagem natural
+    if (text) {
+      const questionKeywords = ['quanto', 'quantos', 'quantas', 'qual', 'quais', 'onde', 'quando', 'como'];
+      if (questionKeywords.some(kw => text.toLowerCase().startsWith(kw))) {
+        const thinking = await sendTelegramMessage(chatId, '🤔 Deixe-me verificar...');
+        
+        try {
+          const response = await supabaseAdmin.functions.invoke('query-engine', {
+            body: { question: text, userId }
+          });
+
+          if (response.error) throw response.error;
+
+          if (thinking?.message_id) {
+            await editTelegramMessage(chatId, thinking.message_id, `❓ *Sua pergunta:* ${text}\n\n${response.data.answer}`);
+          } else {
+            await sendTelegramMessage(chatId, `❓ *Sua pergunta:* ${text}\n\n${response.data.answer}`, { parse_mode: 'Markdown' });
+          }
+          return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+        } catch (error) {
+          console.error('Erro ao processar pergunta:', error);
+          const errorMsg = '❌ Desculpe, não consegui processar sua pergunta. Tente usar /perguntar [pergunta]';
+          if (thinking?.message_id) {
+            await editTelegramMessage(chatId, thinking.message_id, errorMsg);
+          } else {
+            await sendTelegramMessage(chatId, errorMsg);
+          }
+          return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+        }
+      }
+    }
+
+    // Processar como transação (voz ou texto)
+    if (true) {
       const { data: license } = await supabaseAdmin.from('licenses').select('plano, status').eq('user_id', userId).eq('status', 'ativo').single();
       if (!license || license.plano !== 'premium') {
         await sendTelegramMessage(chatId, `🔒 *Funcionalidade Premium*\n\nOlá! A adição de transações pelo Telegram é uma funcionalidade exclusiva do plano Premium.\n\n✨ Com o Premium você terá:\n• Registro de transações por IA\n• Contas e categorias ilimitadas\n• Relatórios avançados\n• Metas e orçamentos\n\n📱 Visite nossa página de licenças para fazer upgrade e desbloquear todo o poder do Gasto Certo!\n\n🌐 Acesse: [Fazer Upgrade](${Deno.env.get('SUPABASE_URL')?.replace('supabase.co', 'lovable.app')}/license)`);

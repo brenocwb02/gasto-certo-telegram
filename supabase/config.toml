@@ -12,6 +12,9 @@ verify_jwt = true
 [functions.nlp-transaction]
 verify_jwt = true
 
+[functions.query-engine]
+verify_jwt = true
+
 [functions.telegram-notifications]
 verify_jwt = true
 
