@@ -6,7 +6,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 // --- Funções Auxiliares ---
 /**
  * Formata um número para a moeda BRL.
- */ function formatCurrency(value) {
+ */ function formatCurrency(value: number): string {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL'
@@ -14,7 +14,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 }
 /**
  * Envia uma mensagem para o Telegram.
- */ async function sendTelegramMessage(chatId, text, options = {}) {
+ */ async function sendTelegramMessage(chatId: number, text: string, options: any = {}): Promise<any> {
   const telegramApiUrl = `https://api.telegram.org/bot${Deno.env.get('TELEGRAM_BOT_TOKEN')}/sendMessage`;
   try {
     const body = {
@@ -43,7 +43,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 }
 /**
  * Edita uma mensagem existente no Telegram.
- */ async function editTelegramMessage(chatId, messageId, text) {
+ */ async function editTelegramMessage(chatId: number, messageId: number, text: string): Promise<void> {
   const telegramApiUrl = `https://api.telegram.org/bot${Deno.env.get('TELEGRAM_BOT_TOKEN')}/editMessageText`;
   try {
     await fetch(telegramApiUrl, {
@@ -64,7 +64,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 }
 /**
  * Transcreve um áudio do Telegram usando a API do Gemini.
- */ async function getTranscriptFromAudio(fileId) {
+ */ async function getTranscriptFromAudio(fileId: string): Promise<string> {
   const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
   const googleApiKey = Deno.env.get('GOOGLE_AI_API_KEY');
   if (!botToken || !googleApiKey) {
@@ -165,7 +165,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 }
 /**
  * Vincula a conta de um utilizador do Telegram à sua licença.
- */ async function linkUserWithLicense(supabase, telegramChatId, licenseCode) {
+ */ async function linkUserWithLicense(supabase: any, telegramChatId: number, licenseCode: string): Promise<{success: boolean; message: string}> {
   console.log(`Tentando vincular a licença ${licenseCode} ao chat ${telegramChatId}`);
   const { data: license, error: licenseError } = await supabase.from('licenses').select('user_id, status').eq('codigo', licenseCode).single();
   if (licenseError || !license || license.status !== 'ativo') {
@@ -233,7 +233,7 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
         }).limit(10);
         let extratoMessage = '📄 *Últimas Transações:*\n\n';
         if (transactions && transactions.length > 0) {
-          transactions.forEach((t)=>{
+          transactions.forEach((t: any)=>{
             const emoji = t.tipo === 'receita' ? '🟢' : '🔴';
             const valor = formatCurrency(t.valor);
             const data = new Date(t.data_transacao).toLocaleDateString('pt-BR');
@@ -254,7 +254,7 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
         let receitas = 0;
         let despesas = 0;
         if (transactions) {
-          transactions.forEach((t)=>{
+          transactions.forEach((t: any)=>{
             if (t.tipo === 'receita') receitas += Number(t.valor);
             if (t.tipo === 'despesa') despesas += Number(t.valor);
           });

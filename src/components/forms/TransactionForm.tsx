@@ -98,6 +98,9 @@ export function TransactionForm({ onSuccess, onCancel, mode = 'create', initialD
           tags: null,
           data_vencimento: null,
           origem: 'web',
+          installment_number: 1,
+          installment_total: 1,
+          parent_transaction_id: null,
         });
 
         toast({

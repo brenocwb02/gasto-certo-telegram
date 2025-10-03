@@ -162,6 +162,68 @@ export type Database = {
           },
         ]
       }
+      family_groups: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      family_members: {
+        Row: {
+          can_manage_members: boolean
+          created_at: string
+          group_id: string
+          id: string
+          member_id: string
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          can_manage_members?: boolean
+          created_at?: string
+          group_id: string
+          id?: string
+          member_id: string
+          role?: string
+          updated_at?: string
+        }
+        Update: {
+          can_manage_members?: boolean
+          created_at?: string
+          group_id?: string
+          id?: string
+          member_id?: string
+          role?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "family_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       goals: {
         Row: {
           categoria_id: string | null
@@ -263,6 +325,8 @@ export type Database = {
           created_at: string
           id: string
           nome: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
           telefone: string | null
           telegram_bot_token: string | null
           telegram_chat_id: number | null
@@ -275,6 +339,8 @@ export type Database = {
           created_at?: string
           id?: string
           nome: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           telefone?: string | null
           telegram_bot_token?: string | null
           telegram_chat_id?: number | null
@@ -287,10 +353,42 @@ export type Database = {
           created_at?: string
           id?: string
           nome?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           telefone?: string | null
           telegram_bot_token?: string | null
           telegram_chat_id?: number | null
           telegram_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      scheduled_notifications: {
+        Row: {
+          created_at: string
+          id: string
+          message_content: string
+          notification_type: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message_content: string
+          notification_type: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message_content?: string
+          notification_type?: string
+          status?: string
           updated_at?: string
           user_id?: string
         }
@@ -400,8 +498,11 @@ export type Database = {
           data_vencimento: string | null
           descricao: string
           id: string
+          installment_number: number | null
+          installment_total: number | null
           observacoes: string | null
           origem: string | null
+          parent_transaction_id: string | null
           tags: string[] | null
           tipo: string
           updated_at: string
@@ -418,8 +519,11 @@ export type Database = {
           data_vencimento?: string | null
           descricao: string
           id?: string
+          installment_number?: number | null
+          installment_total?: number | null
           observacoes?: string | null
           origem?: string | null
+          parent_transaction_id?: string | null
           tags?: string[] | null
           tipo: string
           updated_at?: string
@@ -436,8 +540,11 @@ export type Database = {
           data_vencimento?: string | null
           descricao?: string
           id?: string
+          installment_number?: number | null
+          installment_total?: number | null
           observacoes?: string | null
           origem?: string | null
+          parent_transaction_id?: string | null
           tags?: string[] | null
           tipo?: string
           updated_at?: string
@@ -466,6 +573,13 @@ export type Database = {
             referencedRelation: "accounts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "transactions_parent_transaction_id_fkey"
+            columns: ["parent_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
@@ -473,6 +587,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auto_learn_category: {
+        Args: {
+          p_category_id: string
+          p_new_keyword: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       calcular_vencimento_cartao: {
         Args: {
           data_transacao: string
@@ -500,9 +622,26 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_dashboard_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          monthly_expenses: number
+          monthly_income: number
+          monthly_savings: number
+          total_balance: number
+        }[]
+      }
+      get_user_group_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_user_license_plan: {
         Args: { target_user_id: string }
         Returns: string
+      }
+      is_family_member: {
+        Args: { target_user_id: string }
+        Returns: boolean
       }
     }
     Enums: {
