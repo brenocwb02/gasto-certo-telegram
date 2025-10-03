@@ -209,14 +209,14 @@ import { corsHeaders } from '../_shared/cors.ts';
   };
 }
 // --- Funções de Manipulação de Comandos ---
-async function handleCommand(supabase, command, userId, chatId) {
+async function handleCommand(supabase: any, command: string, userId: string, chatId: number): Promise<void> {
   switch(command){
     case '/saldo':
       {
         const { data: accounts } = await supabase.from('accounts').select('nome, saldo_atual, tipo').eq('user_id', userId).eq('ativo', true);
         let saldoMessage = '💰 *Seus Saldos:*\n\n';
         if (accounts && accounts.length > 0) {
-          accounts.forEach((account)=>{
+          accounts.forEach((account: any)=>{
             const emoji = account.tipo === 'cartao_credito' ? '💳' : account.tipo === 'poupanca' ? '🏦' : '💵';
             saldoMessage += `${emoji} *${account.nome}*: ${formatCurrency(account.saldo_atual)}\n`;
           });
@@ -269,7 +269,7 @@ async function handleCommand(supabase, command, userId, chatId) {
         const { data: goals } = await supabase.from('goals').select('titulo, valor_meta, valor_atual').eq('user_id', userId).eq('status', 'ativa');
         let metasMessage = '🎯 *Suas Metas:*\n\n';
         if (goals && goals.length > 0) {
-          goals.forEach((goal)=>{
+          goals.forEach((goal: any)=>{
             const progresso = Number(goal.valor_atual) / Number(goal.valor_meta) * 100;
             metasMessage += `📈 *${goal.titulo}*\nMeta: ${formatCurrency(goal.valor_meta)}\nAtual: ${formatCurrency(goal.valor_atual)}\nProgresso: ${progresso.toFixed(1)}%\n\n`;
           });
