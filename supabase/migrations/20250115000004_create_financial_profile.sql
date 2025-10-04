@@ -255,3 +255,4 @@ CREATE TRIGGER trigger_update_financial_profile_score
 COMMENT ON TABLE public.financial_profile IS 'Perfil financeiro do usuário baseado em quiz de saúde financeira';
 COMMENT ON COLUMN public.financial_profile.financial_health_score IS 'Score de saúde financeira de 0-100 calculado automaticamente';
 COMMENT ON COLUMN public.financial_profile.recommendations IS 'Recomendações personalizadas baseadas nas respostas do quiz';
+

@@ -12,3 +12,4 @@ COMMENT ON COLUMN public.profiles.onboarding_completed IS 'Indica se o usuário 
 CREATE INDEX IF NOT EXISTS idx_profiles_onboarding_completed 
 ON public.profiles(onboarding_completed) 
 WHERE onboarding_completed = false;
+
