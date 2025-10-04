@@ -2,13 +2,24 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
+interface Profile {
+  id: string;
+  user_id: string;
+  nome: string | null;
+  onboarding_completed: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  profile: Profile | null;
   signUp: (email: string, password: string, nome?: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  updateOnboardingCompleted: (completed: boolean) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -17,6 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<Profile | null>(null);
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -26,11 +38,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
         setLoading(false);
         
-        // If user signed in, defer any additional data fetching
+        // If user signed in, fetch profile
         if (event === 'SIGNED_IN' && session?.user) {
-          setTimeout(() => {
-            // Could fetch user profile here if needed
-          }, 0);
+          fetchProfile(session.user.id);
+        } else if (event === 'SIGNED_OUT') {
+          setProfile(null);
         }
       }
     );
@@ -40,10 +52,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return;
+      }
+
+      setProfile(data);
+    } catch (err) {
+      console.error('Error fetching profile:', err);
+    }
+  };
+
+  const updateOnboardingCompleted = async (completed: boolean) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ onboarding_completed: completed })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      
+      setProfile(prev => prev ? { ...prev, onboarding_completed: completed } : null);
+    } catch (err) {
+      console.error('Error updating onboarding:', err);
+      throw err;
+    }
+  };
 
   const signUp = async (email: string, password: string, nome?: string) => {
     const redirectUrl = `${window.location.origin}/`;
@@ -97,9 +150,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     session,
     loading,
+    profile,
     signUp,
     signIn,
     signOut,
+    updateOnboardingCompleted,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
