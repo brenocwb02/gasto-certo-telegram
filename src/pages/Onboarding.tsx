@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -17,13 +18,10 @@ import {
   Crown,
   TrendingUp,
   TrendingDown,
-  MessageSquare,
   Bot
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useProfile } from "@/hooks/useSupabaseData";
-import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 
 interface OnboardingStep {
   id: number;
@@ -34,11 +32,11 @@ interface OnboardingStep {
 }
 
 export default function Onboarding() {
-  const { user } = useAuth();
-  const { profile, updateOnboardingCompleted } = useProfile();
-  const navigate = useNavigate();
+  const { profile, updateOnboardingCompleted } = useAuth(); // Alterado para useAuth
+  const navigate = useNavigate(); // Adicionado para navegação
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const steps: OnboardingStep[] = [
     {
@@ -195,7 +193,7 @@ export default function Onboarding() {
     {
       id: 5,
       title: "Telegram Bot",
-      description: "Controle suas finanças pelo WhatsApp",
+      description: "Controle suas finanças pelo Telegram",
       icon: Smartphone,
       content: (
         <div className="space-y-6">
@@ -272,6 +270,28 @@ export default function Onboarding() {
     }
   ];
 
+  const handleComplete = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
+    try {
+      await updateOnboardingCompleted(true); // Isto agora atualiza o estado central
+      toast({
+        title: "Onboarding concluído!",
+        description: "Bem-vindo ao Zaq - Boas Contas!",
+      });
+      // Navegação suave, que agora funcionará corretamente
+      navigate('/'); 
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao concluir onboarding",
+        variant: "destructive",
+      });
+      setIsSubmitting(false); // Reativa o botão em caso de erro
+    }
+  };
+
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
       setCurrentStep(prev => prev + 1);
@@ -285,34 +305,6 @@ export default function Onboarding() {
       setCurrentStep(prev => prev - 1);
     }
   };
-
-  const handleSkip = async () => {
-    await handleComplete();
-  };
-
-  const handleComplete = async () => {
-    try {
-      await updateOnboardingCompleted(true);
-      toast({
-        title: "Onboarding concluído!",
-        description: "Bem-vindo ao Zaq - Boas Contas!",
-      });
-      navigate('/');
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Erro ao concluir onboarding",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Redirecionar se já completou o onboarding
-  useEffect(() => {
-    if (profile?.onboarding_completed) {
-      navigate('/');
-    }
-  }, [profile?.onboarding_completed, navigate]);
 
   const progress = ((currentStep + 1) / steps.length) * 100;
   const currentStepData = steps[currentStep];
@@ -352,18 +344,18 @@ export default function Onboarding() {
           <div className="flex justify-between pt-4">
             <div className="flex gap-2">
               {currentStep > 0 && (
-                <Button variant="outline" onClick={handlePrevious}>
+                <Button variant="outline" onClick={handlePrevious} disabled={isSubmitting}>
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Anterior
                 </Button>
               )}
-              <Button variant="ghost" onClick={handleSkip}>
+              <Button variant="ghost" onClick={handleComplete} disabled={isSubmitting}>
                 Pular Tutorial
               </Button>
             </div>
             
-            <Button onClick={handleNext}>
-              {currentStep === steps.length - 1 ? (
+            <Button onClick={handleNext} disabled={isSubmitting}>
+              {isSubmitting ? 'Aguarde...' : currentStep === steps.length - 1 ? (
                 <>
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Começar a Usar
@@ -377,7 +369,7 @@ export default function Onboarding() {
             </Button>
           </div>
           
-          {/* Indicadores de progresso */}
+          {/* Progress indicators */}
           <div className="flex justify-center gap-2">
             {steps.map((_, index) => (
               <div
