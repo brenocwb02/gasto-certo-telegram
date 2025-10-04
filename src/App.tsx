@@ -19,7 +19,6 @@ import Settings from "@/pages/Settings";
 import Support from "@/pages/Support";
 import License from "@/pages/License";
 import TelegramIntegration from "@/pages/TelegramIntegration";
-import TelegramBot from "@/pages/TelegramBot";
 import Categories from "@/pages/Categories";
 import Budget from "@/pages/Budget";
 import CheckoutPage from "@/pages/Checkout";
@@ -148,16 +147,6 @@ const AppRoutes = () => {
           <ProtectedRoute>
             <AppLayout>
               <TelegramIntegration />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/telegram-bot"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <TelegramBot />
             </AppLayout>
           </ProtectedRoute>
         }
