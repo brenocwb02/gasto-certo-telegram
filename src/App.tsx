@@ -23,6 +23,9 @@ import TelegramBot from "@/pages/TelegramBot";
 import Categories from "@/pages/Categories";
 import Budget from "@/pages/Budget";
 import CheckoutPage from "@/pages/Checkout";
+import Investments from "@/pages/Investments";
+import NetWorth from "@/pages/NetWorth";
+import FamilySettings from "@/pages/FamilySettings";
 
 const queryClient = new QueryClient();
 
@@ -165,6 +168,36 @@ const AppRoutes = () => {
           <ProtectedRoute>
             <AppLayout>
               <CheckoutPage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/investimentos"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <Investments />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/patrimonio"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <NetWorth />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/familia"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <FamilySettings />
             </AppLayout>
           </ProtectedRoute>
         }

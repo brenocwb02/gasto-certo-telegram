@@ -21,17 +21,21 @@ export type Database = {
           closing_day: number | null
           cor: string | null
           created_at: string
+          debt_type: string | null
           dia_fechamento: number | null
           dia_vencimento: number | null
           due_day: number | null
           id: string
           is_primary: boolean | null
           limite_credito: number | null
+          monthly_payment: number | null
           nome: string
           parent_account_id: string | null
+          remaining_installments: number | null
           saldo_atual: number
           saldo_inicial: number
           tipo: string
+          total_installments: number | null
           updated_at: string
           user_id: string
         }
@@ -41,17 +45,21 @@ export type Database = {
           closing_day?: number | null
           cor?: string | null
           created_at?: string
+          debt_type?: string | null
           dia_fechamento?: number | null
           dia_vencimento?: number | null
           due_day?: number | null
           id?: string
           is_primary?: boolean | null
           limite_credito?: number | null
+          monthly_payment?: number | null
           nome: string
           parent_account_id?: string | null
+          remaining_installments?: number | null
           saldo_atual?: number
           saldo_inicial?: number
           tipo: string
+          total_installments?: number | null
           updated_at?: string
           user_id: string
         }
@@ -61,17 +69,21 @@ export type Database = {
           closing_day?: number | null
           cor?: string | null
           created_at?: string
+          debt_type?: string | null
           dia_fechamento?: number | null
           dia_vencimento?: number | null
           due_day?: number | null
           id?: string
           is_primary?: boolean | null
           limite_credito?: number | null
+          monthly_payment?: number | null
           nome?: string
           parent_account_id?: string | null
+          remaining_installments?: number | null
           saldo_atual?: number
           saldo_inicial?: number
           tipo?: string
+          total_installments?: number | null
           updated_at?: string
           user_id?: string
         }
@@ -279,6 +291,95 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      investment_transactions: {
+        Row: {
+          created_at: string
+          id: string
+          investment_id: string | null
+          notes: string | null
+          price: number | null
+          quantity: number | null
+          ticker: string
+          total_value: number
+          transaction_date: string
+          transaction_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          investment_id?: string | null
+          notes?: string | null
+          price?: number | null
+          quantity?: number | null
+          ticker: string
+          total_value: number
+          transaction_date?: string
+          transaction_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          investment_id?: string | null
+          notes?: string | null
+          price?: number | null
+          quantity?: number | null
+          ticker?: string
+          total_value?: number
+          transaction_date?: string
+          transaction_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investment_transactions_investment_id_fkey"
+            columns: ["investment_id"]
+            isOneToOne: false
+            referencedRelation: "investments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      investments: {
+        Row: {
+          asset_type: Database["public"]["Enums"]["asset_type"]
+          average_price: number | null
+          created_at: string
+          current_price: number | null
+          id: string
+          last_price_update: string | null
+          quantity: number | null
+          ticker: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          asset_type: Database["public"]["Enums"]["asset_type"]
+          average_price?: number | null
+          created_at?: string
+          current_price?: number | null
+          id?: string
+          last_price_update?: string | null
+          quantity?: number | null
+          ticker: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          asset_type?: Database["public"]["Enums"]["asset_type"]
+          average_price?: number | null
+          created_at?: string
+          current_price?: number | null
+          id?: string
+          last_price_update?: string | null
+          quantity?: number | null
+          ticker?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       licenses: {
         Row: {
@@ -645,7 +746,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      asset_type: "acao" | "fii" | "etf" | "renda_fixa" | "cripto"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -772,6 +873,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      asset_type: ["acao", "fii", "etf", "renda_fixa", "cripto"],
+    },
   },
 } as const
