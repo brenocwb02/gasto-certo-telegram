@@ -19,7 +19,7 @@ import {
   TrendingDown,
   Bot
 } from "lucide-react";
-import { useProfile } from "@/hooks/useProfile";
+import { useProfile } from "@/hooks/useSupabaseData";
 import { useToast } from "@/components/ui/use-toast";
 
 interface OnboardingStep {
