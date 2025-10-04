@@ -25,6 +25,7 @@ import CheckoutPage from "@/pages/Checkout";
 import Investments from "@/pages/Investments";
 import NetWorth from "@/pages/NetWorth";
 import FamilySettings from "@/pages/FamilySettings";
+import RecurringTransactions from "@/pages/RecurringTransactions";
 
 const queryClient = new QueryClient();
 
@@ -187,6 +188,16 @@ const AppRoutes = () => {
           <ProtectedRoute>
             <AppLayout>
               <FamilySettings />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/recorrentes"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <RecurringTransactions />
             </AppLayout>
           </ProtectedRoute>
         }

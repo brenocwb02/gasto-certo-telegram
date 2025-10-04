@@ -12,7 +12,8 @@ import {
   KeyRound,
   LogOut,
   Calculator,
-  Users, // Importado
+  Users,
+  Repeat,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "../../contexts/AuthContext";
@@ -159,6 +160,22 @@ export function Sidebar() {
       </nav>
       <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
         <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <NavLink
+                to="/recorrentes"
+                className={({ isActive }) =>
+                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
+                    isActive ? "bg-accent text-accent-foreground" : ""
+                  }`
+                }
+              >
+                <Repeat className="h-5 w-5" />
+                <span className="sr-only">Recorrentes</span>
+              </NavLink>
+            </TooltipTrigger>
+            <TooltipContent side="right">Recorrentes</TooltipContent>
+          </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <NavLink
