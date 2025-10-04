@@ -3,6 +3,98 @@ import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 import { corsHeaders } from '../_shared/cors.ts';
+
+/**
+ * Converte valores do quiz em labels legíveis
+ */
+function getEmergencyFundLabel(value: string): string {
+  const labels: Record<string, string> = {
+    'none': 'Nada',
+    'less_than_1_month': 'Menos de 1 mês',
+    '1_to_3_months': '1-3 meses',
+    '3_to_6_months': '3-6 meses',
+    'more_than_6_months': 'Mais de 6 meses'
+  };
+  return labels[value] || value;
+}
+
+function getDebtSituationLabel(value: string): string {
+  const labels: Record<string, string> = {
+    'no_debt': 'Sem dívidas',
+    'low_debt': 'Dívidas baixas',
+    'moderate_debt': 'Dívidas moderadas',
+    'high_debt': 'Dívidas altas',
+    'overwhelming_debt': 'Dívidas esmagadoras'
+  };
+  return labels[value] || value;
+}
+
+function getSavingsRateLabel(value: string): string {
+  const labels: Record<string, string> = {
+    'negative': 'Negativo',
+    '0_to_5_percent': '0-5%',
+    '5_to_10_percent': '5-10%',
+    '10_to_20_percent': '10-20%',
+    'more_than_20_percent': 'Mais de 20%'
+  };
+  return labels[value] || value;
+}
+
+function getInvestmentKnowledgeLabel(value: string): string {
+  const labels: Record<string, string> = {
+    'beginner': 'Iniciante',
+    'basic': 'Básico',
+    'intermediate': 'Intermediário',
+    'advanced': 'Avançado',
+    'expert': 'Especialista'
+  };
+  return labels[value] || value;
+}
+
+function getFinancialGoalsLabel(value: string): string {
+  const labels: Record<string, string> = {
+    'survival': 'Sobrevivência',
+    'stability': 'Estabilidade',
+    'growth': 'Crescimento',
+    'wealth_building': 'Construção de Riqueza',
+    'legacy': 'Legado'
+  };
+  return labels[value] || value;
+}
+
+function getBudgetControlLabel(value: string): string {
+  const labels: Record<string, string> = {
+    'no_budget': 'Sem orçamento',
+    'informal': 'Informal',
+    'basic_tracking': 'Controle básico',
+    'detailed_budget': 'Orçamento detalhado',
+    'advanced_planning': 'Planejamento avançado'
+  };
+  return labels[value] || value;
+}
+
+function getInsuranceCoverageLabel(value: string): string {
+  const labels: Record<string, string> = {
+    'none': 'Nenhuma',
+    'basic': 'Básica',
+    'adequate': 'Adequada',
+    'comprehensive': 'Abrangente',
+    'excellent': 'Excelente'
+  };
+  return labels[value] || value;
+}
+
+function getRetirementPlanningLabel(value: string): string {
+  const labels: Record<string, string> = {
+    'not_started': 'Não começou',
+    'thinking_about_it': 'Pensando',
+    'basic_plan': 'Plano básico',
+    'detailed_plan': 'Plano detalhado',
+    'expert_level': 'Nível especialista'
+  };
+  return labels[value] || value;
+}
+
 // --- Funções Auxiliares ---
 /**
  * Formata um número para a moeda BRL.
@@ -596,9 +688,66 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
       break;
     }
 
+    case '/meuperfil': {
+      // Buscar perfil financeiro do usuário
+      const { data: financialProfile, error: profileError } = await supabase
+        .from('financial_profile')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        await sendTelegramMessage(chatId, '❌ Erro ao buscar seu perfil financeiro. Tente novamente.');
+        break;
+      }
+
+      if (!financialProfile) {
+        const message = `📊 *Seu Perfil Financeiro*\n\n❌ Você ainda não completou o quiz de saúde financeira.\n\n🎯 *Para descobrir seu perfil:*\n🔗 [Fazer Quiz](https://app.boascontas.com/quiz-financeiro)\n\n*O quiz avalia:*\n• Fundo de emergência\n• Situação de dívidas\n• Taxa de poupança\n• Conhecimento em investimentos\n• Objetivos financeiros\n• Controle de orçamento\n• Cobertura de seguros\n• Planejamento de aposentadoria\n\n💡 *Benefícios:*\n• Score de saúde financeira (0-100)\n• Recomendações personalizadas\n• Estratégias de melhoria\n\n🎓 Complete o quiz para receber insights valiosos sobre suas finanças!`;
+        await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
+        break;
+      }
+
+      // Calcular nível de saúde financeira
+      const score = financialProfile.financial_health_score;
+      let healthLevel = '';
+      let healthEmoji = '';
+      
+      if (score >= 80) {
+        healthLevel = 'Excelente';
+        healthEmoji = '🟢';
+      } else if (score >= 60) {
+        healthLevel = 'Bom';
+        healthEmoji = '🔵';
+      } else if (score >= 40) {
+        healthLevel = 'Regular';
+        healthEmoji = '🟡';
+      } else if (score >= 20) {
+        healthLevel = 'Precisa Melhorar';
+        healthEmoji = '🟠';
+      } else {
+        healthLevel = 'Crítico';
+        healthEmoji = '🔴';
+      }
+
+      // Processar recomendações
+      let recommendations = [];
+      try {
+        recommendations = Array.isArray(financialProfile.recommendations) 
+          ? financialProfile.recommendations 
+          : JSON.parse(financialProfile.recommendations as string);
+      } catch {
+        recommendations = [];
+      }
+
+      const message = `📊 *Seu Perfil Financeiro*\n\n${healthEmoji} *Score de Saúde Financeira: ${score}/100 - ${healthLevel}*\n\n📈 *Progresso:*\n${'█'.repeat(Math.floor(score/10))}${'░'.repeat(10-Math.floor(score/10))} ${score}%\n\n🎯 *Suas Respostas:*\n• Fundo de Emergência: ${getEmergencyFundLabel(financialProfile.emergency_fund)}\n• Dívidas: ${getDebtSituationLabel(financialProfile.debt_situation)}\n• Poupança: ${getSavingsRateLabel(financialProfile.savings_rate)}\n• Investimentos: ${getInvestmentKnowledgeLabel(financialProfile.investment_knowledge)}\n• Objetivos: ${getFinancialGoalsLabel(financialProfile.financial_goals)}\n• Orçamento: ${getBudgetControlLabel(financialProfile.budget_control)}\n• Seguros: ${getInsuranceCoverageLabel(financialProfile.insurance_coverage)}\n• Aposentadoria: ${getRetirementPlanningLabel(financialProfile.retirement_planning)}\n\n💡 *Recomendações:*\n${recommendations.slice(0, 3).map((rec: string, i: number) => `${i+1}. ${rec}`).join('\n')}\n\n🔗 [Ver Perfil Completo](https://app.boascontas.com/quiz-financeiro)\n\n📅 *Última atualização:* ${new Date(financialProfile.completed_at).toLocaleDateString('pt-BR')}`;
+      
+      await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
+      break;
+    }
+
     case '/ajuda':
     default: {
-      const message = `💡 *Comandos Disponíveis*\n\n💰 *Finanças*\n• Registre gastos naturalmente\n• /saldo - Saldo das contas\n• /extrato - Últimas transações\n• /resumo - Resumo do mês\n\n📊 *Análises*\n• /perguntar - Pergunte sobre gastos\n• /top_gastos - Top 5 categorias\n• /comparar_meses - Comparativo\n• /previsao - Projeção de gastos\n\n🔄 *Recorrentes*\n• /recorrente_nova - Criar recorrência\n• /recorrentes - Ver ativas\n• /pausar_recorrente - Pausar/reativar\n\n✏️ *Edição*\n• /editar_ultima - Editar transação\n\n🎯 *Metas*\n• /metas - Ver progresso\n\n🎓 *Ajuda*\n• /tutorial - Tutorial completo`;
+      const message = `💡 *Comandos Disponíveis*\n\n💰 *Finanças*\n• Registre gastos naturalmente\n• /saldo - Saldo das contas\n• /extrato - Últimas transações\n• /resumo - Resumo do mês\n\n📊 *Análises*\n• /perguntar - Pergunte sobre gastos\n• /top_gastos - Top 5 categorias\n• /comparar_meses - Comparativo\n• /previsao - Projeção de gastos\n\n🔄 *Recorrentes*\n• /recorrente_nova - Criar recorrência\n• /recorrentes - Ver ativas\n• /pausar_recorrente - Pausar/reativar\n\n✏️ *Edição*\n• /editar_ultima - Editar transação\n\n🎯 *Metas*\n• /metas - Ver progresso\n\n📊 *Perfil Financeiro*\n• /meuperfil - Ver score de saúde financeira\n\n🎓 *Ajuda*\n• /tutorial - Tutorial completo`;
       await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
       break;
     }

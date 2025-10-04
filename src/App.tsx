@@ -11,6 +11,7 @@ import Dashboard from "@/pages/Dashboard";
 import Landing from "@/pages/Landing";
 import Auth from "@/pages/Auth";
 import Onboarding from "@/pages/Onboarding";
+import QuizFinanceiro from "@/pages/QuizFinanceiro";
 import NotFound from "@/pages/NotFound";
 import Transactions from "@/pages/Transactions";
 import Accounts from "@/pages/Accounts";
@@ -42,6 +43,7 @@ const AppRoutes = () => {
       <Route path="/landing" element={<Landing />} />
       <Route path="/auth" element={user ? <Navigate to="/" replace /> : <Auth />} />
       <Route path="/onboarding" element={<Onboarding />} />
+      <Route path="/quiz-financeiro" element={<QuizFinanceiro />} />
 
       {/* Rotas Protegidas com Layout */}
       <Route

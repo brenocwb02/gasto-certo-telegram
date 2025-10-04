@@ -8,7 +8,7 @@ import { TransactionForm } from "@/components/forms/TransactionForm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { useFinancialStats, useProfile, useGoals } from "@/hooks/useSupabaseData";
+import { useFinancialStats, useProfile, useGoals, useFinancialProfile } from "@/hooks/useSupabaseData";
 import { LicenseStatus } from "@/components/LicenseGuard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
@@ -16,7 +16,10 @@ import {
   TrendingUp, 
   TrendingDown, 
   Target,
-  Plus
+  Plus,
+  Heart,
+  Award,
+  ArrowRight
 } from "lucide-react";
 
 const Dashboard = () => {
@@ -24,6 +27,84 @@ const Dashboard = () => {
   const { stats, loading: statsLoading } = useFinancialStats();
   const { profile } = useProfile();
   const { goals, loading: goalsLoading } = useGoals();
+  const { financialProfile, hasCompletedQuiz, getFinancialHealthLevel } = useFinancialProfile();
+
+  const FinancialHealthSection = () => {
+    if (!hasCompletedQuiz) {
+      return (
+        <Card className="financial-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Heart className="h-5 w-5" />
+              Saúde Financeira
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-center py-6">
+            <Award className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="font-semibold mb-2">Descubra sua Saúde Financeira</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Faça nosso quiz e receba um score personalizado com recomendações para melhorar suas finanças.
+            </p>
+            <Button asChild className="w-full">
+              <a href="/quiz-financeiro">
+                Fazer Quiz
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </a>
+            </Button>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    const score = financialProfile?.financial_health_score || 0;
+    const healthLevel = getFinancialHealthLevel(score);
+
+    return (
+      <Card className="financial-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Heart className="h-5 w-5" />
+            Saúde Financeira
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="text-center">
+            <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${healthLevel.bgColor} ${healthLevel.color} mb-2`}>
+              <Heart className="h-4 w-4 mr-1" />
+              {healthLevel.level}
+            </div>
+            <div className="text-2xl font-bold">{score}/100</div>
+            <div className="text-sm text-muted-foreground">Score de Saúde Financeira</div>
+          </div>
+          
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span>Progresso</span>
+              <span>{score}%</span>
+            </div>
+            <div className="w-full bg-muted rounded-full h-2">
+              <div 
+                className={`h-2 rounded-full transition-all duration-500 ${
+                  score >= 80 ? 'bg-green-500' :
+                  score >= 60 ? 'bg-blue-500' :
+                  score >= 40 ? 'bg-yellow-500' :
+                  score >= 20 ? 'bg-orange-500' : 'bg-red-500'
+                }`}
+                style={{ width: `${score}%` }}
+              />
+            </div>
+          </div>
+
+          <Button asChild variant="outline" className="w-full">
+            <a href="/quiz-financeiro">
+              Ver Detalhes
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </a>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  };
 
   const GoalsSection = () => (
     <Card className="financial-card">
@@ -177,6 +258,7 @@ const Dashboard = () => {
         
         {/* Sidebar Column */}
         <div className="lg:col-span-1 space-y-6">
+          <FinancialHealthSection />
           <QuickActions />
           <BudgetSummary />
           <GoalsSection />

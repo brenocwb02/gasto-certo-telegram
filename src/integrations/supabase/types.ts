@@ -236,6 +236,60 @@ export type Database = {
           },
         ]
       }
+      financial_profile: {
+        Row: {
+          budget_control: string
+          completed_at: string
+          created_at: string
+          debt_situation: string
+          emergency_fund: string
+          financial_goals: string
+          financial_health_score: number
+          id: string
+          insurance_coverage: string
+          investment_knowledge: string
+          recommendations: Json
+          retirement_planning: string
+          savings_rate: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          budget_control: string
+          completed_at?: string
+          created_at?: string
+          debt_situation: string
+          emergency_fund: string
+          financial_goals: string
+          financial_health_score?: number
+          id?: string
+          insurance_coverage: string
+          investment_knowledge: string
+          recommendations?: Json
+          retirement_planning: string
+          savings_rate: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          budget_control?: string
+          completed_at?: string
+          created_at?: string
+          debt_situation?: string
+          emergency_fund?: string
+          financial_goals?: string
+          financial_health_score?: number
+          id?: string
+          insurance_coverage?: string
+          investment_knowledge?: string
+          recommendations?: Json
+          retirement_planning?: string
+          savings_rate?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       goals: {
         Row: {
           categoria_id: string | null
