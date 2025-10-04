@@ -297,7 +297,7 @@ export default function Onboarding() {
         title: "Onboarding concluído!",
         description: "Bem-vindo ao Zaq - Boas Contas!",
       });
-      navigate('/');
+      window.location.href = '/';
     } catch (error) {
       toast({
         title: "Erro",
