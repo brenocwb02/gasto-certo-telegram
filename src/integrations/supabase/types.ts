@@ -426,6 +426,7 @@ export type Database = {
           created_at: string
           id: string
           nome: string
+          onboarding_completed: boolean
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           telefone: string | null
@@ -440,6 +441,7 @@ export type Database = {
           created_at?: string
           id?: string
           nome: string
+          onboarding_completed?: boolean
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           telefone?: string | null
@@ -454,6 +456,7 @@ export type Database = {
           created_at?: string
           id?: string
           nome?: string
+          onboarding_completed?: boolean
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           telefone?: string | null

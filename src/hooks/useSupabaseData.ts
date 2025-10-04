@@ -44,7 +44,24 @@ export function useProfile() {
     fetchProfile();
   }, [user]);
 
-  return { profile, loading, error };
+  const updateOnboardingCompleted = async (completed: boolean = true) => {
+    if (!user || !profile) return;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ onboarding_completed: completed })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      
+      setProfile(prev => prev ? { ...prev, onboarding_completed: completed } : null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao atualizar onboarding');
+    }
+  };
+
+  return { profile, loading, error, updateOnboardingCompleted };
 }
 
 export function useTransactions() {

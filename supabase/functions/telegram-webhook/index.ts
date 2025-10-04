@@ -590,9 +590,15 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
       break;
     }
 
+    case '/tutorial': {
+      const message = `🎓 *Tutorial do Zaq - Boas Contas*\n\n📱 *Acesse o tutorial completo:*\n🔗 [Abrir Tutorial](https://app.boascontas.com/onboarding)\n\n*Resumo rápido:*\n\n💰 *Transações:*\n• "Gastei R$ 50 no mercado"\n• "Recebi R$ 1000 de salário"\n• "Transferi R$ 200 da conta para carteira"\n\n🤖 *Comandos úteis:*\n• /saldo - Ver saldo das contas\n• /extrato - Últimas transações\n• /metas - Progresso das metas\n• /perguntar - Faça perguntas sobre gastos\n\n👥 *Gestão Familiar:*\n• Convide membros da família\n• Controle permissões\n• Compartilhe finanças\n\n🎯 *Metas e Orçamento:*\n• Defina objetivos financeiros\n• Acompanhe progresso\n• Planeje o futuro\n\n📊 *Relatórios Inteligentes:*\n• Gráficos de evolução\n• Análises de padrões\n• IA para insights\n\n💡 *Dica:* Complete o tutorial no app para uma experiência completa!`;
+      await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
+      break;
+    }
+
     case '/ajuda':
     default: {
-      const message = `💡 *Comandos Disponíveis*\n\n💰 *Finanças*\n• Registre gastos naturalmente\n• /saldo - Saldo das contas\n• /extrato - Últimas transações\n• /resumo - Resumo do mês\n\n📊 *Análises*\n• /perguntar - Pergunte sobre gastos\n• /top_gastos - Top 5 categorias\n• /comparar_meses - Comparativo\n• /previsao - Projeção de gastos\n\n🔄 *Recorrentes*\n• /recorrente_nova - Criar recorrência\n• /recorrentes - Ver ativas\n• /pausar_recorrente - Pausar/reativar\n\n✏️ *Edição*\n• /editar_ultima - Editar transação\n\n🎯 *Metas*\n• /metas - Ver progresso`;
+      const message = `💡 *Comandos Disponíveis*\n\n💰 *Finanças*\n• Registre gastos naturalmente\n• /saldo - Saldo das contas\n• /extrato - Últimas transações\n• /resumo - Resumo do mês\n\n📊 *Análises*\n• /perguntar - Pergunte sobre gastos\n• /top_gastos - Top 5 categorias\n• /comparar_meses - Comparativo\n• /previsao - Projeção de gastos\n\n🔄 *Recorrentes*\n• /recorrente_nova - Criar recorrência\n• /recorrentes - Ver ativas\n• /pausar_recorrente - Pausar/reativar\n\n✏️ *Edição*\n• /editar_ultima - Editar transação\n\n🎯 *Metas*\n• /metas - Ver progresso\n\n🎓 *Ajuda*\n• /tutorial - Tutorial completo`;
       await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
       break;
     }
