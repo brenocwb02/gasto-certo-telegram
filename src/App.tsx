@@ -113,15 +113,15 @@ const AppRoutes = () => {
         }
       />
        <Route
-        path="/support"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <Support />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
+          path="/support"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <Support />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
        <Route
         path="/license"
         element={
