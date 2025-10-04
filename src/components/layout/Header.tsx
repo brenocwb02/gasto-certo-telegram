@@ -45,7 +45,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           <Menu className="h-5 w-5" />
         </Button>
         <div>
-           <h1 className="text-2xl font-bold text-foreground">Boas Contas</h1>
+           <h1 className="text-2xl font-bold text-foreground">Zaq - Boas Contas</h1>
           <p className="text-sm text-muted-foreground">Controle Financeiro Inteligente</p>
         </div>
       </div>

@@ -216,7 +216,7 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
 
   switch (cmd.toLowerCase()) {
     case '/start': {
-      const message = `👋 Olá! Bem-vindo ao Gasto Certo!
+      const message = `🎉 *Bem-vindo ao Zaq - Boas Contas!*
 
 🎯 Comandos disponíveis:
 
@@ -637,7 +637,7 @@ serve(async (req)=>{
     if (text && text.startsWith('/start')) {
       const licenseCode = text.split(' ')[1];
       if (!licenseCode) {
-        await sendTelegramMessage(chatId, '👋 *Bem-vindo ao Gasto Certo!*\n\nPara vincular sua conta, use o comando:\n`/start SEU_CODIGO_DE_LICENCA`\n\n📍 Você encontra seu código na aba "Licença" do aplicativo web.\n\n❓ Use /ajuda para ver todos os comandos disponíveis.');
+        await sendTelegramMessage(chatId, '👋 *Bem-vindo ao Zaq - Boas Contas!*\n\nPara vincular sua conta, use o comando:\n`/start SEU_CODIGO_DE_LICENCA`\n\n📍 Você encontra seu código na aba "Licença" do aplicativo web.\n\n❓ Use /ajuda para ver todos os comandos disponíveis.');
       } else {
         const result = await linkUserWithLicense(supabaseAdmin, chatId, licenseCode);
         await sendTelegramMessage(chatId, result.message);
@@ -782,7 +782,7 @@ serve(async (req)=>{
     if (true) {
       const { data: license } = await supabaseAdmin.from('licenses').select('plano, status').eq('user_id', userId).eq('status', 'ativo').single();
       if (!license || license.plano !== 'premium') {
-        await sendTelegramMessage(chatId, `🔒 *Funcionalidade Premium*\n\nOlá! A adição de transações pelo Telegram é uma funcionalidade exclusiva do plano Premium.\n\n✨ Com o Premium você terá:\n• Registro de transações por IA\n• Contas e categorias ilimitadas\n• Relatórios avançados\n• Metas e orçamentos\n\n📱 Visite nossa página de licenças para fazer upgrade e desbloquear todo o poder do Gasto Certo!\n\n🌐 Acesse: [Fazer Upgrade](${Deno.env.get('SUPABASE_URL')?.replace('supabase.co', 'lovable.app')}/license)`);
+        await sendTelegramMessage(chatId, `🔒 *Funcionalidade Premium*\n\nOlá! A adição de transações pelo Telegram é uma funcionalidade exclusiva do plano Premium.\n\n✨ Com o Premium você terá:\n• Registro de transações por IA\n• Contas e categorias ilimitadas\n• Relatórios avançados\n• Metas e orçamentos\n\n📱 Visite nossa página de licenças para fazer upgrade e desbloquear todo o poder do Zaq - Boas Contas!\n\n🌐 Acesse: [Fazer Upgrade](${Deno.env.get('SUPABASE_URL')?.replace('supabase.co', 'lovable.app')}/license)`);
         return new Response('Premium required', {
           status: 200,
           headers: corsHeaders

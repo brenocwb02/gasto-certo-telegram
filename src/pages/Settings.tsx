@@ -27,7 +27,7 @@ const Settings = () => {
     document.title = "Configurações | Boas Contas";
     const meta = document.querySelector('meta[name="description"]');
     if (meta) {
-      meta.setAttribute("content", "Configure sua conta do Gasto Certo: vincule o Telegram, gerencie licença e ajuste preferências.");
+      meta.setAttribute("content", "Configure sua conta do Boas Contas: vincule o Telegram, gerencie licença e ajuste preferências.");
     }
     let link = document.querySelector('link[rel="canonical"]');
     if (!link) {
@@ -138,7 +138,7 @@ const Settings = () => {
                 Licença
               </CardTitle>
               <CardDescription>
-                Informações sobre sua licença do Gasto Certo
+                Informações sobre sua licença do Boas Contas
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

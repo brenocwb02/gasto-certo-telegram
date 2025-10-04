@@ -88,7 +88,7 @@ const Dashboard = () => {
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-3xl font-bold text-foreground">
-              Bem-vindo ao Zac - Boas Contas{profile?.nome ? `, ${profile.nome}` : ''}! 👋
+              Bem-vindo ao Zaq - Boas Contas{profile?.nome ? `, ${profile.nome}` : ''}! 👋
             </h1>
             <p className="text-muted-foreground">Controle financeiro familiar com propósito - Aqui está o resumo das suas finanças hoje</p>
           </div>

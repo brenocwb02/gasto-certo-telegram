@@ -12,7 +12,7 @@ const Transactions = () => {
     if (meta) {
       meta.setAttribute(
         "content",
-        "Transações financeiramente organizadas no Gasto Certo: liste, edite e exclua suas transações."
+        "Transações financeiramente organizadas no Boas Contas: liste, edite e exclua suas transações."
       );
     }
     let link: HTMLLinkElement | null = document.querySelector('link[rel="canonical"]');

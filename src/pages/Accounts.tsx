@@ -19,7 +19,7 @@ const Accounts = () => {
     document.title = "Contas | Boas Contas";
     const meta = document.querySelector('meta[name="description"]');
     if (meta) {
-      meta.setAttribute("content", "Gerencie suas contas financeiras no Gasto Certo: carteira, conta corrente, poupança e investimentos.");
+      meta.setAttribute("content", "Gerencie suas contas financeiras no Boas Contas: carteira, conta corrente, poupança e investimentos.");
     }
     let link = document.querySelector('link[rel="canonical"]');
     if (!link) {

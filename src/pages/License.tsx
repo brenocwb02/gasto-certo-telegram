@@ -30,7 +30,7 @@ export default function License() {
   const { isPremium, createCheckout, openCustomerPortal } = useSubscription();
 
   useEffect(() => {
-    document.title = 'Licença - Gasto Certo';
+    document.title = 'Licença - Boas Contas';
   }, []);
 
   const handleUpgrade = async () => {
@@ -382,7 +382,7 @@ export default function License() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Nossa equipe está sempre pronta para ajudar você a aproveitar ao máximo o Gasto Certo.
+                  Nossa equipe está sempre pronta para ajudar você a aproveitar ao máximo o Boas Contas.
                 </p>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => window.open('/support', '_self')}>

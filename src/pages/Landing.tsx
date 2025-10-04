@@ -135,7 +135,7 @@ const Landing = () => {
               <Heart className="h-6 w-6 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-primary">Zac</h1>
+              <h1 className="text-xl font-bold text-primary">Zaq</h1>
               <p className="text-xs text-muted-foreground">Boas Contas</p>
             </div>
           </div>
@@ -167,7 +167,7 @@ const Landing = () => {
             <span className="text-sm text-primary font-medium">Inspirado em valores cristãos</span>
           </div>
           <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            Zac - <span className="text-primary">Boas Contas</span>
+            Zaq - <span className="text-primary">Boas Contas</span>
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
             Controle financeiro familiar com <span className="text-primary font-semibold">propósito</span>
@@ -175,7 +175,8 @@ const Landing = () => {
           <p className="text-lg text-muted-foreground mb-12 max-w-3xl mx-auto">
             Transforme a relação da sua família com o dinheiro. Organize receitas, 
             despesas e metas com uma ferramenta simples, prática e baseada em 
-            valores cristãos.
+            valores cristãos. <strong>Zaq</strong> é seu assistente financeiro pessoal, 
+            inspirado em Zaqueu da Bíblia - alguém que transformou sua relação com o dinheiro.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">

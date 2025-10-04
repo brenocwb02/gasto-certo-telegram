@@ -17,7 +17,7 @@ const Reports = () => {
     document.title = "Relatórios | Boas Contas";
     const meta = document.querySelector('meta[name="description"]');
     if (meta) {
-      meta.setAttribute("content", "Relatórios e análises financeiras detalhadas do Gasto Certo: gráficos, tendências e insights dos seus gastos.");
+      meta.setAttribute("content", "Relatórios e análises financeiras detalhadas do Boas Contas: gráficos, tendências e insights dos seus gastos.");
     }
     let link = document.querySelector('link[rel="canonical"]');
     if (!link) {

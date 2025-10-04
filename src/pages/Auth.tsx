@@ -62,7 +62,7 @@ export default function Auth() {
       } else {
         toast({
           title: "Login realizado com sucesso!",
-          description: "Bem-vindo ao Gasto Certo.",
+          description: "Bem-vindo ao Boas Contas.",
         });
       }
     } catch (error) {
