@@ -101,6 +101,7 @@ export function TransactionForm({ onSuccess, onCancel, mode = 'create', initialD
           installment_number: 1,
           installment_total: 1,
           parent_transaction_id: null,
+          group_id: null,
         });
 
         toast({

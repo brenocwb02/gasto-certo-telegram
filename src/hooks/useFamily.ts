@@ -96,16 +96,29 @@ export function useFamily() {
     try {
       const { data, error } = await supabase
         .from('family_members')
-        .select(`
-          *,
-          profile:profiles!family_members_member_id_fkey(nome, avatar_url)
-        `)
+        .select('*')
         .eq('group_id', groupId)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
 
-      setMembers(data || []);
+      // Buscar perfis separadamente para evitar erros de relação
+      if (data && data.length > 0) {
+        const memberIds = data.map(m => m.member_id);
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, nome, avatar_url')
+          .in('user_id', memberIds);
+
+        const membersWithProfiles = data.map(member => ({
+          ...member,
+          profile: profiles?.find(p => p.user_id === member.member_id)
+        })) as FamilyMember[];
+
+        setMembers(membersWithProfiles);
+      } else {
+        setMembers([]);
+      }
     } catch (err) {
       console.error('Erro ao carregar membros da família:', err);
       setError('Erro ao carregar membros da família');
@@ -125,7 +138,7 @@ export function useFamily() {
 
       if (error) throw error;
 
-      setInvites(data || []);
+      setInvites((data || []) as FamilyInvite[]);
     } catch (err) {
       console.error('Erro ao carregar convites da família:', err);
       setError('Erro ao carregar convites da família');
@@ -133,23 +146,37 @@ export function useFamily() {
   };
 
   // Criar novo grupo familiar
-  const createFamilyGroup = async (name: string, description?: string) => {
+  const createFamilyGroup = async (name: string) => {
     if (!user) throw new Error('Usuário não autenticado');
 
     try {
-      const { data, error } = await supabase.rpc('create_family_group', {
-        group_name: name,
-        group_description: description
-      });
+      // Criar grupo diretamente
+      const { data: groupData, error: groupError } = await supabase
+        .from('family_groups')
+        .insert({
+          name,
+          owner_id: user.id
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (groupError) throw groupError;
 
-      if (data.success) {
-        await loadFamilyGroups();
-        return { success: true, message: data.message, group_id: data.group_id };
-      } else {
-        throw new Error(data.message);
-      }
+      // Adicionar owner como membro
+      const { error: memberError } = await supabase
+        .from('family_members')
+        .insert({
+          group_id: groupData.id,
+          member_id: user.id,
+          role: 'owner',
+          status: 'active',
+          joined_at: new Date().toISOString()
+        });
+
+      if (memberError) throw memberError;
+
+      await loadFamilyGroups();
+      return { success: true, message: 'Grupo criado com sucesso!', group_id: groupData.id };
     } catch (err) {
       console.error('Erro ao criar grupo familiar:', err);
       throw err;
@@ -159,47 +186,54 @@ export function useFamily() {
   // Convidar membro para o grupo
   const inviteFamilyMember = async (groupId: string, email: string, role: string = 'member') => {
     try {
-      const { data, error } = await supabase.rpc('invite_family_member', {
-        group_id: groupId,
-        email: email,
-        role: role
-      });
+      // Gerar token único
+      const token = 'FAM_' + Math.random().toString(36).substring(2, 14).toUpperCase();
 
-      if (error) throw error;
+      // Criar convite diretamente
+      const { data: inviteData, error: inviteError } = await supabase
+        .from('family_invites')
+        .insert({
+          group_id: groupId,
+          email,
+          role,
+          invited_by: user!.id,
+          token,
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          status: 'pending'
+        })
+        .select()
+        .single();
 
-      if (data.success) {
-        // Buscar o convite criado para enviar email
-        const { data: invite, error: inviteError } = await supabase
-          .from('family_invites')
-          .select(`
-            *,
-            family_groups!inner(name, description),
-            inviter:profiles!family_invites_invited_by_fkey(nome)
-          `)
-          .eq('token', data.token)
-          .single();
+      if (inviteError) throw inviteError;
 
-        if (!inviteError && invite) {
-          // Enviar email de convite
-          try {
-            await supabase.functions.invoke('send-family-invite', {
-              body: {
-                inviteId: invite.id,
-                groupName: invite.family_groups.name,
-                inviterName: invite.inviter?.nome
-              }
-            });
-          } catch (emailError) {
-            console.warn('Erro ao enviar email de convite:', emailError);
-            // Não falhar o processo se o email não for enviado
+      // Buscar dados do grupo e inviter para email
+      const { data: groupData } = await supabase
+        .from('family_groups')
+        .select('name')
+        .eq('id', groupId)
+        .single();
+
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('nome')
+        .eq('user_id', user!.id)
+        .single();
+
+      // Enviar email de convite
+      try {
+        await supabase.functions.invoke('send-family-invite', {
+          body: {
+            inviteId: inviteData.id,
+            groupName: groupData?.name || 'Grupo Familiar',
+            inviterName: profileData?.nome || 'Um membro'
           }
-        }
-
-        await loadFamilyInvites(groupId);
-        return { success: true, message: data.message, token: data.token };
-      } else {
-        throw new Error(data.message);
+        });
+      } catch (emailError) {
+        console.warn('Erro ao enviar email de convite:', emailError);
       }
+
+      await loadFamilyInvites(groupId);
+      return { success: true, message: 'Convite enviado com sucesso!', token };
     } catch (err) {
       console.error('Erro ao convidar membro:', err);
       throw err;
@@ -209,18 +243,43 @@ export function useFamily() {
   // Aceitar convite familiar
   const acceptFamilyInvite = async (token: string) => {
     try {
-      const { data, error } = await supabase.rpc('accept_family_invite', {
-        invite_token: token
-      });
+      // Buscar convite válido
+      const { data: invite, error: inviteError } = await supabase
+        .from('family_invites')
+        .select('*')
+        .eq('token', token)
+        .eq('status', 'pending')
+        .gt('expires_at', new Date().toISOString())
+        .single();
 
-      if (error) throw error;
-
-      if (data.success) {
-        await loadFamilyGroups();
-        return { success: true, message: data.message, group_id: data.group_id };
-      } else {
-        throw new Error(data.message);
+      if (inviteError || !invite) {
+        throw new Error('Convite inválido ou expirado');
       }
+
+      // Adicionar membro ao grupo
+      const { error: memberError } = await supabase
+        .from('family_members')
+        .insert({
+          group_id: invite.group_id,
+          member_id: user!.id,
+          role: invite.role,
+          status: 'active',
+          invited_by: invite.invited_by,
+          joined_at: new Date().toISOString()
+        });
+
+      if (memberError) throw memberError;
+
+      // Marcar convite como aceito
+      const { error: updateError } = await supabase
+        .from('family_invites')
+        .update({ status: 'accepted' })
+        .eq('id', invite.id);
+
+      if (updateError) throw updateError;
+
+      await loadFamilyGroups();
+      return { success: true, message: 'Convite aceito com sucesso!', group_id: invite.group_id };
     } catch (err) {
       console.error('Erro ao aceitar convite:', err);
       throw err;

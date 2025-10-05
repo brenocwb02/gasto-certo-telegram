@@ -91,7 +91,7 @@ export function useRecurringTransactions() {
 
       if (error) throw error;
 
-      setRecurringTransactions(data || []);
+      setRecurringTransactions((data || []) as any);
     } catch (err) {
       console.error('Erro ao carregar transações recorrentes:', err);
       setError('Erro ao carregar transações recorrentes');
@@ -133,7 +133,7 @@ export function useRecurringTransactions() {
                (recurring.group_id && currentGroup?.id === recurring.group_id);
       }) || [];
 
-      setGenerationLogs(filteredLogs);
+      setGenerationLogs(filteredLogs as any);
     } catch (err) {
       console.error('Erro ao carregar logs de geração:', err);
     }
@@ -159,7 +159,7 @@ export function useRecurringTransactions() {
     try {
       const { data, error } = await supabase.rpc('create_recurring_transaction', {
         p_title: transactionData.title,
-        p_description: transactionData.description,
+        p_description: transactionData.description || '',
         p_amount: transactionData.amount,
         p_type: transactionData.type,
         p_frequency: transactionData.frequency,
@@ -167,18 +167,18 @@ export function useRecurringTransactions() {
         p_end_date: transactionData.end_date,
         p_category_id: transactionData.category_id,
         p_account_id: transactionData.account_id,
-        p_group_id: transactionData.group_id || currentGroup?.id,
+        p_group_id: transactionData.group_id || currentGroup?.id || null,
         p_day_of_month: transactionData.day_of_month,
         p_day_of_week: transactionData.day_of_week
-      });
+      }) as any;
 
       if (error) throw error;
 
-      if (data.success) {
+      if (data?.success) {
         await loadRecurringTransactions();
         return { success: true, message: data.message, recurring_id: data.recurring_id };
       } else {
-        throw new Error(data.message);
+        throw new Error(data?.message || 'Erro ao criar transação recorrente');
       }
     } catch (err) {
       console.error('Erro ao criar transação recorrente:', err);

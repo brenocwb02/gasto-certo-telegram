@@ -25,6 +25,7 @@ export type Database = {
           dia_fechamento: number | null
           dia_vencimento: number | null
           due_day: number | null
+          group_id: string | null
           id: string
           is_primary: boolean | null
           limite_credito: number | null
@@ -49,6 +50,7 @@ export type Database = {
           dia_fechamento?: number | null
           dia_vencimento?: number | null
           due_day?: number | null
+          group_id?: string | null
           id?: string
           is_primary?: boolean | null
           limite_credito?: number | null
@@ -73,6 +75,7 @@ export type Database = {
           dia_fechamento?: number | null
           dia_vencimento?: number | null
           due_day?: number | null
+          group_id?: string | null
           id?: string
           is_primary?: boolean | null
           limite_credito?: number | null
@@ -88,6 +91,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "accounts_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "family_groups"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "accounts_parent_account_id_fkey"
             columns: ["parent_account_id"]
@@ -131,6 +141,7 @@ export type Database = {
         Row: {
           cor: string | null
           created_at: string
+          group_id: string | null
           icone: string | null
           id: string
           keywords: string[] | null
@@ -143,6 +154,7 @@ export type Database = {
         Insert: {
           cor?: string | null
           created_at?: string
+          group_id?: string | null
           icone?: string | null
           id?: string
           keywords?: string[] | null
@@ -155,6 +167,7 @@ export type Database = {
         Update: {
           cor?: string | null
           created_at?: string
+          group_id?: string | null
           icone?: string | null
           id?: string
           keywords?: string[] | null
@@ -165,6 +178,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "categories_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "family_groups"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "categories_parent_id_fkey"
             columns: ["parent_id"]
@@ -198,14 +218,65 @@ export type Database = {
         }
         Relationships: []
       }
+      family_invites: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          group_id: string
+          id: string
+          invited_by: string
+          role: string
+          status: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at: string
+          group_id: string
+          id?: string
+          invited_by: string
+          role?: string
+          status?: string
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          group_id?: string
+          id?: string
+          invited_by?: string
+          role?: string
+          status?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_invites_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "family_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       family_members: {
         Row: {
           can_manage_members: boolean
           created_at: string
           group_id: string
           id: string
+          invited_at: string | null
+          invited_by: string | null
+          joined_at: string | null
           member_id: string
           role: string
+          status: string
           updated_at: string
         }
         Insert: {
@@ -213,8 +284,12 @@ export type Database = {
           created_at?: string
           group_id: string
           id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          joined_at?: string | null
           member_id: string
           role?: string
+          status?: string
           updated_at?: string
         }
         Update: {
@@ -222,8 +297,12 @@ export type Database = {
           created_at?: string
           group_id?: string
           id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          joined_at?: string | null
           member_id?: string
           role?: string
+          status?: string
           updated_at?: string
         }
         Relationships: [
@@ -236,60 +315,6 @@ export type Database = {
           },
         ]
       }
-      financial_profile: {
-        Row: {
-          budget_control: string
-          completed_at: string
-          created_at: string
-          debt_situation: string
-          emergency_fund: string
-          financial_goals: string
-          financial_health_score: number
-          id: string
-          insurance_coverage: string
-          investment_knowledge: string
-          recommendations: Json
-          retirement_planning: string
-          savings_rate: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          budget_control: string
-          completed_at?: string
-          created_at?: string
-          debt_situation: string
-          emergency_fund: string
-          financial_goals: string
-          financial_health_score?: number
-          id?: string
-          insurance_coverage: string
-          investment_knowledge: string
-          recommendations?: Json
-          retirement_planning: string
-          savings_rate: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          budget_control?: string
-          completed_at?: string
-          created_at?: string
-          debt_situation?: string
-          emergency_fund?: string
-          financial_goals?: string
-          financial_health_score?: number
-          id?: string
-          insurance_coverage?: string
-          investment_knowledge?: string
-          recommendations?: Json
-          retirement_planning?: string
-          savings_rate?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       goals: {
         Row: {
           categoria_id: string | null
@@ -297,6 +322,7 @@ export type Database = {
           data_fim: string
           data_inicio: string
           descricao: string | null
+          group_id: string | null
           id: string
           status: string
           tipo_periodo: string
@@ -312,6 +338,7 @@ export type Database = {
           data_fim: string
           data_inicio: string
           descricao?: string | null
+          group_id?: string | null
           id?: string
           status?: string
           tipo_periodo: string
@@ -327,6 +354,7 @@ export type Database = {
           data_fim?: string
           data_inicio?: string
           descricao?: string | null
+          group_id?: string | null
           id?: string
           status?: string
           tipo_periodo?: string
@@ -344,11 +372,19 @@ export type Database = {
             referencedRelation: "categories"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "goals_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "family_groups"
+            referencedColumns: ["id"]
+          },
         ]
       }
       investment_transactions: {
         Row: {
           created_at: string
+          group_id: string | null
           id: string
           investment_id: string | null
           notes: string | null
@@ -362,6 +398,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          group_id?: string | null
           id?: string
           investment_id?: string | null
           notes?: string | null
@@ -375,6 +412,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          group_id?: string | null
           id?: string
           investment_id?: string | null
           notes?: string | null
@@ -387,6 +425,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "investment_transactions_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "family_groups"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "investment_transactions_investment_id_fkey"
             columns: ["investment_id"]
@@ -402,6 +447,7 @@ export type Database = {
           average_price: number | null
           created_at: string
           current_price: number | null
+          group_id: string | null
           id: string
           last_price_update: string | null
           quantity: number | null
@@ -414,6 +460,7 @@ export type Database = {
           average_price?: number | null
           created_at?: string
           current_price?: number | null
+          group_id?: string | null
           id?: string
           last_price_update?: string | null
           quantity?: number | null
@@ -426,6 +473,7 @@ export type Database = {
           average_price?: number | null
           created_at?: string
           current_price?: number | null
+          group_id?: string | null
           id?: string
           last_price_update?: string | null
           quantity?: number | null
@@ -433,7 +481,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "investments_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "family_groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       licenses: {
         Row: {
@@ -521,6 +577,139 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      recurring_generation_log: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          generated_date: string
+          id: string
+          recurring_id: string
+          status: string
+          transaction_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          generated_date: string
+          id?: string
+          recurring_id: string
+          status: string
+          transaction_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          generated_date?: string
+          id?: string
+          recurring_id?: string
+          status?: string
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_generation_log_recurring_id_fkey"
+            columns: ["recurring_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_generation_log_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurring_transactions: {
+        Row: {
+          account_id: string | null
+          amount: number
+          category_id: string | null
+          created_at: string
+          day_of_month: number | null
+          day_of_week: number | null
+          description: string | null
+          end_date: string | null
+          frequency: string
+          group_id: string | null
+          id: string
+          is_active: boolean
+          last_generated: string | null
+          next_due_date: string | null
+          start_date: string
+          title: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          category_id?: string | null
+          created_at?: string
+          day_of_month?: number | null
+          day_of_week?: number | null
+          description?: string | null
+          end_date?: string | null
+          frequency: string
+          group_id?: string | null
+          id?: string
+          is_active?: boolean
+          last_generated?: string | null
+          next_due_date?: string | null
+          start_date: string
+          title: string
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          category_id?: string | null
+          created_at?: string
+          day_of_month?: number | null
+          day_of_week?: number | null
+          description?: string | null
+          end_date?: string | null
+          frequency?: string
+          group_id?: string | null
+          id?: string
+          is_active?: boolean
+          last_generated?: string | null
+          next_due_date?: string | null
+          start_date?: string
+          title?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_transactions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_transactions_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "family_groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scheduled_notifications: {
         Row: {
@@ -655,6 +844,7 @@ export type Database = {
           data_transacao: string
           data_vencimento: string | null
           descricao: string
+          group_id: string | null
           id: string
           installment_number: number | null
           installment_total: number | null
@@ -676,6 +866,7 @@ export type Database = {
           data_transacao?: string
           data_vencimento?: string | null
           descricao: string
+          group_id?: string | null
           id?: string
           installment_number?: number | null
           installment_total?: number | null
@@ -697,6 +888,7 @@ export type Database = {
           data_transacao?: string
           data_vencimento?: string | null
           descricao?: string
+          group_id?: string | null
           id?: string
           installment_number?: number | null
           installment_total?: number | null
@@ -732,6 +924,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "transactions_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "family_groups"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "transactions_parent_transaction_id_fkey"
             columns: ["parent_transaction_id"]
             isOneToOne: false
@@ -745,6 +944,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_family_invite: {
+        Args: { invite_token: string }
+        Returns: Json
+      }
       auto_learn_category: {
         Args: {
           p_category_id: string
@@ -760,6 +963,31 @@ export type Database = {
           dia_vencimento: number
         }
         Returns: string
+      }
+      create_family_group: {
+        Args: { group_description?: string; group_name: string }
+        Returns: Json
+      }
+      create_onboarding_column_if_not_exists: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      create_recurring_transaction: {
+        Args: {
+          p_account_id?: string
+          p_amount: number
+          p_category_id?: string
+          p_day_of_month?: number
+          p_day_of_week?: number
+          p_description: string
+          p_end_date?: string
+          p_frequency: string
+          p_group_id?: string
+          p_start_date: string
+          p_title: string
+          p_type: string
+        }
+        Returns: Json
       }
       generate_activation_code: {
         Args: { user_uuid: string }
@@ -797,8 +1025,24 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: string
       }
+      invite_family_member: {
+        Args: { email: string; group_id: string; role?: string }
+        Returns: Json
+      }
+      is_family_group_admin: {
+        Args: { group_uuid: string }
+        Returns: boolean
+      }
+      is_family_group_owner: {
+        Args: { group_uuid: string }
+        Returns: boolean
+      }
       is_family_member: {
         Args: { target_user_id: string }
+        Returns: boolean
+      }
+      is_in_family_group: {
+        Args: { group_uuid: string }
         Returns: boolean
       }
     }
