@@ -147,7 +147,7 @@ const AppRoutes = () => {
         }
       />
       <Route
-        path="/telegram"
+        path="/telegram-integration"
         element={
           <ProtectedRoute>
             <AppLayout>

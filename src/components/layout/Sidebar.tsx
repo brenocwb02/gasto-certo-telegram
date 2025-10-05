@@ -14,6 +14,8 @@ import {
   Calculator,
   Users,
   Repeat,
+  TrendingUp,
+  Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "../../contexts/AuthContext";
@@ -155,6 +157,38 @@ export function Sidebar() {
               </NavLink>
             </TooltipTrigger>
             <TooltipContent side="right">Metas</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <NavLink
+                to="/investimentos"
+                className={({ isActive }) =>
+                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
+                    isActive ? "bg-accent text-accent-foreground" : ""
+                  }`
+                }
+              >
+                <TrendingUp className="h-5 w-5" />
+                <span className="sr-only">Investimentos</span>
+              </NavLink>
+            </TooltipTrigger>
+            <TooltipContent side="right">Investimentos</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <NavLink
+                to="/patrimonio"
+                className={({ isActive }) =>
+                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
+                    isActive ? "bg-accent text-accent-foreground" : ""
+                  }`
+                }
+              >
+                <Wallet className="h-5 w-5" />
+                <span className="sr-only">Patrimônio</span>
+              </NavLink>
+            </TooltipTrigger>
+            <TooltipContent side="right">Patrimônio</TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </nav>

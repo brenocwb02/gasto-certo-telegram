@@ -745,9 +745,324 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
       break;
     }
 
+    case '/comprar_ativo': {
+      if (!argument) {
+        await sendTelegramMessage(chatId, '📈 *Registrar Compra de Ativo*\n\nExemplos:\n• Comprei 10 ações PETR4 a R$ 35,50\n• Comprei 5 VALE3 por R$ 68,20\n• Comprei 100 ações ITSA4 a 12,50');
+        return;
+      }
+
+      const thinking = await sendTelegramMessage(chatId, '🤔 Processando compra...');
+      
+      try {
+        const response = await supabase.functions.invoke('nlp-transaction', {
+          body: { message: `COMPRA DE ATIVO: ${argument}`, userId }
+        });
+
+        if (response.error) throw response.error;
+
+        const result = response.data;
+        
+        // Extrair dados da transação
+        const ticker = result.description?.match(/[A-Z]{4}\d{1,2}/)?.[0];
+        const quantidade = parseFloat(result.amount || 0);
+        const preco = result.additionalInfo?.price || 0;
+        
+        if (!ticker || quantidade <= 0) {
+          await editTelegramMessage(chatId, thinking.message_id, '❌ Não consegui identificar o ativo ou quantidade. Use o formato:\n"Comprei 10 ações PETR4 a R$ 35,50"');
+          return;
+        }
+
+        // Inserir transação de investimento
+        const { error: insertError } = await supabase
+          .from('investment_transactions')
+          .insert({
+            user_id: userId,
+            ticker: ticker,
+            transaction_type: 'compra',
+            quantity: quantidade,
+            price: preco,
+            total_value: quantidade * preco,
+            transaction_date: new Date().toISOString().split('T')[0],
+            notes: argument
+          });
+
+        if (insertError) throw insertError;
+
+        await editTelegramMessage(
+          chatId, 
+          thinking.message_id, 
+          `✅ *Compra Registrada!*\n\n📈 ${ticker}\n💰 ${quantidade} ações\n💵 R$ ${preco.toFixed(2)} cada\n\n💎 Total: ${formatCurrency(quantidade * preco)}`,
+          { parse_mode: 'Markdown' }
+        );
+      } catch (error) {
+        console.error('Erro ao registrar compra:', error);
+        await editTelegramMessage(chatId, thinking.message_id, '❌ Erro ao processar compra. Tente: "Comprei 10 ações PETR4 a R$ 35,50"');
+      }
+      break;
+    }
+
+    case '/vender_ativo': {
+      if (!argument) {
+        await sendTelegramMessage(chatId, '📉 *Registrar Venda de Ativo*\n\nExemplos:\n• Vendi 5 ações VALE3 a R$ 68,20\n• Vendi 10 PETR4 por R$ 37,00\n• Vendi 50 ações ITSA4 a 13,20');
+        return;
+      }
+
+      const thinking = await sendTelegramMessage(chatId, '🤔 Processando venda...');
+      
+      try {
+        const response = await supabase.functions.invoke('nlp-transaction', {
+          body: { message: `VENDA DE ATIVO: ${argument}`, userId }
+        });
+
+        if (response.error) throw response.error;
+
+        const result = response.data;
+        
+        const ticker = result.description?.match(/[A-Z]{4}\d{1,2}/)?.[0];
+        const quantidade = parseFloat(result.amount || 0);
+        const preco = result.additionalInfo?.price || 0;
+        
+        if (!ticker || quantidade <= 0) {
+          await editTelegramMessage(chatId, thinking.message_id, '❌ Não consegui identificar o ativo ou quantidade. Use o formato:\n"Vendi 5 ações VALE3 a R$ 68,20"');
+          return;
+        }
+
+        const { error: insertError } = await supabase
+          .from('investment_transactions')
+          .insert({
+            user_id: userId,
+            ticker: ticker,
+            transaction_type: 'venda',
+            quantity: quantidade,
+            price: preco,
+            total_value: quantidade * preco,
+            transaction_date: new Date().toISOString().split('T')[0],
+            notes: argument
+          });
+
+        if (insertError) throw insertError;
+
+        await editTelegramMessage(
+          chatId, 
+          thinking.message_id, 
+          `✅ *Venda Registrada!*\n\n📉 ${ticker}\n💰 ${quantidade} ações\n💵 R$ ${preco.toFixed(2)} cada\n\n💎 Total: ${formatCurrency(quantidade * preco)}`,
+          { parse_mode: 'Markdown' }
+        );
+      } catch (error) {
+        console.error('Erro ao registrar venda:', error);
+        await editTelegramMessage(chatId, thinking.message_id, '❌ Erro ao processar venda. Tente: "Vendi 5 ações VALE3 a R$ 68,20"');
+      }
+      break;
+    }
+
+    case '/provento': {
+      if (!argument) {
+        await sendTelegramMessage(chatId, '💰 *Registrar Provento*\n\nExemplos:\n• Recebi R$ 12,50 de dividendos de ITSA4\n• Provento de R$ 25,00 de PETR4\n• Dividendo VALE3 R$ 8,75');
+        return;
+      }
+
+      const thinking = await sendTelegramMessage(chatId, '🤔 Registrando provento...');
+      
+      try {
+        const ticker = argument.match(/[A-Z]{4}\d{1,2}/)?.[0];
+        const valorMatch = argument.match(/R?\$?\s*(\d+(?:[.,]\d{2})?)/);
+        const valor = valorMatch ? parseFloat(valorMatch[1].replace(',', '.')) : 0;
+        
+        if (!ticker || valor <= 0) {
+          await editTelegramMessage(chatId, thinking.message_id, '❌ Não consegui identificar o ativo ou valor. Use o formato:\n"Recebi R$ 12,50 de dividendos de ITSA4"');
+          return;
+        }
+
+        const { error: insertError } = await supabase
+          .from('investment_transactions')
+          .insert({
+            user_id: userId,
+            ticker: ticker,
+            transaction_type: 'provento',
+            quantity: 0,
+            price: 0,
+            total_value: valor,
+            transaction_date: new Date().toISOString().split('T')[0],
+            notes: argument
+          });
+
+        if (insertError) throw insertError;
+
+        await editTelegramMessage(
+          chatId, 
+          thinking.message_id, 
+          `✅ *Provento Registrado!*\n\n💰 ${ticker}\n💵 ${formatCurrency(valor)}\n\n📅 ${new Date().toLocaleDateString('pt-BR')}`,
+          { parse_mode: 'Markdown' }
+        );
+      } catch (error) {
+        console.error('Erro ao registrar provento:', error);
+        await editTelegramMessage(chatId, thinking.message_id, '❌ Erro ao processar provento. Tente: "Recebi R$ 12,50 de dividendos de ITSA4"');
+      }
+      break;
+    }
+
+    case '/carteira': {
+      try {
+        const { data: investments } = await supabase
+          .from('investments')
+          .select('*')
+          .eq('user_id', userId)
+          .gt('quantity', 0)
+          .order('ticker');
+
+        if (!investments || investments.length === 0) {
+          await sendTelegramMessage(chatId, '📊 *Sua Carteira*\n\n📭 Você ainda não tem investimentos cadastrados.\n\nUse /comprar_ativo para registrar sua primeira compra!');
+          return;
+        }
+
+        let totalValue = 0;
+        let totalProfit = 0;
+        const list = investments.map((inv: any) => {
+          const currentValue = inv.quantity * inv.current_price;
+          const costBasis = inv.quantity * inv.average_price;
+          const profit = currentValue - costBasis;
+          const profitPercent = ((profit / costBasis) * 100).toFixed(2);
+          
+          totalValue += currentValue;
+          totalProfit += profit;
+          
+          const profitIcon = profit >= 0 ? '📈' : '📉';
+          return `${profitIcon} *${inv.ticker}*\n   ${inv.quantity} ações × R$ ${inv.current_price.toFixed(2)}\n   PM: R$ ${inv.average_price.toFixed(2)} | ${profitPercent}%\n   ${formatCurrency(currentValue)}`;
+        }).join('\n\n');
+
+        const totalProfitPercent = totalValue > 0 ? ((totalProfit / (totalValue - totalProfit)) * 100).toFixed(2) : '0';
+        
+        const message = `📊 *Sua Carteira de Investimentos*\n\n${list}\n\n━━━━━━━━━━━━━━━━\n💎 *Valor Total:* ${formatCurrency(totalValue)}\n${totalProfit >= 0 ? '📈' : '📉'} *Lucro:* ${formatCurrency(totalProfit)} (${totalProfitPercent}%)`;
+        
+        await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
+      } catch (error) {
+        console.error('Erro ao buscar carteira:', error);
+        await sendTelegramMessage(chatId, '❌ Erro ao carregar carteira.');
+      }
+      break;
+    }
+
+    case '/patrimonio': {
+      const thinking = await sendTelegramMessage(chatId, '🤔 Calculando patrimônio...');
+      
+      try {
+        const response = await supabase.functions.invoke('calculate-net-worth');
+
+        if (response.error) throw response.error;
+
+        const data = response.data;
+        const netWorth = data.netWorth || 0;
+        const cash = data.breakdown?.cash || 0;
+        const investments = data.breakdown?.investments || 0;
+        const debts = data.breakdown?.debts || 0;
+
+        const message = `💎 *Seu Patrimônio Líquido*\n\n━━━━━━━━━━━━━━━━\n💰 *Total:* ${formatCurrency(netWorth)}\n━━━━━━━━━━━━━━━━\n\n📊 *Composição:*\n\n💵 Contas: ${formatCurrency(cash)}\n📈 Investimentos: ${formatCurrency(investments)}\n💳 Dívidas: ${formatCurrency(debts)}\n\n📅 Atualizado em: ${new Date(data.calculatedAt).toLocaleString('pt-BR')}`;
+        
+        await editTelegramMessage(chatId, thinking.message_id, message, { parse_mode: 'Markdown' });
+      } catch (error) {
+        console.error('Erro ao calcular patrimônio:', error);
+        await editTelegramMessage(chatId, thinking.message_id, '❌ Erro ao calcular patrimônio. Tente novamente.');
+      }
+      break;
+    }
+
+    case '/dividas': {
+      try {
+        const { data: debts } = await supabase
+          .from('accounts')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('ativo', true)
+          .or('tipo.eq.cartao_credito,debt_type.not.is.null')
+          .order('saldo_atual', { ascending: false });
+
+        if (!debts || debts.length === 0) {
+          await sendTelegramMessage(chatId, '✅ *Parabéns!*\n\nVocê não tem dívidas cadastradas no momento! 🎉');
+          return;
+        }
+
+        let totalDebt = 0;
+        const list = debts.map((debt: any) => {
+          const balance = Math.abs(parseFloat(debt.saldo_atual || 0));
+          totalDebt += balance;
+          
+          let details = `💳 *${debt.nome}*\n   Saldo: ${formatCurrency(balance)}`;
+          
+          if (debt.tipo === 'cartao_credito') {
+            details += `\n   Limite: ${formatCurrency(parseFloat(debt.limite_credito || 0))}`;
+            if (debt.dia_vencimento) {
+              details += `\n   Vencimento: dia ${debt.dia_vencimento}`;
+            }
+          }
+          
+          if (debt.monthly_payment) {
+            details += `\n   Parcela: ${formatCurrency(parseFloat(debt.monthly_payment))}`;
+          }
+          
+          if (debt.remaining_installments) {
+            details += `\n   Faltam: ${debt.remaining_installments} parcelas`;
+          }
+          
+          return details;
+        }).join('\n\n');
+
+        const message = `💳 *Suas Dívidas*\n\n${list}\n\n━━━━━━━━━━━━━━━━\n⚠️ *Total de Dívidas:* ${formatCurrency(totalDebt)}`;
+        
+        await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
+      } catch (error) {
+        console.error('Erro ao buscar dívidas:', error);
+        await sendTelegramMessage(chatId, '❌ Erro ao carregar dívidas.');
+      }
+      break;
+    }
+
+    case '/orcamento': {
+      try {
+        const firstDay = new Date();
+        firstDay.setDate(1);
+        const month = firstDay.toISOString().split('T')[0];
+
+        const { data: budgets } = await supabase.rpc('get_budgets_with_spent', { p_month: month });
+
+        if (!budgets || budgets.length === 0) {
+          await sendTelegramMessage(chatId, '📊 *Orçamento do Mês*\n\n📭 Você ainda não definiu orçamentos.\n\n💡 Acesse o app para criar seus orçamentos: https://app.boascontas.com/orcamento');
+          return;
+        }
+
+        let totalBudget = 0;
+        let totalSpent = 0;
+        
+        const list = budgets.map((b: any) => {
+          const budget = parseFloat(b.amount);
+          const spent = parseFloat(b.spent);
+          const remaining = budget - spent;
+          const percent = budget > 0 ? ((spent / budget) * 100).toFixed(0) : '0';
+          
+          totalBudget += budget;
+          totalSpent += spent;
+          
+          const icon = spent > budget ? '🔴' : spent > budget * 0.8 ? '🟡' : '🟢';
+          const bar = '█'.repeat(Math.min(10, Math.floor((spent / budget) * 10))) + '░'.repeat(Math.max(0, 10 - Math.floor((spent / budget) * 10)));
+          
+          return `${icon} *${b.category_name}*\n${bar} ${percent}%\n${formatCurrency(spent)} / ${formatCurrency(budget)}\n${remaining >= 0 ? '✅' : '⚠️'} Restante: ${formatCurrency(Math.abs(remaining))}`;
+        }).join('\n\n');
+
+        const totalPercent = totalBudget > 0 ? ((totalSpent / totalBudget) * 100).toFixed(0) : '0';
+        const totalRemaining = totalBudget - totalSpent;
+
+        const message = `📊 *Orçamento de ${new Date().toLocaleDateString('pt-BR', { month: 'long' })}*\n\n${list}\n\n━━━━━━━━━━━━━━━━\n💰 *Total Orçado:* ${formatCurrency(totalBudget)}\n💸 *Total Gasto:* ${formatCurrency(totalSpent)} (${totalPercent}%)\n${totalRemaining >= 0 ? '✅' : '⚠️'} *Saldo:* ${formatCurrency(Math.abs(totalRemaining))}`;
+        
+        await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
+      } catch (error) {
+        console.error('Erro ao buscar orçamento:', error);
+        await sendTelegramMessage(chatId, '❌ Erro ao carregar orçamento.');
+      }
+      break;
+    }
+
     case '/ajuda':
     default: {
-      const message = `💡 *Comandos Disponíveis*\n\n💰 *Finanças*\n• Registre gastos naturalmente\n• /saldo - Saldo das contas\n• /extrato - Últimas transações\n• /resumo - Resumo do mês\n\n📊 *Análises*\n• /perguntar - Pergunte sobre gastos\n• /top_gastos - Top 5 categorias\n• /comparar_meses - Comparativo\n• /previsao - Projeção de gastos\n\n🔄 *Recorrentes*\n• /recorrente_nova - Criar recorrência\n• /recorrentes - Ver ativas\n• /pausar_recorrente - Pausar/reativar\n\n✏️ *Edição*\n• /editar_ultima - Editar transação\n\n🎯 *Metas*\n• /metas - Ver progresso\n\n📊 *Perfil Financeiro*\n• /meuperfil - Ver score de saúde financeira\n\n🎓 *Ajuda*\n• /tutorial - Tutorial completo`;
+      const message = `💡 *Guia Completo de Comandos*\n\n📊 *FINANÇAS BÁSICAS*\n• Registro natural: "Gastei R$ 50 no mercado"\n• /saldo - Ver saldo de todas as contas\n• /extrato - Últimas 10 transações\n• /resumo - Resumo financeiro do mês\n\n💰 *INVESTIMENTOS*\n• /comprar_ativo - Registrar compra de ativos\n• /vender_ativo - Registrar venda de ativos\n• /provento - Registrar dividendos recebidos\n• /carteira - Ver seu portfólio completo\n• /patrimonio - Patrimônio líquido total\n• /dividas - Listar dívidas ativas\n\n🤖 *ANÁLISES INTELIGENTES*\n• /perguntar [pergunta] - Pergunte sobre seus gastos\n• /top_gastos - Top 5 categorias do mês\n• /comparar_meses - Comparar mês atual vs anterior\n• /previsao - Projeção de gastos do mês\n\n✏️ *EDIÇÃO & GESTÃO*\n• /editar_ultima - Editar última transação\n• /orcamento - Ver status do orçamento\n\n🔄 *CONTAS RECORRENTES*\n• /recorrente_nova - Criar nova recorrência\n• /recorrentes - Ver todas as recorrências ativas\n• /pausar_recorrente - Pausar/reativar recorrência\n\n🎯 *METAS & PERFIL*\n• /metas - Ver progresso das suas metas\n• /meuperfil - Score de saúde financeira\n\n🎓 *AJUDA*\n• /tutorial - Tutorial completo\n• /ajuda - Este menu\n\n🌐 *Acesse o app web:*\n📱 https://app.boascontas.com`;
       await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
       break;
     }
