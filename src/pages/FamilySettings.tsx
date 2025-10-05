@@ -19,9 +19,7 @@ import {
   Shield, 
   User, 
   Eye, 
-  MoreHorizontal,
   Trash2,
-  Edit,
   CheckCircle,
   XCircle,
   Clock,
@@ -71,7 +69,7 @@ export default function FamilySettings() {
     if (!newGroupName.trim()) return;
 
     try {
-      const result = await createFamilyGroup(newGroupName.trim(), newGroupDescription.trim() || undefined);
+      const result = await createFamilyGroup(newGroupName.trim());
       
       toast({
         title: "Sucesso!",

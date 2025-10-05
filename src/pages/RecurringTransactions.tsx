@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,7 +16,6 @@ import {
   Plus, 
   Play, 
   Pause, 
-  Edit, 
   Trash2, 
   Calendar,
   DollarSign,
@@ -48,7 +47,6 @@ export default function RecurringTransactions() {
     generateRecurringTransactions,
     getRecurringStats,
     getFrequencyLabel,
-    getDayOfWeekLabel,
     isDueSoon,
     isOverdue
   } = useRecurringTransactions();
@@ -596,7 +594,7 @@ export default function RecurringTransactions() {
                           
                           <div>
                             <p className="font-medium">
-                              {log.recurring_transaction?.title || 'Transação recorrente'}
+                              {(log as any).recurring_transaction?.title || 'Transação recorrente'}
                             </p>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <span>

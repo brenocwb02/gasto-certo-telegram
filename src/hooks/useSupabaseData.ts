@@ -9,7 +9,6 @@ type Account = Tables['accounts']['Row'];
 type Category = Tables['categories']['Row'];
 type Profile = Tables['profiles']['Row'];
 type Goal = Tables['goals']['Row'];
-type FinancialProfile = Tables['financial_profile']['Row'];
 
 
 export function useProfile() {
@@ -561,7 +560,7 @@ export function useFinancialStats() {
 // Hook para gerenciar perfil financeiro (quiz de saúde financeira)
 export function useFinancialProfile() {
   const { user } = useAuth();
-  const [financialProfile, setFinancialProfile] = useState<FinancialProfile | null>(null);
+  const [financialProfile, setFinancialProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -574,7 +573,7 @@ export function useFinancialProfile() {
 
     const fetchFinancialProfile = async () => {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('financial_profile')
           .select('*')
           .eq('user_id', user.id)
@@ -608,7 +607,7 @@ export function useFinancialProfile() {
       setLoading(true);
       
       // Usar upsert para criar ou atualizar o perfil
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('financial_profile')
         .upsert({
           user_id: user.id,

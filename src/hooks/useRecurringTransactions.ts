@@ -157,7 +157,7 @@ export function useRecurringTransactions() {
     if (!user) throw new Error('Usuário não autenticado');
 
     try {
-      const { data, error } = await supabase.rpc('create_recurring_transaction', {
+      const { data, error } = await (supabase.rpc as any)('create_recurring_transaction', {
         p_title: transactionData.title,
         p_description: transactionData.description || '',
         p_amount: transactionData.amount,
@@ -167,10 +167,10 @@ export function useRecurringTransactions() {
         p_end_date: transactionData.end_date,
         p_category_id: transactionData.category_id,
         p_account_id: transactionData.account_id,
-        p_group_id: transactionData.group_id || currentGroup?.id || null,
+        p_group_id: transactionData.group_id || currentGroup?.id || undefined,
         p_day_of_month: transactionData.day_of_month,
         p_day_of_week: transactionData.day_of_week
-      }) as any;
+      });
 
       if (error) throw error;
 
@@ -189,18 +189,18 @@ export function useRecurringTransactions() {
   // Pausar/reativar transação recorrente
   const toggleRecurringTransaction = async (recurringId: string, isActive: boolean) => {
     try {
-      const { data, error } = await supabase.rpc('toggle_recurring_transaction', {
+      const { data, error } = await (supabase.rpc as any)('toggle_recurring_transaction', {
         p_recurring_id: recurringId,
         p_is_active: isActive
       });
 
       if (error) throw error;
 
-      if (data.success) {
+      if (data?.success) {
         await loadRecurringTransactions();
         return { success: true, message: data.message };
       } else {
-        throw new Error(data.message);
+        throw new Error(data?.message || 'Erro ao alterar status');
       }
     } catch (err) {
       console.error('Erro ao alterar status da transação recorrente:', err);
@@ -228,11 +228,11 @@ export function useRecurringTransactions() {
   // Gerar transações recorrentes manualmente
   const generateRecurringTransactions = async () => {
     try {
-      const { data, error } = await supabase.rpc('generate_recurring_transactions');
+      const { data, error } = await (supabase.rpc as any)('generate_recurring_transactions');
 
       if (error) throw error;
 
-      if (data.success) {
+      if (data?.success) {
         await loadRecurringTransactions();
         await loadGenerationLogs();
         return { 
@@ -242,7 +242,7 @@ export function useRecurringTransactions() {
           error_count: data.error_count
         };
       } else {
-        throw new Error(data.message);
+        throw new Error(data?.message || 'Erro ao gerar transações');
       }
     } catch (err) {
       console.error('Erro ao gerar transações recorrentes:', err);
