@@ -693,7 +693,7 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
       const { data: financialProfile, error: profileError } = await supabase
         .from('financial_profile')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .maybeSingle();
 
       if (profileError) {

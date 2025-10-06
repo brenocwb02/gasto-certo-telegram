@@ -40,14 +40,15 @@ const AppRoutes = () => {
 
   return (
     <Routes>
-      <Route path="/landing" element={<Landing />} />
-      <Route path="/auth" element={user ? <Navigate to="/" replace /> : <Auth />} />
+      {/* Rota principal - Landing para não logados, Dashboard para logados */}
+      <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <Landing />} />
+      <Route path="/auth" element={user ? <Navigate to="/dashboard" replace /> : <Auth />} />
       <Route path="/onboarding" element={<Onboarding />} />
       <Route path="/quiz-financeiro" element={<QuizFinanceiro />} />
 
       {/* Rotas Protegidas com Layout */}
       <Route
-        path="/"
+        path="/dashboard"
         element={
           <ProtectedRoute>
             <AppLayout>
