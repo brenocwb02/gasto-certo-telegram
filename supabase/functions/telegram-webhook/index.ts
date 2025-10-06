@@ -1062,8 +1062,52 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
 
     case '/ajuda':
     default: {
-      const message = `💡 *Guia Completo de Comandos*\n\n📊 *FINANÇAS BÁSICAS*\n• Registro natural: "Gastei R$ 50 no mercado"\n• /saldo - Ver saldo de todas as contas\n• /extrato - Últimas 10 transações\n• /resumo - Resumo financeiro do mês\n\n💰 *INVESTIMENTOS*\n• /comprar_ativo - Registrar compra de ativos\n• /vender_ativo - Registrar venda de ativos\n• /provento - Registrar dividendos recebidos\n• /carteira - Ver seu portfólio completo\n• /patrimonio - Patrimônio líquido total\n• /dividas - Listar dívidas ativas\n\n🤖 *ANÁLISES INTELIGENTES*\n• /perguntar [pergunta] - Pergunte sobre seus gastos\n• /top_gastos - Top 5 categorias do mês\n• /comparar_meses - Comparar mês atual vs anterior\n• /previsao - Projeção de gastos do mês\n\n✏️ *EDIÇÃO & GESTÃO*\n• /editar_ultima - Editar última transação\n• /orcamento - Ver status do orçamento\n\n🔄 *CONTAS RECORRENTES*\n• /recorrente_nova - Criar nova recorrência\n• /recorrentes - Ver todas as recorrências ativas\n• /pausar_recorrente - Pausar/reativar recorrência\n\n🎯 *METAS & PERFIL*\n• /metas - Ver progresso das suas metas\n• /meuperfil - Score de saúde financeira\n\n🎓 *AJUDA*\n• /tutorial - Tutorial completo\n• /ajuda - Este menu\n\n🌐 *Acesse o app web:*\n📱 https://app.boascontas.com`;
-      await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
+      // Dividido em múltiplas mensagens para evitar erro de parse
+      const part1 = `💡 *Guia Completo de Comandos*
+
+📊 *FINANÇAS BÁSICAS*
+• Registro natural: "Gastei R$ 50 no mercado"
+• /saldo - Ver saldo de todas as contas
+• /extrato - Últimas 10 transações
+• /resumo - Resumo financeiro do mês
+
+💰 *INVESTIMENTOS*
+• /comprar_ativo - Registrar compra de ativos
+• /vender_ativo - Registrar venda de ativos
+• /provento - Registrar dividendos recebidos
+• /carteira - Ver seu portfólio completo
+• /patrimonio - Patrimônio líquido total
+• /dividas - Listar dívidas ativas`;
+
+      const part2 = `🤖 *ANÁLISES INTELIGENTES*
+• /perguntar [pergunta] - Pergunte sobre seus gastos
+• /top_gastos - Top 5 categorias do mês
+• /comparar_meses - Comparar mês atual vs anterior
+• /previsao - Projeção de gastos do mês
+
+✏️ *EDIÇÃO & GESTÃO*
+• /editar_ultima - Editar última transação
+• /orcamento - Ver status do orçamento
+
+🔄 *CONTAS RECORRENTES*
+• /recorrente_nova - Criar nova recorrência
+• /recorrentes - Ver todas as recorrências ativas
+• /pausar_recorrente - Pausar/reativar recorrência`;
+
+      const part3 = `🎯 *METAS & PERFIL*
+• /metas - Ver progresso das suas metas
+• /meuperfil - Score de saúde financeira
+
+🎓 *AJUDA*
+• /tutorial - Tutorial completo
+• /ajuda - Este menu
+
+🌐 *Acesse o app web:*
+📱 https://app.boascontas.com`;
+
+      await sendTelegramMessage(chatId, part1, { parse_mode: 'Markdown' });
+      await sendTelegramMessage(chatId, part2, { parse_mode: 'Markdown' });
+      await sendTelegramMessage(chatId, part3, { parse_mode: 'Markdown' });
       break;
     }
   }
