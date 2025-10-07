@@ -54,26 +54,26 @@ export function QuickActions() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3">
           {quickActions.map((action) => (
             <Button
               key={action.title}
               variant="outline"
-              className="h-auto p-4 flex flex-col items-center gap-2 hover:bg-card-hover group transition-all duration-200"
+              className="h-auto p-3 sm:p-4 flex flex-col items-center gap-1.5 sm:gap-2 hover:bg-card-hover group transition-all duration-200"
               onClick={action.action}
             >
               <div className={`
-                p-2 rounded-lg transition-all duration-200 group-hover:scale-110
+                p-1.5 sm:p-2 rounded-lg transition-all duration-200 group-hover:scale-110
                 ${action.color === "success" ? "bg-success/10 text-success" : ""}
                 ${action.color === "expense" ? "bg-expense/10 text-expense" : ""}
                 ${action.color === "warning" ? "bg-warning/10 text-warning" : ""}
                 ${action.color === "primary" ? "bg-primary/10 text-primary" : ""}
               `}>
-                <action.icon className="h-5 w-5" />
+                <action.icon className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
               <div className="text-center">
-                <p className="font-medium text-sm">{action.title}</p>
-                <p className="text-xs text-muted-foreground">{action.description}</p>
+                <p className="font-medium text-xs sm:text-sm">{action.title}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">{action.description}</p>
               </div>
             </Button>
           ))}

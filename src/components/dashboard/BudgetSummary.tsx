@@ -64,13 +64,13 @@ export const BudgetSummary = () => {
   
   return (
     <Card className="financial-card">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <CardTitle className="flex items-center gap-2">
-          <Calculator className="h-5 w-5 text-primary" />
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+        <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+          <Calculator className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           Orçamento Mensal
         </CardTitle>
         <NavLink to="/orcamento">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" className="text-xs sm:text-sm">
             Ver Todos
           </Button>
         </NavLink>
@@ -85,18 +85,18 @@ export const BudgetSummary = () => {
 
           return (
             <div key={budget.id} className="space-y-2">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">{budget.category_name}</span>
+              <div className="flex justify-between items-start sm:items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs sm:text-sm font-medium truncate">{budget.category_name}</span>
                   {isOverBudget && (
-                    <AlertTriangle className="h-4 w-4 text-expense" />
+                    <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 text-expense flex-shrink-0" />
                   )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">
-                    R$ {Number(budget.spent).toFixed(2)} / R$ {Number(budget.amount).toFixed(2)}
+                <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1 sm:gap-2 flex-shrink-0">
+                  <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
+                    R$ {Number(budget.spent).toFixed(0)} / {Number(budget.amount).toFixed(0)}
                   </span>
-                  <Badge variant={isOverBudget ? "destructive" : isNearLimit ? "secondary" : "outline"}>
+                  <Badge variant={isOverBudget ? "destructive" : isNearLimit ? "secondary" : "outline"} className="text-[10px] sm:text-xs">
                     {percentage.toFixed(0)}%
                   </Badge>
                 </div>

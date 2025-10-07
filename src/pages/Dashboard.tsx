@@ -165,24 +165,25 @@ const Dashboard = () => {
   return (
     <>
       {/* Welcome Section */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">
-              Bem-vindo ao Zaq - Boas Contas{profile?.nome ? `, ${profile.nome}` : ''}! 👋
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+              Olá{profile?.nome ? `, ${profile.nome}` : ''}! 👋
             </h1>
-            <p className="text-muted-foreground">Controle financeiro familiar com propósito - Aqui está o resumo das suas finanças hoje</p>
+            <p className="text-sm sm:text-base text-muted-foreground">Resumo das suas finanças hoje</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <LicenseStatus />
             <Dialog open={showTransactionForm} onOpenChange={setShowTransactionForm}>
               <DialogTrigger asChild>
                 <Button className="flex items-center gap-2">
                   <Plus className="h-4 w-4" />
-                  Nova Transação
+                  <span className="hidden sm:inline">Nova Transação</span>
+                  <span className="sm:hidden">Nova</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <TransactionForm 
                   onSuccess={() => setShowTransactionForm(false)}
                   onCancel={() => setShowTransactionForm(false)}
@@ -248,8 +249,13 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* Main Dashboard Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Main Dashboard Grid - Mobile First */}
+      <div className="space-y-6 lg:space-y-0 lg:grid lg:grid-cols-3 lg:gap-6">
+        {/* Quick Actions - First on Mobile */}
+        <div className="lg:hidden">
+          <QuickActions />
+        </div>
+
         {/* Main Column */}
         <div className="lg:col-span-2 space-y-6">
           <FinancialChart />
@@ -259,7 +265,10 @@ const Dashboard = () => {
         {/* Sidebar Column */}
         <div className="lg:col-span-1 space-y-6">
           <FinancialHealthSection />
-          <QuickActions />
+          {/* Quick Actions - Hidden on mobile, shown on desktop */}
+          <div className="hidden lg:block">
+            <QuickActions />
+          </div>
           <BudgetSummary />
           <GoalsSection />
         </div>
