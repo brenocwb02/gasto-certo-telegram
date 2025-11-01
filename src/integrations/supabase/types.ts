@@ -534,6 +534,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          current_group_id: string | null
           id: string
           nome: string
           onboarding_completed: boolean
@@ -549,6 +550,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          current_group_id?: string | null
           id?: string
           nome: string
           onboarding_completed?: boolean
@@ -564,6 +566,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          current_group_id?: string | null
           id?: string
           nome?: string
           onboarding_completed?: boolean
@@ -576,7 +579,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_current_group_id_fkey"
+            columns: ["current_group_id"]
+            isOneToOne: false
+            referencedRelation: "family_groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       recurring_generation_log: {
         Row: {
@@ -939,15 +950,36 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      accept_family_invite: {
-        Args: { invite_token: string }
-        Returns: Json
-      }
+      accept_family_invite: { Args: { invite_token: string }; Returns: Json }
       auto_learn_category: {
         Args: {
           p_category_id: string
@@ -969,7 +1001,7 @@ export type Database = {
         Returns: Json
       }
       create_onboarding_column_if_not_exists: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: undefined
       }
       create_recurring_transaction: {
@@ -989,10 +1021,7 @@ export type Database = {
         }
         Returns: Json
       }
-      generate_activation_code: {
-        Args: { user_uuid: string }
-        Returns: string
-      }
+      generate_activation_code: { Args: { user_uuid: string }; Returns: string }
       get_budgets_with_spent: {
         Args: { p_month: string }
         Returns: {
@@ -1009,7 +1038,7 @@ export type Database = {
         }[]
       }
       get_dashboard_stats: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           monthly_expenses: number
           monthly_income: number
@@ -1017,36 +1046,29 @@ export type Database = {
           total_balance: number
         }[]
       }
-      get_user_group_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      get_user_group_id: { Args: never; Returns: string }
       get_user_license_plan: {
         Args: { target_user_id: string }
         Returns: string
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
       }
       invite_family_member: {
         Args: { email: string; group_id: string; role?: string }
         Returns: Json
       }
-      is_family_group_admin: {
-        Args: { group_uuid: string }
-        Returns: boolean
-      }
-      is_family_group_owner: {
-        Args: { group_uuid: string }
-        Returns: boolean
-      }
-      is_family_member: {
-        Args: { target_user_id: string }
-        Returns: boolean
-      }
-      is_in_family_group: {
-        Args: { group_uuid: string }
-        Returns: boolean
-      }
+      is_family_group_admin: { Args: { group_uuid: string }; Returns: boolean }
+      is_family_group_owner: { Args: { group_uuid: string }; Returns: boolean }
+      is_family_member: { Args: { target_user_id: string }; Returns: boolean }
+      is_in_family_group: { Args: { group_uuid: string }; Returns: boolean }
     }
     Enums: {
+      app_role: "admin" | "moderator" | "user"
       asset_type: "acao" | "fii" | "etf" | "renda_fixa" | "cripto"
     }
     CompositeTypes: {
@@ -1175,6 +1197,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "moderator", "user"],
       asset_type: ["acao", "fii", "etf", "renda_fixa", "cripto"],
     },
   },
