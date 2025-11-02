@@ -62,6 +62,17 @@ export default function FamilySettings() {
 
   useEffect(() => {
     document.title = "Família | Boas Contas";
+    
+    // Processar convite da URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const inviteToken = urlParams.get('invite');
+    
+    if (inviteToken) {
+      setInviteCode(inviteToken);
+      setShowInviteCode(true);
+      // Limpar o parâmetro da URL
+      window.history.replaceState({}, '', '/familia');
+    }
   }, []);
 
   // Criar novo grupo familiar

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { Resend } from "npm:resend@2.0.0";
 import { corsHeaders } from '../_shared/cors.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -226,21 +227,44 @@ serve(async (req) => {
       </html>
     `;
 
-    // Enviar email (aqui você integraria com seu provedor de email)
-    // Por enquanto, vamos apenas retornar sucesso
-    // Em produção, você usaria SendGrid, Resend, ou outro serviço
+    // Enviar email via Resend
+    const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
+    
+    try {
+      const emailResult = await resend.emails.send({
+        from: 'Zaq - Boas Contas <onboarding@resend.dev>',
+        to: [invite.email],
+        subject: `Convite para o grupo ${groupName}`,
+        html: emailHtml,
+      });
 
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: 'Convite enviado com sucesso',
-        inviteUrl: inviteUrl
-      }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    );
+      console.log('Email enviado com sucesso:', emailResult);
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Convite enviado com sucesso',
+          inviteUrl: inviteUrl,
+          emailId: emailResult.data?.id
+        }),
+        { 
+          status: 200, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    } catch (emailError) {
+      console.error('Erro ao enviar email:', emailError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Erro ao enviar email',
+          details: emailError.message
+        }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
 
   } catch (error) {
     console.error('Erro ao enviar convite familiar:', error);
