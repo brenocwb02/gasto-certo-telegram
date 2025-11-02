@@ -530,6 +530,57 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_preferences: {
+        Row: {
+          bill_reminders: boolean
+          budget_alerts: boolean
+          created_at: string
+          daily_summary: boolean
+          email_enabled: boolean
+          goal_reminders: boolean
+          id: string
+          monthly_summary: boolean
+          preferred_time: string
+          spending_alerts: boolean
+          telegram_enabled: boolean
+          updated_at: string
+          user_id: string
+          weekly_summary: boolean
+        }
+        Insert: {
+          bill_reminders?: boolean
+          budget_alerts?: boolean
+          created_at?: string
+          daily_summary?: boolean
+          email_enabled?: boolean
+          goal_reminders?: boolean
+          id?: string
+          monthly_summary?: boolean
+          preferred_time?: string
+          spending_alerts?: boolean
+          telegram_enabled?: boolean
+          updated_at?: string
+          user_id: string
+          weekly_summary?: boolean
+        }
+        Update: {
+          bill_reminders?: boolean
+          budget_alerts?: boolean
+          created_at?: string
+          daily_summary?: boolean
+          email_enabled?: boolean
+          goal_reminders?: boolean
+          id?: string
+          monthly_summary?: boolean
+          preferred_time?: string
+          spending_alerts?: boolean
+          telegram_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+          weekly_summary?: boolean
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

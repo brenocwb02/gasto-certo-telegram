@@ -13,6 +13,7 @@ import { useLicense } from "@/hooks/useLicense";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { NotificationSettings } from "@/components/NotificationSettings";
 
 const Settings = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -291,6 +292,9 @@ const Settings = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Notification Settings */}
+          <NotificationSettings />
         </main>
       </div>
     </div>
