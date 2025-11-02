@@ -275,20 +275,23 @@ export default function Onboarding() {
     setIsSubmitting(true);
 
     try {
-      await updateOnboardingCompleted(true); // Isto agora atualiza o estado central
+      await updateOnboardingCompleted(true);
       toast({
-        title: "Onboarding concluído!",
-        description: "Bem-vindo ao Zaq - Boas Contas!",
+        title: "✅ Onboarding concluído!",
+        description: "Bem-vindo ao Zaq - Boas Contas! Vamos começar sua jornada.",
       });
-      // Navegação suave, que agora funcionará corretamente
-      navigate('/'); 
+      // Redirect to dashboard after successful completion
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 500);
     } catch (error) {
+      console.error('Error completing onboarding:', error);
       toast({
         title: "Erro",
-        description: "Erro ao concluir onboarding",
+        description: "Erro ao concluir onboarding. Tente novamente.",
         variant: "destructive",
       });
-      setIsSubmitting(false); // Reativa o botão em caso de erro
+      setIsSubmitting(false);
     }
   };
 

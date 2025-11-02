@@ -32,24 +32,49 @@ import RecurringTransactions from "@/pages/RecurringTransactions";
 const queryClient = new QueryClient();
 
 const AppRoutes = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, profile } = useAuth();
 
   if (loading) {
-    return <div></div>; // Pode ser um spinner de tela cheia
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
   }
+
+  // Redirect authenticated users who haven't completed onboarding
+  const needsOnboarding = user && profile && !profile.onboarding_completed;
 
   return (
     <Routes>
       {/* Rota principal - Landing para não logados, Dashboard para logados */}
-      <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <Landing />} />
+      <Route 
+        path="/" 
+        element={
+          !user ? <Landing /> : 
+          needsOnboarding ? <Navigate to="/onboarding" replace /> : 
+          <Navigate to="/dashboard" replace />
+        } 
+      />
       <Route path="/auth" element={user ? <Navigate to="/dashboard" replace /> : <Auth />} />
-      <Route path="/onboarding" element={<Onboarding />} />
+      <Route 
+        path="/onboarding" 
+        element={
+          !user ? <Navigate to="/auth" replace /> :
+          profile?.onboarding_completed ? <Navigate to="/dashboard" replace /> :
+          <Onboarding />
+        } 
+      />
       <Route path="/quiz-financeiro" element={<QuizFinanceiro />} />
 
       {/* Rotas Protegidas com Layout */}
       <Route
         path="/dashboard"
         element={
+          needsOnboarding ? <Navigate to="/onboarding" replace /> :
           <ProtectedRoute>
             <AppLayout>
               <Dashboard />
