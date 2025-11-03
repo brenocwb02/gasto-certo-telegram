@@ -175,7 +175,25 @@ function getRetirementPlanningLabel(value: string): string {
   const audioArrayBuffer = await audioBlob.arrayBuffer();
   // 3. Converter para Base64
   const base64Audio = encodeBase64(audioArrayBuffer);
-  const mimeType = audioBlob.type || 'audio/ogg';
+  
+  // O Telegram geralmente envia áudio como OGG/Opus
+  // Se o MIME type vier como application/octet-stream, corrigimos para audio/ogg
+  let mimeType = audioBlob.type;
+  
+  console.log('MIME type original do áudio:', mimeType);
+  
+  // Corrigir MIME types problemáticos
+  if (!mimeType || mimeType === 'application/octet-stream' || mimeType === '') {
+    mimeType = 'audio/ogg';
+    console.log('MIME type corrigido para:', mimeType);
+  }
+  
+  // Garantir que o MIME type é suportado pelo Gemini
+  const supportedTypes = ['audio/wav', 'audio/mp3', 'audio/aiff', 'audio/aac', 'audio/ogg', 'audio/flac'];
+  if (!supportedTypes.includes(mimeType)) {
+    console.log(`MIME type ${mimeType} não suportado, usando audio/ogg como padrão`);
+    mimeType = 'audio/ogg';
+  }
   // 4. Chamar a API do Gemini para transcrição
   // Usando o modelo mais recente gemini-2.5-flash
   const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${googleApiKey}`;
@@ -215,23 +233,9 @@ function getRetirementPlanningLabel(value: string): string {
       }
     ]
   };
-  console.log('Enviando para o Gemini (sem dados de áudio):', JSON.stringify({
-    contents: [
-      {
-        parts: [
-          {
-            text: prompt
-          },
-          {
-            inline_data: {
-              mime_type: mimeType,
-              data: "..."
-            }
-          }
-        ]
-      }
-    ]
-  }));
+  
+  console.log('Enviando para o Gemini com MIME type:', mimeType, '(tamanho do áudio em bytes:', audioArrayBuffer.byteLength, ')');
+  
   const geminiResponse = await fetch(geminiUrl, {
     method: 'POST',
     headers: {
