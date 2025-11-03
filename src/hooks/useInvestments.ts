@@ -33,6 +33,7 @@ export const useInvestments = () => {
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [transactions, setTransactions] = useState<InvestmentTransaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [updatingPrices, setUpdatingPrices] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -120,6 +121,30 @@ export const useInvestments = () => {
     }, 0);
   };
 
+  const updateStockPrices = async () => {
+    setUpdatingPrices(true);
+    try {
+      const { data, error: updateError } = await supabase.functions.invoke('update-stock-prices');
+      
+      if (updateError) throw updateError;
+      
+      toast({
+        title: 'Preços atualizados',
+        description: `${data?.updated || 0} ativos atualizados com sucesso!`,
+      });
+      
+      await fetchInvestments();
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao atualizar preços',
+        description: err.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdatingPrices(false);
+    }
+  };
+
   useEffect(() => {
     fetchInvestments();
     fetchTransactions();
@@ -144,10 +169,12 @@ export const useInvestments = () => {
     investments,
     transactions,
     loading,
+    updatingPrices,
     error,
     addTransaction,
     getTotalValue,
     getTotalProfit,
+    updateStockPrices,
     refetch: () => {
       fetchInvestments();
       fetchTransactions();

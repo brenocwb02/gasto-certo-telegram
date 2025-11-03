@@ -18,7 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { InvestmentForm } from '@/components/forms/InvestmentForm';
 
 export default function Investments() {
-  const { investments, transactions, loading, getTotalValue, getTotalProfit, refetch } = useInvestments();
+  const { investments, transactions, loading, updatingPrices, getTotalValue, getTotalProfit, updateStockPrices } = useInvestments();
   const [showAddDialog, setShowAddDialog] = useState(false);
 
   const totalValue = getTotalValue();
@@ -35,8 +35,14 @@ export default function Investments() {
             <p className="text-muted-foreground">Gerencie sua carteira de investimentos</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="icon" onClick={refetch}>
-              <RefreshCw className="h-4 w-4" />
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={updateStockPrices}
+              disabled={updatingPrices}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${updatingPrices ? 'animate-spin' : ''}`} />
+              {updatingPrices ? 'Atualizando...' : 'Atualizar Preços'}
             </Button>
             <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
               <DialogTrigger asChild>
@@ -170,9 +176,14 @@ export default function Investments() {
                         <TableCell className="text-right">
                           {avgPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                         </TableCell>
-                        <TableCell className="text-right">
-                          {currentPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                        </TableCell>
+                         <TableCell className="text-right">
+                           {currentPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                           {inv.last_price_update && (
+                             <p className="text-xs text-muted-foreground mt-1">
+                               Atualizado: {new Date(inv.last_price_update).toLocaleString('pt-BR')}
+                             </p>
+                           )}
+                         </TableCell>
                         <TableCell className="text-right font-medium">
                           {totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                         </TableCell>
