@@ -177,8 +177,8 @@ function getRetirementPlanningLabel(value: string): string {
   const base64Audio = encodeBase64(audioArrayBuffer);
   const mimeType = audioBlob.type || 'audio/ogg';
   // 4. Chamar a API do Gemini para transcrição
-  // CORREÇÃO FINAL: Alterado o modelo para 'gemini-1.5-flash' que é o nome estável correto.
-  const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${googleApiKey}`;
+  // Usando o modelo mais recente gemini-2.5-flash
+  const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${googleApiKey}`;
   const prompt = "Transcreva este áudio em português:";
   const requestBody = {
     contents: [
