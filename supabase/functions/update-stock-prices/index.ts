@@ -5,13 +5,28 @@ import { corsHeaders } from '../_shared/cors.ts';
 // Função para buscar cotação da API Brapi (API brasileira gratuita)
 async function fetchStockPrice(ticker: string): Promise<number | null> {
   try {
-    const response = await fetch(`https://brapi.dev/api/quote/${ticker}?token=demo`);
-    if (!response.ok) return null;
+    // Adicionar .SA se o ticker não tiver sufixo (padrão B3)
+    const formattedTicker = ticker.includes('.') ? ticker : `${ticker}.SA`;
+    
+    console.log(`[UPDATE-PRICES] Buscando cotação para ${ticker} (formatado: ${formattedTicker})`);
+    
+    const response = await fetch(`https://brapi.dev/api/quote/${formattedTicker}?token=demo`);
+    
+    if (!response.ok) {
+      console.error(`[UPDATE-PRICES] API retornou status ${response.status} para ${formattedTicker}`);
+      return null;
+    }
     
     const data = await response.json();
+    console.log(`[UPDATE-PRICES] Resposta da API para ${formattedTicker}:`, JSON.stringify(data));
+    
     if (data.results && data.results.length > 0) {
-      return data.results[0].regularMarketPrice;
+      const price = data.results[0].regularMarketPrice;
+      console.log(`[UPDATE-PRICES] Preço encontrado para ${ticker}: R$ ${price}`);
+      return price;
     }
+    
+    console.warn(`[UPDATE-PRICES] Nenhum resultado encontrado para ${formattedTicker}`);
     return null;
   } catch (error) {
     console.error(`[UPDATE-PRICES] Erro ao buscar ${ticker}:`, error);
