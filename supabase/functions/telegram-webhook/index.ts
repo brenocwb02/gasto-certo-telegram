@@ -1295,7 +1295,18 @@ serve(async (req)=>{
         headers: corsHeaders
       });
     }
+    
     const message = body.message;
+    
+    // ⚠️ CRÍTICO: Ignorar mensagens enviadas pelo próprio bot para evitar loops
+    if (message.from?.is_bot) {
+      console.log("Ignorando mensagem do próprio bot para evitar loop");
+      return new Response('OK', {
+        status: 200,
+        headers: corsHeaders
+      });
+    }
+    
     const chatId = message.chat.id;
     let text = message.text ? message.text.trim() : null;
     const voice = message.voice;
