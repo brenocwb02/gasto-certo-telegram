@@ -41,7 +41,7 @@ export function QuickActions() {
       description: "Comando rápido",
       icon: MessageSquare,
       color: "primary",
-      action: () => window.open('https://t.me/GastoCertoBot', '_blank')
+      action: () => window.open('https://t.me/BoasContasBot', '_blank')
     }
   ];
 
