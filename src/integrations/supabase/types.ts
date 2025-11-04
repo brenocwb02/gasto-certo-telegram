@@ -592,7 +592,6 @@ export type Database = {
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           telefone: string | null
-          telegram_bot_token: string | null
           telegram_chat_id: number | null
           telegram_id: string | null
           updated_at: string
@@ -608,7 +607,6 @@ export type Database = {
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           telefone?: string | null
-          telegram_bot_token?: string | null
           telegram_chat_id?: number | null
           telegram_id?: string | null
           updated_at?: string
@@ -624,7 +622,6 @@ export type Database = {
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           telefone?: string | null
-          telegram_bot_token?: string | null
           telegram_chat_id?: number | null
           telegram_id?: string | null
           updated_at?: string
@@ -833,30 +830,6 @@ export type Database = {
           updated_at?: string
           user_id?: string
           webhook_url?: string | null
-        }
-        Relationships: []
-      }
-      telegram_integration: {
-        Row: {
-          created_at: string
-          id: string
-          telegram_chat_id: number
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          telegram_chat_id: number
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          telegram_chat_id?: number
-          updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }

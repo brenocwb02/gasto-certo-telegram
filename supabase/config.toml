@@ -3,9 +3,6 @@ project_id = "dnpwlpxugkzomqczijwy"
 [functions.telegram-webhook]
 verify_jwt = false
 
-[functions.send-telegram-message]
-verify_jwt = true
-
 [functions.nlp-transaction]
 verify_jwt = true
 
