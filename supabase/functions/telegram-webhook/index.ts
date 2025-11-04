@@ -262,9 +262,17 @@ function getRetirementPlanningLabel(value: string): string {
 }
 /**
  * Vincula a conta de um utilizador do Telegram à sua licença.
- */ async function linkUserWithLicense(supabase: any, telegramChatId: number, licenseCode: string): Promise<{success: boolean; message: string}> {
+ */
+async function linkUserWithLicense(supabase: any, telegramChatId: number, licenseCode: string): Promise<{success: boolean; message: string}> {
   console.log(`Tentando vincular a licença ${licenseCode} ao chat ${telegramChatId}`);
-  const { data: license, error: licenseError } = await supabase.from('licenses').select('user_id, status').eq('codigo', licenseCode).single();
+  
+  // Verifica se a licença existe e está ativa
+  const { data: license, error: licenseError } = await supabase
+    .from('licenses')
+    .select('user_id, status')
+    .eq('codigo', licenseCode)
+    .single();
+    
   if (licenseError || !license || license.status !== 'ativo') {
     console.error('Licença não encontrada ou inativa:', licenseError);
     return {
@@ -272,9 +280,16 @@ function getRetirementPlanningLabel(value: string): string {
       message: '❌ Código de licença inválido, expirado ou não encontrado.'
     };
   }
-  const { data: existingIntegration } = await supabase.from('telegram_integration').select('user_id').eq('telegram_chat_id', telegramChatId).single();
-  if (existingIntegration) {
-    if (existingIntegration.user_id === license.user_id) {
+  
+  // Verifica se este chat_id já está vinculado a algum perfil
+  const { data: existingProfile } = await supabase
+    .from('profiles')
+    .select('user_id')
+    .eq('telegram_chat_id', telegramChatId)
+    .single();
+    
+  if (existingProfile) {
+    if (existingProfile.user_id === license.user_id) {
       return {
         success: true,
         message: '✅ Este chat já está vinculado à sua conta.'
@@ -286,20 +301,23 @@ function getRetirementPlanningLabel(value: string): string {
       };
     }
   }
-  const { error: insertError } = await supabase.from('telegram_integration').insert({
-    user_id: license.user_id,
-    telegram_chat_id: telegramChatId
-  });
-  if (insertError) {
-    console.error('Erro ao vincular a conta:', insertError);
+  
+  // Vincula o telegram_chat_id ao perfil do usuário
+  const { error: updateError } = await supabase
+    .from('profiles')
+    .update({ telegram_chat_id: telegramChatId })
+    .eq('user_id', license.user_id);
+    
+  if (updateError) {
+    console.error('Erro ao vincular a conta:', updateError);
     return {
       success: false,
       message: '❌ Ocorreu um erro ao vincular a sua conta. Tente novamente.'
     };
   }
-  await supabase.from('profiles').update({
-    telegram_chat_id: telegramChatId
-  }).eq('user_id', license.user_id);
+  
+  console.log(`✅ Chat ${telegramChatId} vinculado com sucesso ao usuário ${license.user_id}`);
+  
   return {
     success: true,
     message: '✅ Conta vinculada com sucesso! Agora você pode usar todos os comandos:\n\n🔍 /saldo - Ver saldo das suas contas\n📊 /resumo - Resumo financeiro do mês\n🎯 /metas - Acompanhar suas metas\n❓ /ajuda - Ver lista completa de comandos\n\n💬 Ou simplesmente escreva como "Gastei 25 reais com almoço" que eu registro automaticamente!'
@@ -1133,12 +1151,17 @@ serve(async (req)=>{
       const messageId = callbackQuery.message.message_id;
       const data = callbackQuery.data;
 
-      // Buscar integração para pegar userId
-      const { data: integration } = await supabaseAdmin.from('telegram_integration').select('user_id').eq('telegram_chat_id', chatId).single();
-      if (!integration) {
+      // Buscar perfil do usuário pelo telegram_chat_id
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('user_id')
+        .eq('telegram_chat_id', chatId)
+        .single();
+        
+      if (!profile) {
         return new Response('OK', { status: 200, headers: corsHeaders });
       }
-      const userId = integration.user_id;
+      const userId = profile.user_id;
 
       // Ações de edição de transação
       if (data.startsWith('edit_')) {
@@ -1295,15 +1318,21 @@ serve(async (req)=>{
         headers: corsHeaders
       });
     }
-    const { data: integration } = await supabaseAdmin.from('telegram_integration').select('user_id').eq('telegram_chat_id', chatId).single();
-    if (!integration) {
+    // Buscar perfil do usuário pelo telegram_chat_id
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('user_id')
+      .eq('telegram_chat_id', chatId)
+      .single();
+      
+    if (!profile) {
       await sendTelegramMessage(chatId, '🔗 *Sua conta não está vinculada*\n\nUse:\n`/start SEU_CODIGO_DE_LICENCA`');
       return new Response('Utilizador não vinculado', {
         status: 401,
         headers: corsHeaders
       });
     }
-    const userId = integration.user_id;
+    const userId = profile.user_id;
 
     // Verificar se está em modo de edição
     const { data: session } = await supabaseAdmin
