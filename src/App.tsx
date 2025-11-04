@@ -20,11 +20,9 @@ import Goals from "@/pages/Goals";
 import Settings from "@/pages/Settings";
 import Support from "@/pages/Support";
 import License from "@/pages/License";
-import TelegramIntegration from "@/pages/TelegramIntegration";
 import Categories from "@/pages/Categories";
 import Budget from "@/pages/Budget";
 import CheckoutPage from "@/pages/Checkout";
-import Investments from "@/pages/Investments";
 import NetWorth from "@/pages/NetWorth";
 import FamilySettings from "@/pages/FamilySettings";
 import RecurringTransactions from "@/pages/RecurringTransactions";
@@ -173,31 +171,11 @@ const AppRoutes = () => {
         }
       />
       <Route
-        path="/telegram-integration"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <TelegramIntegration />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
         path="/checkout"
         element={
           <ProtectedRoute>
             <AppLayout>
               <CheckoutPage />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/investimentos"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <Investments />
             </AppLayout>
           </ProtectedRoute>
         }

@@ -11,14 +11,11 @@ import { Link, Copy, Shield, Bot, User } from "lucide-react";
 import { useProfile } from "@/hooks/useSupabaseData";
 import { useLicense } from "@/hooks/useLicense";
 import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { NotificationSettings } from "@/components/NotificationSettings";
 
 const Settings = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [telegramId, setTelegramId] = useState("");
-  const [loading, setLoading] = useState(false);
   const { profile, loading: profileLoading } = useProfile();
   const { license, loading: licenseLoading } = useLicense();
   const { toast } = useToast();
@@ -39,12 +36,6 @@ const Settings = () => {
     link.setAttribute("href", window.location.origin + "/settings");
   }, []);
 
-  useEffect(() => {
-    if (profile?.telegram_id) {
-      setTelegramId(profile.telegram_id);
-    }
-  }, [profile]);
-
   const copyLicenseCode = () => {
     if (license?.codigo) {
       navigator.clipboard.writeText(license.codigo);
@@ -52,34 +43,6 @@ const Settings = () => {
         title: "Código copiado!",
         description: "Código de licença copiado para a área de transferência.",
       });
-    }
-  };
-
-  const saveTelegramId = async () => {
-    if (!user) return;
-
-    setLoading(true);
-    try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ telegram_id: telegramId || null })
-        .eq("user_id", user.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Telegram vinculado",
-        description: "ID do Telegram foi salvo com sucesso.",
-      });
-    } catch (error) {
-      console.error("Erro ao salvar Telegram ID:", error);
-      toast({
-        title: "Erro",
-        description: "Erro ao salvar o ID do Telegram.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -206,42 +169,56 @@ const Settings = () => {
                 Integração com Telegram
               </CardTitle>
               <CardDescription>
-                Configure o bot do Telegram para registrar transações por mensagem
+                Configure o @BoasContasBot para registrar transações por mensagem
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="bg-muted/50 p-4 rounded-lg">
-                <h4 className="font-semibold mb-2">Como conectar:</h4>
-                <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
-                  <li>Copie seu código de licença acima</li>
-                  <li>Abra o Telegram e busque por: <strong>@BoasContasBot</strong></li>
-                  <li>Inicie uma conversa com: <strong>/start {license?.codigo}</strong></li>
-                  <li>O bot confirmará a vinculação da sua conta</li>
-                </ol>
-              </div>
-              
-              <div>
-                <Label>ID do Telegram (preenchido automaticamente)</Label>
-                <div className="flex space-x-2 mt-1">
-                  <Input 
-                    value={telegramId}
-                    onChange={(e) => setTelegramId(e.target.value)}
-                    placeholder="Será preenchido automaticamente após conectar"
-                  />
-                  <Button 
-                    onClick={saveTelegramId}
-                    disabled={loading}
-                    variant="outline"
-                  >
-                    {loading ? "Salvando..." : "Salvar"}
-                  </Button>
+            <CardContent className="space-y-6">
+              <div className="bg-gradient-to-br from-primary/10 to-primary/5 p-6 rounded-lg border border-primary/20">
+                <h4 className="font-semibold mb-4 text-lg">Como conectar em 3 passos:</h4>
+                <div className="space-y-4">
+                  <div className="flex items-start space-x-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold">
+                      1
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium">Copie seu código de licença</p>
+                      <p className="text-sm text-muted-foreground">Use o código acima na seção de Licença</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold">
+                      2
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium mb-2">Abra o bot no Telegram</p>
+                      <Button 
+                        variant="outline" 
+                        className="w-full sm:w-auto"
+                        onClick={() => window.open('https://t.me/BoasContasBot', '_blank')}
+                      >
+                        <Bot className="h-4 w-4 mr-2" />
+                        Abrir @BoasContasBot
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold">
+                      3
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium">Vincule sua conta</p>
+                      <p className="text-sm text-muted-foreground">
+                        Envie: <code className="bg-muted px-2 py-1 rounded">/start {license?.codigo || 'SEU_CODIGO'}</code>
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               {profile?.telegram_id && (
-                <div className="flex items-center space-x-2 text-sm text-green-600">
-                  <Link className="h-4 w-4" />
-                  <span>Telegram conectado com sucesso!</span>
+                <div className="flex items-center space-x-2 p-4 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg">
+                  <Link className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <span className="font-medium text-green-700 dark:text-green-300">Telegram conectado com sucesso!</span>
                 </div>
               )}
             </CardContent>

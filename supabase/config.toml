@@ -3,9 +3,6 @@ project_id = "dnpwlpxugkzomqczijwy"
 [functions.telegram-webhook]
 verify_jwt = false
 
-[functions.telegram-bot-setup]
-verify_jwt = true
-
 [functions.send-telegram-message]
 verify_jwt = true
 
@@ -32,6 +29,3 @@ verify_jwt = true
 
 [functions.calculate-net-worth]
 verify_jwt = true
-
-[functions.update-stock-prices]
-verify_jwt = false

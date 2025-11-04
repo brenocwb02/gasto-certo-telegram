@@ -8,13 +8,11 @@ import {
   Folders,
   Settings,
   LifeBuoy,
-  Bot,
   KeyRound,
   LogOut,
   Calculator,
   Users,
   Repeat,
-  TrendingUp,
   Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -161,22 +159,6 @@ export function Sidebar() {
           <Tooltip>
             <TooltipTrigger asChild>
               <NavLink
-                to="/investimentos"
-                className={({ isActive }) =>
-                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
-                    isActive ? "bg-accent text-accent-foreground" : ""
-                  }`
-                }
-              >
-                <TrendingUp className="h-5 w-5" />
-                <span className="sr-only">Investimentos</span>
-              </NavLink>
-            </TooltipTrigger>
-            <TooltipContent side="right">Investimentos</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <NavLink
                 to="/patrimonio"
                 className={({ isActive }) =>
                   `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
@@ -225,22 +207,6 @@ export function Sidebar() {
               </NavLink>
             </TooltipTrigger>
             <TooltipContent side="right">Família</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <NavLink
-                to="/telegram-integration"
-                className={({ isActive }) =>
-                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
-                    isActive ? "bg-accent text-accent-foreground" : ""
-                  }`
-                }
-              >
-                <Bot className="h-5 w-5" />
-                <span className="sr-only">Integração Telegram</span>
-              </NavLink>
-            </TooltipTrigger>
-            <TooltipContent side="right">Integração Telegram</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
