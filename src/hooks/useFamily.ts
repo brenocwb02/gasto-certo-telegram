@@ -221,15 +221,24 @@ export function useFamily() {
 
       // Enviar email de convite
       try {
-        await supabase.functions.invoke('send-family-invite', {
+        const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-family-invite', {
           body: {
             inviteId: inviteData.id,
             groupName: groupData?.name || 'Grupo Familiar',
             inviterName: profileData?.nome || 'Um membro'
           }
         });
+
+        if (emailError) {
+          console.error('Erro ao enviar email de convite:', emailError);
+          throw new Error('Convite criado, mas houve erro ao enviar o email. Token: ' + token);
+        }
+        
+        console.log('Email enviado com sucesso:', emailResult);
       } catch (emailError) {
-        console.warn('Erro ao enviar email de convite:', emailError);
+        console.error('Erro ao enviar email de convite:', emailError);
+        // Não falhar se o email não for enviado, mas mostrar o token
+        throw new Error('Convite criado. Compartilhe o código manualmente: ' + token);
       }
 
       await loadFamilyInvites(groupId);

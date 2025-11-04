@@ -71,9 +71,10 @@ serve(async (req) => {
     }
 
     // Preparar dados do email
-    const inviteUrl = `${Deno.env.get('SITE_URL')}/familia?invite=${invite.token}`;
-    const inviterName = invite.inviter?.nome || 'Um membro da família';
-    const groupName = invite.family_groups?.name || 'Grupo Familiar';
+    const siteUrl = Deno.env.get('SITE_URL') || 'https://dnpwlpxugkzomqczijwy.supabase.co';
+    const inviteUrl = `${siteUrl}/familia?invite=${invite.token}`;
+    const inviterNameData = invite.inviter?.nome || 'Um membro da família';
+    const groupNameData = invite.family_groups?.name || 'Grupo Familiar';
 
     // Template do email
     const emailHtml = `
@@ -184,10 +185,10 @@ serve(async (req) => {
 
           <div class="content">
             <h2>Olá! 👋</h2>
-            <p><strong>${inviterName}</strong> convidou você para participar do grupo familiar <strong>"${groupName}"</strong> no Zaq - Boas Contas.</p>
+            <p><strong>${inviterNameData}</strong> convidou você para participar do grupo familiar <strong>"${groupNameData}"</strong> no Zaq - Boas Contas.</p>
 
             <div class="invite-card">
-              <div class="group-name">${groupName}</div>
+              <div class="group-name">${groupNameData}</div>
               ${invite.family_groups?.description ? `<div class="group-description">${invite.family_groups.description}</div>` : ''}
               <div>
                 <span class="role-badge">${getRoleLabel(invite.role)}</span>
@@ -234,7 +235,7 @@ serve(async (req) => {
       const emailResult = await resend.emails.send({
         from: 'Zaq - Boas Contas <onboarding@resend.dev>',
         to: [invite.email],
-        subject: `Convite para o grupo ${groupName}`,
+        subject: `Convite para o grupo ${groupNameData}`,
         html: emailHtml,
       });
 
