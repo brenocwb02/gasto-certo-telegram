@@ -45,6 +45,7 @@ export default function FamilySettings() {
     removeFamilyMember,
     updateMemberRole,
     cancelInvite,
+    deleteFamilyGroup,
     selectGroup,
     isGroupAdmin,
     isGroupOwner
@@ -55,6 +56,8 @@ export default function FamilySettings() {
   const [showInviteMember, setShowInviteMember] = useState(false);
   const [showInviteCode, setShowInviteCode] = useState(false);
   const [showGeneratedCode, setShowGeneratedCode] = useState(false);
+  const [showDeleteGroup, setShowDeleteGroup] = useState(false);
+  const [groupToDelete, setGroupToDelete] = useState<string | null>(null);
   
   // Estados para formulários
   const [newGroupName, setNewGroupName] = useState("");
@@ -154,6 +157,29 @@ export default function FamilySettings() {
       toast({
         title: "Erro",
         description: err instanceof Error ? err.message : "Erro ao aceitar convite",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Deletar grupo familiar
+  const handleDeleteGroup = async () => {
+    if (!groupToDelete) return;
+
+    try {
+      const result = await deleteFamilyGroup(groupToDelete);
+      
+      toast({
+        title: "Sucesso!",
+        description: result.message,
+      });
+      
+      setGroupToDelete(null);
+      setShowDeleteGroup(false);
+    } catch (err) {
+      toast({
+        title: "Erro",
+        description: err instanceof Error ? err.message : "Erro ao deletar grupo",
         variant: "destructive",
       });
     }
@@ -405,7 +431,7 @@ export default function FamilySettings() {
                     >
                       <CardHeader>
                         <div className="flex items-center justify-between">
-                          <div>
+                          <div className="flex-1">
                             <CardTitle className="flex items-center gap-2">
                               {group.name}
                               {isGroupOwner(group.id) && (
@@ -417,8 +443,24 @@ export default function FamilySettings() {
                             </CardTitle>
                             <CardDescription>{group.description}</CardDescription>
                           </div>
-                          <div className="text-right text-sm text-muted-foreground">
-                            <p>Criado em {new Date(group.created_at).toLocaleDateString('pt-BR')}</p>
+                          <div className="flex items-center gap-4">
+                            <div className="text-right text-sm text-muted-foreground">
+                              <p>Criado em {new Date(group.created_at).toLocaleDateString('pt-BR')}</p>
+                            </div>
+                            {isGroupOwner(group.id) && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setGroupToDelete(group.id);
+                                  setShowDeleteGroup(true);
+                                }}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </CardHeader>
@@ -671,6 +713,31 @@ export default function FamilySettings() {
               <div className="flex justify-end">
                 <Button onClick={() => setShowGeneratedCode(false)}>
                   Entendi
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Dialog de Confirmação de Deletar Grupo */}
+          <Dialog open={showDeleteGroup} onOpenChange={setShowDeleteGroup}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Deletar Grupo Familiar</DialogTitle>
+                <DialogDescription>
+                  Tem certeza que deseja deletar este grupo? Esta ação é permanente e não pode ser desfeita.
+                  Todos os membros e convites serão removidos.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex justify-end gap-2 mt-4">
+                <Button variant="outline" onClick={() => {
+                  setShowDeleteGroup(false);
+                  setGroupToDelete(null);
+                }}>
+                  Cancelar
+                </Button>
+                <Button variant="destructive" onClick={handleDeleteGroup}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Deletar Grupo
                 </Button>
               </div>
             </DialogContent>

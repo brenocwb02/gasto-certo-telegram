@@ -315,6 +315,47 @@ export function useFamily() {
     }
   };
 
+  // Deletar grupo familiar
+  const deleteFamilyGroup = async (groupId: string) => {
+    try {
+      // Verificar se é o owner
+      const group = groups.find(g => g.id === groupId);
+      if (!group || group.owner_id !== user?.id) {
+        throw new Error('Apenas o proprietário pode deletar o grupo');
+      }
+
+      // Deletar todos os membros primeiro
+      const { error: membersError } = await supabase
+        .from('family_members')
+        .delete()
+        .eq('group_id', groupId);
+
+      if (membersError) throw membersError;
+
+      // Deletar todos os convites
+      const { error: invitesError } = await supabase
+        .from('family_invites')
+        .delete()
+        .eq('group_id', groupId);
+
+      if (invitesError) throw invitesError;
+
+      // Deletar o grupo
+      const { error: groupError } = await supabase
+        .from('family_groups')
+        .delete()
+        .eq('id', groupId);
+
+      if (groupError) throw groupError;
+
+      await loadFamilyGroups();
+      return { success: true, message: 'Grupo deletado com sucesso!' };
+    } catch (err) {
+      console.error('Erro ao deletar grupo:', err);
+      throw err;
+    }
+  };
+
   // Selecionar grupo atual
   const selectGroup = async (group: FamilyGroup) => {
     setCurrentGroup(group);
@@ -360,6 +401,7 @@ export function useFamily() {
     removeFamilyMember,
     updateMemberRole,
     cancelInvite,
+    deleteFamilyGroup,
     selectGroup,
     isGroupAdmin,
     isGroupOwner,
