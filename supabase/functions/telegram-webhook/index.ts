@@ -1316,6 +1316,57 @@ serve(async (req)=>{
         headers: corsHeaders
       });
     }
+    // Comando /entrar para aceitar convite familiar
+    if (text && text.startsWith('/entrar ')) {
+      const inviteToken = text.replace('/entrar ', '').trim().toUpperCase();
+      console.log('👨‍👩‍👧‍👦 Tentando aceitar convite familiar:', inviteToken);
+      
+      // Verificar se usuário está vinculado
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('user_id, nome')
+        .eq('telegram_chat_id', chatId)
+        .single();
+
+      if (!profile) {
+        await sendTelegramMessage(
+          chatId,
+          '❌ Sua conta não está vinculada. Use `/start SEU_CODIGO` para vincular primeiro.'
+        );
+        return new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: corsHeaders,
+        });
+      }
+
+      // Aceitar convite usando a função do banco
+      const { data: result, error: inviteError } = await supabaseAdmin
+        .rpc('accept_family_invite', { invite_token: inviteToken });
+
+      if (inviteError || !result || !result.success) {
+        console.error('Erro ao aceitar convite:', inviteError);
+        await sendTelegramMessage(
+          chatId,
+          '❌ Código de convite inválido ou expirado. Verifique o código e tente novamente.'
+        );
+        return new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: corsHeaders,
+        });
+      }
+
+      await sendTelegramMessage(
+        chatId,
+        `✅ *Convite aceito com sucesso!*\n\nVocê agora faz parte do grupo familiar. Bem-vindo(a)! 👨‍👩‍👧‍👦`
+      );
+
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: corsHeaders,
+      });
+    }
+
+    // Comando /start para vincular conta
     if (text && text.startsWith('/start')) {
       const licenseCode = text.split(' ')[1];
       if (!licenseCode) {
