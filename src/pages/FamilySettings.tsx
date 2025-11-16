@@ -23,7 +23,9 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  AlertCircle
+  AlertCircle,
+  QrCode,
+  Copy
 } from "lucide-react";
 import { useFamily } from "@/hooks/useFamily";
 import { useToast } from "@/hooks/use-toast";
@@ -52,13 +54,15 @@ export default function FamilySettings() {
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showInviteMember, setShowInviteMember] = useState(false);
   const [showInviteCode, setShowInviteCode] = useState(false);
+  const [showGeneratedCode, setShowGeneratedCode] = useState(false);
   
   // Estados para formulários
   const [newGroupName, setNewGroupName] = useState("");
   const [newGroupDescription, setNewGroupDescription] = useState("");
-  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteName, setInviteName] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
   const [inviteCode, setInviteCode] = useState("");
+  const [generatedCode, setGeneratedCode] = useState("");
 
   useEffect(() => {
     document.title = "Família | Boas Contas";
@@ -101,23 +105,32 @@ export default function FamilySettings() {
 
   // Convidar membro para o grupo
   const handleInviteFamilyMember = async () => {
-    if (!currentGroup || !inviteEmail.trim()) return;
+    if (!currentGroup || !inviteName.trim()) {
+      toast({
+        title: "Erro",
+        description: "Por favor, preencha o nome do familiar",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
-      const result = await inviteFamilyMember(currentGroup.id, inviteEmail.trim(), inviteRole);
+      const result = await inviteFamilyMember(currentGroup.id, inviteName.trim(), inviteRole);
+      
+      setGeneratedCode(result.token!);
+      setShowInviteMember(false);
+      setShowGeneratedCode(true);
+      setInviteName("");
+      setInviteRole("member");
       
       toast({
-        title: "Convite enviado!",
+        title: "Convite criado!",
         description: result.message,
       });
-      
-      setInviteEmail("");
-      setInviteRole("member");
-      setShowInviteMember(false);
     } catch (err) {
       toast({
         title: "Erro",
-        description: err instanceof Error ? err.message : "Erro ao enviar convite",
+        description: err instanceof Error ? err.message : "Erro ao criar convite",
         variant: "destructive",
       });
     }
@@ -433,19 +446,22 @@ export default function FamilySettings() {
                             <DialogHeader>
                               <DialogTitle>Convidar Membro</DialogTitle>
                               <DialogDescription>
-                                Envie um convite por email para adicionar um novo membro ao grupo.
+                                Gere um código de convite para compartilhar com seu familiar
                               </DialogDescription>
                             </DialogHeader>
                             <div className="space-y-4">
                               <div>
-                                <Label htmlFor="inviteEmail">Email</Label>
+                                <Label htmlFor="inviteName">Nome do familiar</Label>
                                 <Input
-                                  id="inviteEmail"
-                                  type="email"
-                                  value={inviteEmail}
-                                  onChange={(e) => setInviteEmail(e.target.value)}
-                                  placeholder="exemplo@email.com"
+                                  id="inviteName"
+                                  type="text"
+                                  value={inviteName}
+                                  onChange={(e) => setInviteName(e.target.value)}
+                                  placeholder="Ex: Maria Silva"
                                 />
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Este nome será usado apenas para identificar o convite
+                                </p>
                               </div>
                               <div>
                                 <Label htmlFor="inviteRole">Permissão</Label>
@@ -461,7 +477,8 @@ export default function FamilySettings() {
                                 </Select>
                               </div>
                               <Button onClick={handleInviteFamilyMember} className="w-full">
-                                Enviar Convite
+                                <QrCode className="h-4 w-4 mr-2" />
+                                Gerar Código
                               </Button>
                             </div>
                           </DialogContent>
@@ -606,6 +623,58 @@ export default function FamilySettings() {
               </TabsContent>
             </Tabs>
           )}
+
+          {/* Dialog para mostrar código gerado */}
+          <Dialog open={showGeneratedCode} onOpenChange={setShowGeneratedCode}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Convite Criado com Sucesso! 🎉</DialogTitle>
+                <DialogDescription>
+                  Compartilhe este código com seu familiar
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Código do Convite</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={generatedCode}
+                      readOnly
+                      className="font-mono text-xl font-bold text-center bg-muted"
+                    />
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={() => {
+                        navigator.clipboard.writeText(generatedCode);
+                        toast({
+                          title: "Copiado!",
+                          description: "Código copiado para a área de transferência",
+                        });
+                      }}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <Alert>
+                  <QrCode className="h-4 w-4" />
+                  <AlertTitle>Como compartilhar</AlertTitle>
+                  <AlertDescription className="space-y-2 mt-2">
+                    <p>• Envie este código via WhatsApp, Telegram ou qualquer outro meio</p>
+                    <p>• Seu familiar pode aceitar na página Família ou no bot do Telegram</p>
+                    <p>• No Telegram, use: <code className="bg-background px-2 py-1 rounded font-mono">/entrar {generatedCode}</code></p>
+                    <p className="text-muted-foreground">Válido por 30 dias</p>
+                  </AlertDescription>
+                </Alert>
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={() => setShowGeneratedCode(false)}>
+                  Entendi
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </main>
       </div>
     </div>

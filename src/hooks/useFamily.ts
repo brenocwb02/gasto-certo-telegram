@@ -184,67 +184,30 @@ export function useFamily() {
   };
 
   // Convidar membro para o grupo
-  const inviteFamilyMember = async (groupId: string, email: string, role: string = 'member') => {
+  const inviteFamilyMember = async (groupId: string, name: string, role: string = 'member') => {
     try {
-      // Gerar token único
-      const token = 'FAM_' + Math.random().toString(36).substring(2, 14).toUpperCase();
+      // Gerar token único e fácil de compartilhar
+      const token = 'FAM_' + Math.random().toString(36).substring(2, 10).toUpperCase();
 
       // Criar convite diretamente
-      const { data: inviteData, error: inviteError } = await supabase
+      const { error: inviteError } = await supabase
         .from('family_invites')
         .insert({
           group_id: groupId,
-          email,
+          email: name + '@convite.local', // Email placeholder
           role,
           invited_by: user!.id,
           token,
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 dias
           status: 'pending'
-        })
-        .select()
-        .single();
+        });
 
       if (inviteError) throw inviteError;
 
-      // Buscar dados do grupo e inviter para email
-      const { data: groupData } = await supabase
-        .from('family_groups')
-        .select('name')
-        .eq('id', groupId)
-        .single();
-
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('nome')
-        .eq('user_id', user!.id)
-        .single();
-
-      // Enviar email de convite
-      try {
-        const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-family-invite', {
-          body: {
-            inviteId: inviteData.id,
-            groupName: groupData?.name || 'Grupo Familiar',
-            inviterName: profileData?.nome || 'Um membro'
-          }
-        });
-
-        if (emailError) {
-          console.error('Erro ao enviar email de convite:', emailError);
-          throw new Error('Convite criado, mas houve erro ao enviar o email. Token: ' + token);
-        }
-        
-        console.log('Email enviado com sucesso:', emailResult);
-      } catch (emailError) {
-        console.error('Erro ao enviar email de convite:', emailError);
-        // Não falhar se o email não for enviado, mas mostrar o token
-        throw new Error('Convite criado. Compartilhe o código manualmente: ' + token);
-      }
-
       await loadFamilyInvites(groupId);
-      return { success: true, message: 'Convite enviado com sucesso!', token };
+      return { success: true, message: 'Código de convite gerado! Compartilhe com seu familiar.', token };
     } catch (err) {
-      console.error('Erro ao convidar membro:', err);
+      console.error('Erro ao criar convite:', err);
       throw err;
     }
   };
