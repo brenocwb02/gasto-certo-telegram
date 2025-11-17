@@ -1345,9 +1345,16 @@ serve(async (req)=>{
 
       if (inviteError || !result || !result.success) {
         console.error('Erro ao aceitar convite:', inviteError);
+
+        // !! NOVA LÓGICA DE ERRO !!
+        let errorMessage = '❌ Código de convite inválido ou expirado. Verifique o código e tente novamente.';
+        if (inviteError && inviteError.message.includes('USER_ALREADY_IN_GROUP')) {
+          errorMessage = '⚠️ Você já faz parte de um grupo familiar. Só é permitido um grupo por conta.';
+        }
+        
         await sendTelegramMessage(
           chatId,
-          '❌ Código de convite inválido ou expirado. Verifique o código e tente novamente.'
+          errorMessage // Usa a nova mensagem de erro
         );
         return new Response(JSON.stringify({ ok: true }), {
           status: 200,
