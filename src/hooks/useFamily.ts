@@ -76,10 +76,12 @@ export function useFamily() {
       setGroups(data || []);
       
       // Se há grupos, selecionar o primeiro como atual
+      // Esta é a lógica principal do "Produto A". Perfeito!
       if (data && data.length > 0) {
         setCurrentGroup(data[0]);
-        await loadFamilyMembers(data[0].id);
-        await loadFamilyInvites(data[0].id);
+        // Não precisamos de 'await' aqui, pois o useEffect [currentGroup] vai tratar disso
+        // await loadFamilyMembers(data[0].id);
+        // await loadFamilyInvites(data[0].id);
       }
     } catch (err) {
       console.error('Erro ao carregar grupos familiares:', err);
@@ -150,33 +152,21 @@ export function useFamily() {
     if (!user) throw new Error('Usuário não autenticado');
 
     try {
-      // Criar grupo diretamente
-      const { data: groupData, error: groupError } = await supabase
-        .from('family_groups')
-        .insert({
-          name,
-          owner_id: user.id
-        })
-        .select()
-        .single();
+      // !! MODIFICAÇÃO IMPORTANTE !!
+      // Em vez de 'insert' direto, chamamos a função RPC (com a trava)
+      const { data, error } = await supabase.rpc('create_family_group', {
+        p_group_name: name,
+      });
 
-      if (groupError) throw groupError;
-
-      // Adicionar owner como membro
-      const { error: memberError } = await supabase
-        .from('family_members')
-        .insert({
-          group_id: groupData.id,
-          member_id: user.id,
-          role: 'owner',
-          status: 'active',
-          joined_at: new Date().toISOString()
-        });
-
-      if (memberError) throw memberError;
-
+      if (error) {
+        // Se a trava for ativada, o erro 'USER_ALREADY_IN_GROUP' será capturado aqui
+        throw error;
+      }
+      
+      // Se a função RPC for bem-sucedida, ela já criou o grupo e adicionou o membro.
+      // Apenas precisamos de recarregar os dados.
       await loadFamilyGroups();
-      return { success: true, message: 'Grupo criado com sucesso!', group_id: groupData.id };
+      return { success: true, message: 'Grupo criado com sucesso!', group_id: data };
     } catch (err) {
       console.error('Erro ao criar grupo familiar:', err);
       throw err;
@@ -215,43 +205,22 @@ export function useFamily() {
   // Aceitar convite familiar
   const acceptFamilyInvite = async (token: string) => {
     try {
-      // Buscar convite válido
-      const { data: invite, error: inviteError } = await supabase
-        .from('family_invites')
-        .select('*')
-        .eq('token', token)
-        .eq('status', 'pending')
-        .gt('expires_at', new Date().toISOString())
-        .single();
-
-      if (inviteError || !invite) {
-        throw new Error('Convite inválido ou expirado');
+      // !! MODIFICAÇÃO IMPORTANTE !!
+      // Em vez de fazer a lógica de 'select', 'insert', 'update',
+      // chamamos a função RPC que faz tudo isso (e tem a trava).
+      const { data, error } = await supabase.rpc('accept_family_invite', {
+        p_invite_code: token,
+      });
+      
+      if (error) {
+         // Se a trava for ativada, o erro 'USER_ALREADY_IN_GROUP' será capturado aqui
+        throw error;
       }
 
-      // Adicionar membro ao grupo
-      const { error: memberError } = await supabase
-        .from('family_members')
-        .insert({
-          group_id: invite.group_id,
-          member_id: user!.id,
-          role: invite.role,
-          status: 'active',
-          invited_by: invite.invited_by,
-          joined_at: new Date().toISOString()
-        });
-
-      if (memberError) throw memberError;
-
-      // Marcar convite como aceito
-      const { error: updateError } = await supabase
-        .from('family_invites')
-        .update({ status: 'accepted' })
-        .eq('id', invite.id);
-
-      if (updateError) throw updateError;
-
+      // Se a função RPC for bem-sucedida, já estamos no grupo.
+      // Apenas precisamos de recarregar os dados.
       await loadFamilyGroups();
-      return { success: true, message: 'Convite aceito com sucesso!', group_id: invite.group_id };
+      return { success: true, message: 'Convite aceito com sucesso!', group_id: data };
     } catch (err) {
       console.error('Erro ao aceitar convite:', err);
       throw err;
@@ -260,6 +229,7 @@ export function useFamily() {
 
   // Remover membro do grupo
   const removeFamilyMember = async (memberId: string) => {
+// ... (código original sem alteração) ...
     try {
       const { error } = await supabase
         .from('family_members')
@@ -279,6 +249,7 @@ export function useFamily() {
 
   // Atualizar role do membro
   const updateMemberRole = async (memberId: string, newRole: string) => {
+// ... (código original sem alteração) ...
     try {
       const { error } = await supabase
         .from('family_members')
@@ -298,6 +269,7 @@ export function useFamily() {
 
   // Cancelar convite
   const cancelInvite = async (inviteId: string) => {
+// ... (código original sem alteração) ...
     try {
       const { error } = await supabase
         .from('family_invites')
@@ -317,6 +289,7 @@ export function useFamily() {
 
   // Deletar grupo familiar
   const deleteFamilyGroup = async (groupId: string) => {
+// ... (código original sem alteração) ...
     try {
       // Verificar se é o owner
       const group = groups.find(g => g.id === groupId);
@@ -358,19 +331,25 @@ export function useFamily() {
 
   // Selecionar grupo atual
   const selectGroup = async (group: FamilyGroup) => {
-    setCurrentGroup(group);
-    await loadFamilyMembers(group.id);
-    await loadFamilyInvites(group.id);
+    // !! MODIFICAÇÃO IMPORTANTE !!
+    // Esta função não deve fazer nada, pois estamos no modo "1 Grupo".
+    // A UI (FamilySettings.tsx) já foi modificada para não usar isto.
+    console.warn("A troca de grupo está desabilitada (1 Conta = 1 Grupo).", group);
+    // setCurrentGroup(group);
+    // await loadFamilyMembers(group.id);
+    // await loadFamilyInvites(group.id);
   };
 
   // Verificar se usuário é admin do grupo
   const isGroupAdmin = (groupId: string) => {
+// ... (código original sem alteração) ...
     const member = members.find(m => m.group_id === groupId && m.member_id === user?.id);
     return member?.role === 'owner' || member?.role === 'admin';
   };
 
   // Verificar se usuário é owner do grupo
   const isGroupOwner = (groupId: string) => {
+// ... (código original sem alteração) ...
     const member = members.find(m => m.group_id === groupId && m.member_id === user?.id);
     return member?.role === 'owner';
   };
@@ -385,6 +364,10 @@ export function useFamily() {
     if (currentGroup) {
       loadFamilyMembers(currentGroup.id);
       loadFamilyInvites(currentGroup.id);
+    } else {
+      // Se não houver grupo (ex: usuário acabou de deletar o seu), limpar os dados
+      setMembers([]);
+      setInvites([]);
     }
   }, [currentGroup]);
 
