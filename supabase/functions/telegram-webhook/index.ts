@@ -1340,8 +1340,13 @@ serve(async (req)=>{
       }
 
       // Aceitar convite usando a função do banco
+      // !! MODIFICAÇÃO IMPORTANTE !!
+      // Agora passamos o 'p_user_id'
       const { data: result, error: inviteError } = await supabaseAdmin
-        .rpc('accept_family_invite', { invite_token: inviteToken });
+        .rpc('accept_family_invite', { 
+          invite_token: inviteToken,
+          p_user_id: profile.user_id // Enviando o ID do usuário
+        });
 
       if (inviteError || !result || !result.success) {
         console.error('Erro ao aceitar convite:', inviteError);
