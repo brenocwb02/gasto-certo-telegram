@@ -206,10 +206,9 @@ export function useFamily() {
   const acceptFamilyInvite = async (token: string) => {
     try {
       // !! MODIFICAÇÃO IMPORTANTE !!
-      // Em vez de fazer a lógica de 'select', 'insert', 'update',
-      // chamamos a função RPC que faz tudo isso (e tem a trava).
+      // Em vez de 'p_invite_code', usamos 'invite_token' (TEXT)
       const { data, error } = await supabase.rpc('accept_family_invite', {
-        p_invite_code: token,
+        invite_token: token,
       });
       
       if (error) {
