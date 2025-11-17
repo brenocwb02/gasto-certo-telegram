@@ -152,10 +152,12 @@ export function useFamily() {
     if (!user) throw new Error('Usuário não autenticado');
 
     try {
-      // !! MODIFICAÇÃO IMPORTANTE !!
-      // Em vez de 'insert' direto, chamamos a função RPC (com a trava)
+      // !! CORREÇÃO !!
+      // A função RPC 'create_family_group' espera o p_user_id.
+      // Estamos a enviá-lo a partir do 'user' do useAuth.
       const { data, error } = await supabase.rpc('create_family_group', {
         p_group_name: name,
+        p_user_id: user.id // <-- ESTA LINHA FOI ADICIONADA
       });
 
       if (error) {
@@ -204,11 +206,15 @@ export function useFamily() {
 
   // Aceitar convite familiar
   const acceptFamilyInvite = async (token: string) => {
+    if (!user) throw new Error('Usuário não autenticado'); // Precisa do user.id
+
     try {
-      // !! MODIFICAÇÃO IMPORTANTE !!
-      // Em vez de 'p_invite_code', usamos 'invite_token' (TEXT)
+      // !! CORREÇÃO !!
+      // A função RPC 'accept_family_invite' espera o p_user_id.
+      // Estamos a enviá-lo a partir do 'user' do useAuth.
       const { data, error } = await supabase.rpc('accept_family_invite', {
         invite_token: token,
+        p_user_id: user.id // <-- ESTA LINHA FOI ADICIONADA
       });
       
       if (error) {
@@ -219,7 +225,8 @@ export function useFamily() {
       // Se a função RPC for bem-sucedida, já estamos no grupo.
       // Apenas precisamos de recarregar os dados.
       await loadFamilyGroups();
-      return { success: true, message: 'Convite aceito com sucesso!', group_id: data };
+      // O 'data' é o objeto JSON que a função SQL retorna
+      return { success: true, message: 'Convite aceito com sucesso!', group_id: data.group_id };
     } catch (err) {
       console.error('Erro ao aceitar convite:', err);
       throw err;
