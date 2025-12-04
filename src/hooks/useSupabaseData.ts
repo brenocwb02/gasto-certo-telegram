@@ -54,7 +54,7 @@ export function useProfile() {
         .eq('user_id', user.id);
 
       if (error) throw error;
-      
+
       setProfile(prev => prev ? { ...prev, onboarding_completed: completed } : null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao atualizar onboarding');
@@ -64,7 +64,7 @@ export function useProfile() {
   return { profile, loading, error, updateOnboardingCompleted };
 }
 
-export function useTransactions() {
+export function useTransactions(groupId?: string) {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,10 +78,17 @@ export function useTransactions() {
     }
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from('transactions')
-        .select('*')
-        .eq('user_id', user.id)
+        .select('*');
+
+      if (groupId) {
+        query = query.eq('group_id', groupId);
+      } else {
+        query = query.eq('user_id', user.id);
+      }
+
+      const { data, error } = await query
         .order('data_transacao', { ascending: false })
         .order('created_at', { ascending: false });
 
@@ -92,18 +99,23 @@ export function useTransactions() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, groupId]);
 
 
   useEffect(() => {
-    if(!user) return;
+    if (!user) return;
     fetchTransactions();
 
     const channel = supabase
       .channel('transactions-changes')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` },
+        {
+          event: '*',
+          schema: 'public',
+          table: 'transactions',
+          filter: groupId ? `group_id=eq.${groupId}` : `user_id=eq.${user.id}`
+        },
         () => fetchTransactions()
       )
       .subscribe();
@@ -111,14 +123,19 @@ export function useTransactions() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, fetchTransactions]);
+  }, [user, groupId, fetchTransactions]);
 
   const addTransaction = async (transaction: Omit<Transaction, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => {
     if (!user) return;
     try {
+      const transactionData = { ...transaction, user_id: user.id };
+      if (groupId && !transactionData.group_id) {
+        transactionData.group_id = groupId;
+      }
+
       const { data, error } = await supabase
         .from('transactions')
-        .insert([{ ...transaction, user_id: user.id }])
+        .insert([transactionData])
         .select()
         .single();
       if (error) throw error;
@@ -127,8 +144,8 @@ export function useTransactions() {
       throw new Error(err instanceof Error ? err.message : 'Erro ao criar transação');
     }
   };
-  
-    const updateTransaction = async (
+
+  const updateTransaction = async (
     id: string,
     updates: Partial<Omit<Transaction, 'id' | 'created_at' | 'updated_at' | 'user_id'>>
   ) => {
@@ -138,7 +155,6 @@ export function useTransactions() {
         .from('transactions')
         .update({ ...updates })
         .eq('id', id)
-        .eq('user_id', user.id)
         .select()
         .single();
 
@@ -156,8 +172,7 @@ export function useTransactions() {
       const { error } = await supabase
         .from('transactions')
         .delete()
-        .eq('id', id)
-        .eq('user_id', user.id);
+        .eq('id', id);
 
       if (error) throw error;
       setTransactions(prev => prev.filter(t => t.id !== id));
@@ -170,7 +185,7 @@ export function useTransactions() {
   return { transactions, loading, error, addTransaction, updateTransaction, deleteTransaction };
 }
 
-export function useAccounts() {
+export function useAccounts(groupId?: string) {
   const { user } = useAuth();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
@@ -185,12 +200,19 @@ export function useAccounts() {
 
     const fetchAccounts = async () => {
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('accounts')
           .select('*')
-          .eq('user_id', user.id)
           .eq('ativo', true)
           .order('created_at');
+
+        if (groupId) {
+          query = query.eq('group_id', groupId);
+        } else {
+          query = query.eq('user_id', user.id);
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
         setAccounts(data || []);
@@ -207,7 +229,12 @@ export function useAccounts() {
       .channel('accounts-changes')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'accounts', filter: `user_id=eq.${user.id}` },
+        {
+          event: '*',
+          schema: 'public',
+          table: 'accounts',
+          filter: groupId ? `group_id=eq.${groupId}` : `user_id=eq.${user.id}`
+        },
         () => {
           fetchAccounts();
         }
@@ -217,15 +244,20 @@ export function useAccounts() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, groupId]);
 
   const addAccount = async (account: Omit<Account, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => {
     if (!user) return;
 
     try {
+      const accountData = { ...account, user_id: user.id };
+      if (groupId && !accountData.group_id) {
+        accountData.group_id = groupId;
+      }
+
       const { data, error } = await supabase
         .from('accounts')
-        .insert([{ ...account, user_id: user.id }])
+        .insert([accountData])
         .select()
         .single();
 
@@ -246,7 +278,6 @@ export function useAccounts() {
         .from('accounts')
         .update(updates)
         .eq('id', id)
-        .eq('user_id', user.id)
         .select()
         .single();
 
@@ -263,8 +294,7 @@ export function useAccounts() {
       const { error } = await supabase
         .from('accounts')
         .update({ ativo: false })
-        .eq('id', id)
-        .eq('user_id', user.id);
+        .eq('id', id);
 
       if (error) throw error;
       return true;
@@ -280,7 +310,7 @@ export function useAccounts() {
   return { accounts, loading, error, addAccount, updateAccount, deleteAccount, getTotalBalance };
 }
 
-export function useCategories() {
+export function useCategories(groupId?: string) {
   const { user } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -295,11 +325,18 @@ export function useCategories() {
 
     const fetchCategories = async () => {
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('categories')
           .select('*')
-          .eq('user_id', user.id)
           .order('nome');
+
+        if (groupId) {
+          query = query.eq('group_id', groupId);
+        } else {
+          query = query.eq('user_id', user.id);
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
         setCategories(data || []);
@@ -316,7 +353,12 @@ export function useCategories() {
       .channel('categories-changes')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'categories', filter: `user_id=eq.${user.id}` },
+        {
+          event: '*',
+          schema: 'public',
+          table: 'categories',
+          filter: groupId ? `group_id=eq.${groupId}` : `user_id=eq.${user.id}`
+        },
         () => {
           fetchCategories();
         }
@@ -326,13 +368,13 @@ export function useCategories() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, groupId]);
 
   return { categories, loading, error };
 }
 
 
-export function useGoals() {
+export function useGoals(groupId?: string) {
   const { user } = useAuth();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -346,10 +388,17 @@ export function useGoals() {
     }
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from('goals')
-        .select('*, categories(nome, cor)')
-        .eq('user_id', user.id)
+        .select('*, categories(nome, cor)');
+
+      if (groupId) {
+        query = query.eq('group_id', groupId);
+      } else {
+        query = query.eq('user_id', user.id);
+      }
+
+      const { data, error } = await query
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -359,17 +408,22 @@ export function useGoals() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, groupId]);
 
   useEffect(() => {
-    if(!user) return;
+    if (!user) return;
     fetchGoals();
 
     const channel = supabase
       .channel('goals-changes')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'goals', filter: `user_id=eq.${user.id}` },
+        {
+          event: '*',
+          schema: 'public',
+          table: 'goals',
+          filter: groupId ? `group_id=eq.${groupId}` : `user_id=eq.${user.id}`
+        },
         () => fetchGoals()
       )
       .subscribe();
@@ -377,7 +431,7 @@ export function useGoals() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, fetchGoals]);
+  }, [user, groupId, fetchGoals]);
 
   const deleteGoal = async (goalId: string) => {
     if (!user) return;
@@ -385,8 +439,7 @@ export function useGoals() {
       const { error } = await supabase
         .from('goals')
         .delete()
-        .eq('id', goalId)
-        .eq('user_id', user.id);
+        .eq('id', goalId);
 
       if (error) throw error;
       setGoals(prev => prev.filter(g => g.id !== goalId));
@@ -399,7 +452,7 @@ export function useGoals() {
   return { goals, loading, error, refetchGoals: fetchGoals, deleteGoal };
 }
 
-export function useBudgets(month: Date) {
+export function useBudgets(month: Date, groupId?: string) {
   const { user } = useAuth();
   const [budgets, setBudgets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -419,8 +472,9 @@ export function useBudgets(month: Date) {
       const monthDate = `${monthString}-01`;
 
       const { data: budgetsData, error: budgetsError } = await supabase
-        .rpc('get_budgets_with_spent', { 
-          p_month: monthDate
+        .rpc('get_budgets_with_spent', {
+          p_month: monthDate,
+          p_group_id: groupId || null
         });
 
       if (budgetsError) {
@@ -435,37 +489,102 @@ export function useBudgets(month: Date) {
     } finally {
       setLoading(false);
     }
-  }, [user, monthString]); // Dependency array is now stable
+  }, [user, monthString, groupId]); // Dependency array is now stable
 
   useEffect(() => {
     if (!user) return;
-    
+
     fetchBudgets();
-    
+
+    // Filtros para Realtime
+    const budgetFilter = groupId
+      ? `group_id=eq.${groupId}`
+      : `user_id=eq.${user.id}`; // Para pessoal, idealmente filtrar group_id=is.null, mas realtime filter syntax pode ser limitada. 
+    // O filtro user_id=eq.user.id pegaria orçamentos pessoais E de grupos que o usuário criou?
+    // Melhor simplificar: ouvir tudo da tabela e refetch. Ou filtrar por user_id se possível.
+    // Se for grupo, filtrar por group_id é seguro.
+    // Se for pessoal, filtrar por user_id pode trazer eventos de grupos onde o user é dono, mas o fetchBudgets vai filtrar corretamente.
+
+    const transactionFilter = groupId
+      ? `group_id=eq.${groupId}`
+      : `user_id=eq.${user.id}`;
+
     const channel = supabase
-      .channel('budgets-transactions-changes')
+      .channel(`budgets-transactions-changes-${groupId || 'personal'}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'budgets', filter: `user_id=eq.${user.id}` },
+        { event: '*', schema: 'public', table: 'budgets' }, // Ouvir tudo e deixar o fetch filtrar é mais seguro se o filtro for complexo
         () => fetchBudgets()
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` },
+        { event: '*', schema: 'public', table: 'transactions' },
         () => fetchBudgets()
       )
       .subscribe();
-      
+
     return () => {
       supabase.removeChannel(channel);
     };
 
-  }, [user, fetchBudgets]); // fetchBudgets is now stable
-  
-  return { budgets, loading, error, refetchBudgets: fetchBudgets };
+  }, [user, fetchBudgets, groupId]); // fetchBudgets is now stable
+
+  const addBudget = async (categoryId: string, amount: number) => {
+    if (!user) return;
+    try {
+      const monthDate = `${monthString}-01`;
+      const { error } = await supabase
+        .from('budgets')
+        .insert({
+          user_id: user.id,
+          group_id: groupId || null,
+          category_id: categoryId,
+          amount,
+          month: monthDate
+        });
+
+      if (error) throw error;
+      await fetchBudgets();
+    } catch (err) {
+      console.error("Erro ao adicionar orçamento:", err);
+      throw err;
+    }
+  };
+
+  const updateBudget = async (budgetId: string, amount: number) => {
+    try {
+      const { error } = await supabase
+        .from('budgets')
+        .update({ amount })
+        .eq('id', budgetId);
+
+      if (error) throw error;
+      await fetchBudgets();
+    } catch (err) {
+      console.error("Erro ao atualizar orçamento:", err);
+      throw err;
+    }
+  };
+
+  const deleteBudget = async (budgetId: string) => {
+    try {
+      const { error } = await supabase
+        .from('budgets')
+        .delete()
+        .eq('id', budgetId);
+
+      if (error) throw error;
+      await fetchBudgets();
+    } catch (err) {
+      console.error("Erro ao excluir orçamento:", err);
+      throw err;
+    }
+  };
+
+  return { budgets, loading, error, refetchBudgets: fetchBudgets, addBudget, updateBudget, deleteBudget };
 }
 
-export function useFinancialStats() {
+export function useFinancialStats(groupId?: string) {
   const { user } = useAuth();
   const [stats, setStats] = useState({
     totalBalance: 0,
@@ -488,21 +607,35 @@ export function useFinancialStats() {
         const currentMonth = new Date();
         const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
         const lastDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-        
-        const { data: accounts, error: accountsError } = await supabase
+
+        let accountsQuery = supabase
           .from('accounts')
           .select('saldo_atual')
-          .eq('user_id', user.id)
           .eq('ativo', true);
+
+        if (groupId) {
+          accountsQuery = accountsQuery.eq('group_id', groupId);
+        } else {
+          accountsQuery = accountsQuery.eq('user_id', user.id);
+        }
+
+        const { data: accounts, error: accountsError } = await accountsQuery;
 
         if (accountsError) throw accountsError;
 
         const totalBalance = accounts?.reduce((sum, acc) => sum + Number(acc.saldo_atual), 0) || 0;
 
-        const { data: transactions, error: transactionsError } = await supabase
+        let transactionsQuery = supabase
           .from('transactions')
-          .select('valor, tipo')
-          .eq('user_id', user.id)
+          .select('valor, tipo');
+
+        if (groupId) {
+          transactionsQuery = transactionsQuery.eq('group_id', groupId);
+        } else {
+          transactionsQuery = transactionsQuery.eq('user_id', user.id);
+        }
+
+        const { data: transactions, error: transactionsError } = await transactionsQuery
           .gte('data_transacao', firstDayOfMonth.toISOString().split('T')[0])
           .lte('data_transacao', lastDayOfMonth.toISOString().split('T')[0]);
 
@@ -540,12 +673,22 @@ export function useFinancialStats() {
       .channel('financial-stats-changes')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user?.id}` },
+        {
+          event: '*',
+          schema: 'public',
+          table: 'transactions',
+          filter: groupId ? `group_id=eq.${groupId}` : `user_id=eq.${user.id}`
+        },
         () => fetchStats()
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'accounts', filter: `user_id=eq.${user?.id}` },
+        {
+          event: '*',
+          schema: 'public',
+          table: 'accounts',
+          filter: groupId ? `group_id=eq.${groupId}` : `user_id=eq.${user.id}`
+        },
         () => fetchStats()
       )
       .subscribe();
@@ -553,7 +696,7 @@ export function useFinancialStats() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, groupId]);
 
   return { stats, loading, error };
 }
@@ -606,7 +749,7 @@ export function useFinancialProfile() {
 
     try {
       setLoading(true);
-      
+
       // Usar upsert para criar ou atualizar o perfil
       const { data, error } = await (supabase as any)
         .from('financial_profile')
@@ -619,7 +762,7 @@ export function useFinancialProfile() {
         .single();
 
       if (error) throw error;
-      
+
       setFinancialProfile(data);
       setError(null);
       return data;
@@ -642,24 +785,23 @@ export function useFinancialProfile() {
 
   const getRecommendations = () => {
     if (!financialProfile?.recommendations) return [];
-    
+
     try {
-      return Array.isArray(financialProfile.recommendations) 
-        ? financialProfile.recommendations 
+      return Array.isArray(financialProfile.recommendations)
+        ? financialProfile.recommendations
         : JSON.parse(financialProfile.recommendations as string);
     } catch {
       return [];
     }
   };
 
-  return { 
-    financialProfile, 
-    loading, 
-    error, 
+  return {
+    financialProfile,
+    loading,
+    error,
     submitFinancialProfile,
     getFinancialHealthLevel,
     getRecommendations,
     hasCompletedQuiz: !!financialProfile
   };
 }
-

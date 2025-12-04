@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
-import { Header } from "@/components/layout/Header";
-import { Sidebar } from "@/components/layout/Sidebar";
+import { useEffect } from "react";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
+import { useFamily } from "@/hooks/useFamily";
 
 const Transactions = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { currentGroup } = useFamily();
 
   useEffect(() => {
     document.title = "Transações | Boas Contas";
@@ -25,21 +24,23 @@ const Transactions = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background flex">
-      <div className="hidden lg:block">
-        <Sidebar />
+    <>
+      <div className="space-y-3">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Transações</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
+            {currentGroup ? `Visualizando: ${currentGroup.name}` : 'Suas transações pessoais'}
+          </p>
+        </div>
       </div>
-      <div className="lg:hidden">
-        <Sidebar />
-      </div>
-      <div className="flex-1 flex flex-col sm:pl-14">
-        <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-        <main className="flex-1 p-6 space-y-6 animate-fade-in">
-          <h1 className="text-3xl font-bold text-foreground">Transações</h1>
-          <RecentTransactions showViewAllButton={false} title="Transações" />
-        </main>
-      </div>
-    </div>
+
+      <RecentTransactions
+        showViewAllButton={false}
+        title="Todas as Transações"
+        limit={50}
+        groupId={currentGroup?.id}
+      />
+    </>
   );
 };
 

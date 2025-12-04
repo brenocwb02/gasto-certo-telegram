@@ -7,11 +7,14 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { Calendar, TrendingUp, TrendingDown, DollarSign, Activity } from "lucide-react";
 import { useTransactions, useCategories } from "@/hooks/useSupabaseData";
 
+import { useFamily } from "@/hooks/useFamily";
+
 const Reports = () => {
+  const { currentGroup } = useFamily();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState("month");
-  const { transactions, loading } = useTransactions();
-  const { categories } = useCategories();
+  const { transactions, loading } = useTransactions(currentGroup?.id);
+  const { categories } = useCategories(currentGroup?.id);
 
   useEffect(() => {
     document.title = "Relatórios | Boas Contas";
@@ -38,10 +41,10 @@ const Reports = () => {
   // Filter transactions by period
   const getFilteredTransactions = () => {
     if (!transactions) return [];
-    
+
     const now = new Date();
     let startDate;
-    
+
     switch (selectedPeriod) {
       case "week":
         startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -58,7 +61,7 @@ const Reports = () => {
       default:
         startDate = new Date(now.getFullYear(), now.getMonth(), 1);
     }
-    
+
     return transactions.filter(t => new Date(t.data_transacao) >= startDate);
   };
 
@@ -66,22 +69,22 @@ const Reports = () => {
   const getMonthlyData = (): Array<{ receitas: number; despesas: number; month: string }> => {
     const monthlyData: Record<string, { receitas: number; despesas: number; month: string }> = {};
     const filteredTransactions = getFilteredTransactions();
-    
+
     filteredTransactions.forEach(transaction => {
       const date = new Date(transaction.data_transacao);
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      
+
       if (!monthlyData[monthKey]) {
         monthlyData[monthKey] = { receitas: 0, despesas: 0, month: monthKey };
       }
-      
+
       if (transaction.tipo === 'receita') {
         monthlyData[monthKey].receitas += parseFloat(transaction.valor.toString());
       } else if (transaction.tipo === 'despesa') {
         monthlyData[monthKey].despesas += parseFloat(transaction.valor.toString());
       }
     });
-    
+
     return Object.values(monthlyData).sort((a, b) => a.month.localeCompare(b.month));
   };
 
@@ -89,32 +92,32 @@ const Reports = () => {
   const getCategoryData = (): Array<{ name: string; value: number }> => {
     const categoryData: Record<string, number> = {};
     const filteredTransactions = getFilteredTransactions();
-    
+
     filteredTransactions.forEach(transaction => {
       if (transaction.tipo === 'despesa') {
         const categoryName = categories.find(c => c.id === transaction.categoria_id)?.nome || 'Sem categoria';
         categoryData[categoryName] = (categoryData[categoryName] || 0) + parseFloat(transaction.valor.toString());
       }
     });
-    
+
     return Object.entries(categoryData).map(([name, value]) => ({ name, value }));
   };
 
   // Calculate summary statistics
   const getSummaryStats = () => {
     const filteredTransactions = getFilteredTransactions();
-    
+
     const receitas = filteredTransactions
       .filter(t => t.tipo === 'receita')
       .reduce((sum, t) => sum + parseFloat(t.valor.toString()), 0);
-    
+
     const despesas = filteredTransactions
       .filter(t => t.tipo === 'despesa')
       .reduce((sum, t) => sum + parseFloat(t.valor.toString()), 0);
-    
+
     const saldo = receitas - despesas;
     const totalTransactions = filteredTransactions.length;
-    
+
     return { receitas, despesas, saldo, totalTransactions };
   };
 
@@ -233,17 +236,17 @@ const Reports = () => {
                       <YAxis />
                       <Tooltip formatter={(value: number | string) => formatCurrency(Number(value))} />
                       <Legend />
-                      <Line 
-                        type="monotone" 
-                        dataKey="receitas" 
-                        stroke="#22c55e" 
+                      <Line
+                        type="monotone"
+                        dataKey="receitas"
+                        stroke="#22c55e"
                         strokeWidth={2}
                         name="Receitas"
                       />
-                      <Line 
-                        type="monotone" 
-                        dataKey="despesas" 
-                        stroke="#ef4444" 
+                      <Line
+                        type="monotone"
+                        dataKey="despesas"
+                        stroke="#ef4444"
                         strokeWidth={2}
                         name="Despesas"
                       />

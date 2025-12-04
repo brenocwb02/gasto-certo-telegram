@@ -23,13 +23,14 @@ const budgetSchema = z.object({
 interface BudgetFormProps {
   budget?: any;
   onSuccess?: () => void;
+  groupId?: string;
 }
 
-export function BudgetForm({ budget, onSuccess }: BudgetFormProps) {
+export function BudgetForm({ budget, onSuccess, groupId }: BudgetFormProps) {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
-  const { categories } = useCategories();
+  const { categories } = useCategories(groupId);
 
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
@@ -55,6 +56,7 @@ export function BudgetForm({ budget, onSuccess }: BudgetFormProps) {
     try {
       const budgetData = {
         user_id: user.id,
+        group_id: groupId || null,
         category_id: values.category_id,
         amount: parseFloat(values.amount),
         month: `${values.month.year}-${values.month.month}-01`,
@@ -137,7 +139,7 @@ export function BudgetForm({ budget, onSuccess }: BudgetFormProps) {
                     {months.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                 <Select onValueChange={(value) => field.onChange({ ...field.value, year: value })} defaultValue={field.value.year}>
+                <Select onValueChange={(value) => field.onChange({ ...field.value, year: value })} defaultValue={field.value.year}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Ano" />

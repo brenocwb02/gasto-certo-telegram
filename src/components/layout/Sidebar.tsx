@@ -23,21 +23,33 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
-export function Sidebar() {
+interface SidebarProps {
+  className?: string;
+  onClose?: () => void;
+}
+
+export function Sidebar({ className, onClose }: SidebarProps) {
   const { signOut } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     await signOut();
     navigate("/auth");
+    onClose?.();
+  };
+
+  const handleLinkClick = () => {
+    onClose?.();
   };
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background sm:flex">
+    <aside className={cn("fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background sm:flex", className)}>
       <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
         <NavLink
           to="/"
+          onClick={handleLinkClick}
           className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:h-8 md:w-8 md:text-base"
         >
           <Home className="h-4 w-4 transition-all group-hover:scale-110" />
@@ -48,9 +60,9 @@ export function Sidebar() {
             <TooltipTrigger asChild>
               <NavLink
                 to="/"
+                onClick={handleLinkClick}
                 className={({ isActive }) =>
-                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
-                    isActive ? "bg-accent text-accent-foreground" : ""
+                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${isActive ? "bg-accent text-accent-foreground" : ""
                   }`
                 }
               >
@@ -64,9 +76,9 @@ export function Sidebar() {
             <TooltipTrigger asChild>
               <NavLink
                 to="/transactions"
+                onClick={handleLinkClick}
                 className={({ isActive }) =>
-                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
-                    isActive ? "bg-accent text-accent-foreground" : ""
+                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${isActive ? "bg-accent text-accent-foreground" : ""
                   }`
                 }
               >
@@ -80,9 +92,9 @@ export function Sidebar() {
             <TooltipTrigger asChild>
               <NavLink
                 to="/accounts"
+                onClick={handleLinkClick}
                 className={({ isActive }) =>
-                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
-                    isActive ? "bg-accent text-accent-foreground" : ""
+                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${isActive ? "bg-accent text-accent-foreground" : ""
                   }`
                 }
               >
@@ -96,9 +108,9 @@ export function Sidebar() {
             <TooltipTrigger asChild>
               <NavLink
                 to="/categories"
+                onClick={handleLinkClick}
                 className={({ isActive }) =>
-                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
-                    isActive ? "bg-accent text-accent-foreground" : ""
+                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${isActive ? "bg-accent text-accent-foreground" : ""
                   }`
                 }
               >
@@ -112,9 +124,9 @@ export function Sidebar() {
             <TooltipTrigger asChild>
               <NavLink
                 to="/orcamento"
+                onClick={handleLinkClick}
                 className={({ isActive }) =>
-                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
-                    isActive ? "bg-accent text-accent-foreground" : ""
+                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${isActive ? "bg-accent text-accent-foreground" : ""
                   }`
                 }
               >
@@ -128,9 +140,9 @@ export function Sidebar() {
             <TooltipTrigger asChild>
               <NavLink
                 to="/reports"
+                onClick={handleLinkClick}
                 className={({ isActive }) =>
-                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
-                    isActive ? "bg-accent text-accent-foreground" : ""
+                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${isActive ? "bg-accent text-accent-foreground" : ""
                   }`
                 }
               >
@@ -144,9 +156,9 @@ export function Sidebar() {
             <TooltipTrigger asChild>
               <NavLink
                 to="/goals"
+                onClick={handleLinkClick}
                 className={({ isActive }) =>
-                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
-                    isActive ? "bg-accent text-accent-foreground" : ""
+                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${isActive ? "bg-accent text-accent-foreground" : ""
                   }`
                 }
               >
@@ -160,9 +172,9 @@ export function Sidebar() {
             <TooltipTrigger asChild>
               <NavLink
                 to="/patrimonio"
+                onClick={handleLinkClick}
                 className={({ isActive }) =>
-                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
-                    isActive ? "bg-accent text-accent-foreground" : ""
+                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${isActive ? "bg-accent text-accent-foreground" : ""
                   }`
                 }
               >
@@ -180,9 +192,9 @@ export function Sidebar() {
             <TooltipTrigger asChild>
               <NavLink
                 to="/recorrentes"
+                onClick={handleLinkClick}
                 className={({ isActive }) =>
-                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
-                    isActive ? "bg-accent text-accent-foreground" : ""
+                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${isActive ? "bg-accent text-accent-foreground" : ""
                   }`
                 }
               >
@@ -196,9 +208,9 @@ export function Sidebar() {
             <TooltipTrigger asChild>
               <NavLink
                 to="/familia"
+                onClick={handleLinkClick}
                 className={({ isActive }) =>
-                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
-                    isActive ? "bg-accent text-accent-foreground" : ""
+                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${isActive ? "bg-accent text-accent-foreground" : ""
                   }`
                 }
               >
@@ -212,9 +224,9 @@ export function Sidebar() {
             <TooltipTrigger asChild>
               <NavLink
                 to="/license"
+                onClick={handleLinkClick}
                 className={({ isActive }) =>
-                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
-                    isActive ? "bg-accent text-accent-foreground" : ""
+                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${isActive ? "bg-accent text-accent-foreground" : ""
                   }`
                 }
               >
@@ -228,9 +240,9 @@ export function Sidebar() {
             <TooltipTrigger asChild>
               <NavLink
                 to="/support"
+                onClick={handleLinkClick}
                 className={({ isActive }) =>
-                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
-                    isActive ? "bg-accent text-accent-foreground" : ""
+                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${isActive ? "bg-accent text-accent-foreground" : ""
                   }`
                 }
               >
@@ -244,9 +256,9 @@ export function Sidebar() {
             <TooltipTrigger asChild>
               <NavLink
                 to="/settings"
+                onClick={handleLinkClick}
                 className={({ isActive }) =>
-                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${
-                    isActive ? "bg-accent text-accent-foreground" : ""
+                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${isActive ? "bg-accent text-accent-foreground" : ""
                   }`
                 }
               >

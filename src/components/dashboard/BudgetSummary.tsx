@@ -6,9 +6,15 @@ import { useBudgets } from "@/hooks/useSupabaseData";
 import { Calculator, Plus, AlertTriangle } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
-export const BudgetSummary = () => {
-  const currentMonth = new Date();
-  const { budgets, loading } = useBudgets(currentMonth);
+interface BudgetSummaryProps {
+  month: Date;
+  groupId?: string;
+}
+
+export const BudgetSummary = ({ month, groupId }: BudgetSummaryProps) => {
+  const { budgets, loading } = useBudgets(month, groupId);
+  // useCategories pode ser útil se quisermos mostrar nomes de categorias que não têm orçamento, 
+  // mas aqui só mostramos os orçamentos existentes.
 
   if (loading) {
     return (
@@ -61,7 +67,7 @@ export const BudgetSummary = () => {
   }
 
   const topBudgets = budgets.slice(0, 4);
-  
+
   return (
     <Card className="financial-card">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
@@ -77,8 +83,8 @@ export const BudgetSummary = () => {
       </CardHeader>
       <CardContent className="space-y-4">
         {topBudgets.map((budget) => {
-          const percentage = Number(budget.amount) > 0 
-            ? (Number(budget.spent) / Number(budget.amount)) * 100 
+          const percentage = Number(budget.amount) > 0
+            ? (Number(budget.spent) / Number(budget.amount)) * 100
             : 0;
           const isOverBudget = percentage > 100;
           const isNearLimit = percentage > 80 && percentage <= 100;
@@ -102,15 +108,14 @@ export const BudgetSummary = () => {
                 </div>
               </div>
               <div className="w-full bg-muted rounded-full h-2">
-                <div 
-                  className={`h-2 rounded-full transition-all duration-1000 ${
-                    isOverBudget 
-                      ? 'bg-expense' 
-                      : isNearLimit 
-                        ? 'bg-warning' 
-                        : 'bg-primary'
-                  }`}
-                  style={{width: `${Math.min(percentage, 100)}%`}}
+                <div
+                  className={`h-2 rounded-full transition-all duration-1000 ${isOverBudget
+                    ? 'bg-expense'
+                    : isNearLimit
+                      ? 'bg-warning'
+                      : 'bg-primary'
+                    }`}
+                  style={{ width: `${Math.min(percentage, 100)}%` }}
                 ></div>
               </div>
               {isOverBudget && (

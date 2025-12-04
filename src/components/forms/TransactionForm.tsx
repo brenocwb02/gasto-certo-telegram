@@ -22,8 +22,8 @@ const transactionSchema = z.object({
   data_transacao: z.string().min(1, 'Data é obrigatória'),
   observacoes: z.string().optional(),
 }).refine(data => data.tipo === 'transferencia' || data.categoria_id, {
-    message: "Categoria é obrigatória para Receitas/Despesas",
-    path: ['categoria_id'],
+  message: "Categoria é obrigatória para Receitas/Despesas",
+  path: ['categoria_id'],
 });
 
 type TransactionFormData = z.infer<typeof transactionSchema>;
@@ -44,13 +44,14 @@ interface TransactionFormProps {
     data_transacao?: string; // ISO date
     observacoes?: string | null;
   };
+  groupId?: string;
 }
 
-export function TransactionForm({ onSuccess, onCancel, mode = 'create', initialData }: TransactionFormProps) {
+export function TransactionForm({ onSuccess, onCancel, mode = 'create', initialData, groupId }: TransactionFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { addTransaction, updateTransaction } = useTransactions();
-  const { accounts } = useAccounts();
-  const { categories } = useCategories();
+  const { addTransaction, updateTransaction } = useTransactions(groupId);
+  const { accounts } = useAccounts(groupId);
+  const { categories } = useCategories(groupId);
 
   const form = useForm<TransactionFormData>({
     resolver: zodResolver(transactionSchema),
@@ -73,14 +74,14 @@ export function TransactionForm({ onSuccess, onCancel, mode = 'create', initialD
     setIsSubmitting(true);
     try {
       const transactionPayload = {
-          descricao: data.descricao,
-          valor: parseFloat(data.valor),
-          tipo: data.tipo,
-          categoria_id: data.categoria_id || null,
-          conta_origem_id: data.conta_origem_id,
-          conta_destino_id: data.conta_destino_id || null,
-          data_transacao: data.data_transacao,
-          observacoes: data.observacoes || null,
+        descricao: data.descricao,
+        valor: parseFloat(data.valor),
+        tipo: data.tipo,
+        categoria_id: data.categoria_id || null,
+        conta_origem_id: data.conta_origem_id,
+        conta_destino_id: data.conta_destino_id || null,
+        data_transacao: data.data_transacao,
+        observacoes: data.observacoes || null,
       };
 
       if (mode === 'edit' && initialData?.id) {
@@ -101,7 +102,7 @@ export function TransactionForm({ onSuccess, onCancel, mode = 'create', initialD
           installment_number: 1,
           installment_total: 1,
           parent_transaction_id: null,
-          group_id: null,
+          group_id: null, // Will be handled by addTransaction logic if groupId is present
         });
 
         toast({
@@ -124,7 +125,7 @@ export function TransactionForm({ onSuccess, onCancel, mode = 'create', initialD
     }
   };
 
-  const filteredCategories = categories.filter(cat => 
+  const filteredCategories = categories.filter(cat =>
     cat.tipo === watchedType || watchedType === 'transferencia'
   );
 
@@ -167,12 +168,12 @@ export function TransactionForm({ onSuccess, onCancel, mode = 'create', initialD
                   <FormItem>
                     <FormLabel>Valor</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="0,00" 
-                        type="number" 
-                        step="0.01" 
-                        min="0" 
-                        {...field} 
+                      <Input
+                        placeholder="0,00"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
@@ -205,30 +206,30 @@ export function TransactionForm({ onSuccess, onCancel, mode = 'create', initialD
                 )}
               />
 
-                <FormField
-                  control={form.control}
-                  name="categoria_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Categoria</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione a categoria" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {filteredCategories.map((category) => (
-                            <SelectItem key={category.id} value={category.id}>
-                              {category.nome}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <FormField
+                control={form.control}
+                name="categoria_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Categoria</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a categoria" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {filteredCategories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}
@@ -308,10 +309,10 @@ export function TransactionForm({ onSuccess, onCancel, mode = 'create', initialD
                 <FormItem>
                   <FormLabel>Observações (opcional)</FormLabel>
                   <FormControl>
-                    <Textarea 
+                    <Textarea
                       placeholder="Informações adicionais sobre a transação..."
                       className="min-h-[80px]"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -320,18 +321,18 @@ export function TransactionForm({ onSuccess, onCancel, mode = 'create', initialD
             />
 
             <div className="flex gap-4 pt-4">
-              <Button 
-                type="submit" 
-                disabled={isSubmitting} 
+              <Button
+                type="submit"
+                disabled={isSubmitting}
                 className="flex-1"
               >
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Salvar Transação
               </Button>
               {onCancel && (
-                <Button 
-                  type="button" 
-                  variant="outline" 
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={onCancel}
                   disabled={isSubmitting}
                 >

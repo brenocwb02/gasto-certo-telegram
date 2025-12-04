@@ -33,6 +33,7 @@ import {
 import { useFamily } from "../hooks/useFamily";
 // @ts-ignore
 import { useToast } from "../hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function FamilySettings() {
   const { toast } = useToast();
@@ -67,7 +68,11 @@ export default function FamilySettings() {
   const [showInviteMember, setShowInviteMember] = useState(false);
   const [showInviteCode, setShowInviteCode] = useState(false);
   const [showGeneratedCode, setShowGeneratedCode] = useState(false);
-  const [showDeleteGroup, setShowDeleteGroup] = useState(false); // Vamos usar este
+  const [showDeleteGroup, setShowDeleteGroup] = useState(false);
+  const [showDissolveGroup, setShowDissolveGroup] = useState(false);
+  const [showMigrateData, setShowMigrateData] = useState(false);
+  const [personalDataCount, setPersonalDataCount] = useState<any>(null);
+  const [newlyCreatedGroupId, setNewlyCreatedGroupId] = useState<string | null>(null);
 
   // Estados para formulários
   const [newGroupName, setNewGroupName] = useState("");
@@ -90,13 +95,69 @@ export default function FamilySettings() {
     }
   }, [hasGroup]);
 
+  // Verificar dados pessoais do usuário
+  const checkPersonalData = async () => {
+    try {
+      const { data, error } = await supabase.rpc('count_personal_data');
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      console.error('Erro ao contar dados pessoais:', err);
+      return null;
+    }
+  };
+
+  // Migrar dados pessoais para o grupo
+  const migratePersonalData = async (groupId: string) => {
+    try {
+      const { data, error } = await supabase.rpc('migrate_personal_data_to_group', {
+        p_group_id: groupId
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Dados migrados!",
+        description: `${data.total_migrated} itens foram importados para o grupo.`,
+      });
+
+      setShowMigrateData(false);
+      setPersonalDataCount(null);
+      setNewlyCreatedGroupId(null);
+    } catch (err) {
+      console.error('Erro ao migrar dados:', err);
+      toast({
+        title: "Erro",
+        description: "Erro ao migrar dados pessoais",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Criar novo grupo familiar
   const handleCreateFamilyGroup = async () => {
-    if (!newGroupName.trim()) return;
+    console.log('Iniciando criação de grupo:', { newGroupName, newGroupDescription });
+    if (!newGroupName.trim()) {
+      console.log('Nome do grupo vazio, abortando.');
+      return;
+    }
 
     try {
+      console.log('Chamando createFamilyGroup...');
       // @ts-ignore
-      const result = await createFamilyGroup(newGroupName.trim());
+      const result = await createFamilyGroup(newGroupName.trim(), newGroupDescription.trim());
+      console.log('Resultado createFamilyGroup:', result);
+
+      // O ID pode vir como 'id' ou 'group_id' dependendo da implementação
+      // @ts-ignore
+      let createdGroupId = result.id || result.group_id || result.data?.id;
+
+      // Se createdGroupId for um objeto (como vimos no log), pegamos o ID de dentro dele
+      if (typeof createdGroupId === 'object' && createdGroupId !== null && createdGroupId.id) {
+        createdGroupId = createdGroupId.id;
+      }
+
+      console.log('ID do grupo criado (FINAL):', createdGroupId);
 
       toast({
         title: "Sucesso!",
@@ -106,7 +167,20 @@ export default function FamilySettings() {
       setNewGroupName("");
       setNewGroupDescription("");
       setShowCreateGroup(false);
+
+      // Verificar se usuário tem dados pessoais para migrar
+      const personalData = await checkPersonalData();
+      if (personalData && personalData.total > 0) {
+        setPersonalDataCount(personalData);
+        if (createdGroupId) {
+          setNewlyCreatedGroupId(createdGroupId);
+        } else {
+          console.error('ERRO CRÍTICO: ID do grupo não encontrado no resultado!');
+        }
+        setShowMigrateData(true);
+      }
     } catch (err) {
+      console.error('Erro no handleCreateFamilyGroup:', err);
       toast({
         title: "Erro",
         description: err instanceof Error ? err.message : "Erro ao criar grupo familiar",
@@ -173,6 +247,35 @@ export default function FamilySettings() {
     }
   };
 
+  // Dissolver grupo mantendo dados
+  const handleDissolveFamilyGroup = async () => {
+    if (!currentGroup) return;
+
+    try {
+      const { data, error } = await supabase.rpc('dissolve_family_group', {
+        p_group_id: currentGroup.id
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Grupo dissolvido",
+        description: "Grupo removido e dados convertidos para pessoais com sucesso.",
+      });
+
+      setShowDissolveGroup(false);
+      // Recarregar a página para atualizar o estado
+      window.location.reload();
+    } catch (err) {
+      console.error('Erro ao dissolver grupo:', err);
+      toast({
+        title: "Erro",
+        description: "Erro ao dissolver grupo familiar",
+        variant: "destructive",
+      });
+    }
+  };
+
   // !! NOVA FUNÇÃO DELETAR !!
   // Deletar grupo familiar
   const handleDeleteGroup = async () => {
@@ -181,12 +284,12 @@ export default function FamilySettings() {
     try {
       // @ts-ignore
       const result = await deleteFamilyGroup(currentGroup.id);
-      
+
       toast({
         title: "Sucesso!",
         description: result.message, // A mensagem de sucesso vem do RPC
       });
-      
+
       setShowDeleteGroup(false);
       // O hook 'useFamily' vai recarregar e o 'currentGroup'
       // vai-se tornar 'null', fazendo a UI voltar ao estado "Nenhum grupo".
@@ -201,13 +304,13 @@ export default function FamilySettings() {
 
   // ... (handleRemoveFamilyMember, handleUpdateMemberRole, handleCancelInvite - permanecem iguais) ...
   // ... (getRoleIcon, getRoleLabel, getStatusIcon, getStatusLabel - permanecem iguais) ...
-    const handleRemoveFamilyMember = async (memberId: string) => {
+  const handleRemoveFamilyMember = async (memberId: string) => {
     if (!currentGroup) return;
 
     try {
       // @ts-ignore
       await removeFamilyMember(memberId);
-      
+
       toast({
         title: "Membro removido",
         description: "Membro removido do grupo com sucesso",
@@ -227,7 +330,7 @@ export default function FamilySettings() {
     try {
       // @ts-ignore
       await updateMemberRole(memberId, newRole);
-      
+
       toast({
         title: "Role atualizada",
         description: "Role do membro atualizada com sucesso",
@@ -247,7 +350,7 @@ export default function FamilySettings() {
     try {
       // @ts-ignore
       await cancelInvite(inviteId);
-      
+
       toast({
         title: "Convite cancelado",
         description: "Convite cancelado com sucesso",
@@ -550,7 +653,7 @@ export default function FamilySettings() {
                         </Card>
                       ))}
                     </div>
-                    
+
                     {/* !! NOVA ZONA DE PERIGO ADICIONADA !! */}
                     {isGroupOwner(currentGroup.id) && (
                       <Card className="border-destructive mt-6">
@@ -583,6 +686,34 @@ export default function FamilySettings() {
                                 </Button>
                                 <Button variant="destructive" onClick={handleDeleteGroup}>
                                   Eu entendo, apagar o grupo
+                                </Button>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+
+                          <Dialog open={showDissolveGroup} onOpenChange={setShowDissolveGroup}>
+                            <DialogTrigger asChild>
+                              <Button variant="outline" className="w-full mt-4 border-orange-500 text-orange-600 hover:bg-orange-50">
+                                <Shield className="h-4 w-4 mr-2" />
+                                Dissolver Grupo (Manter Dados)
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Dissolver Grupo e Manter Dados?</DialogTitle>
+                                <DialogDescription>
+                                  Esta ação irá excluir o grupo <strong className="px-1">{currentGroup.name}</strong>,
+                                  mas <strong>MANTERÁ</strong> todos os seus dados (transações, contas, orçamentos).
+                                  <br /><br />
+                                  Os dados voltarão a ser "pessoais" e vinculados apenas a você. Outros membros perderão o acesso.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <div className="flex justify-end gap-2 mt-4">
+                                <Button variant="outline" onClick={() => setShowDissolveGroup(false)}>
+                                  Cancelar
+                                </Button>
+                                <Button onClick={handleDissolveFamilyGroup}>
+                                  Sim, dissolver e manter dados
                                 </Button>
                               </div>
                             </DialogContent>
@@ -623,7 +754,7 @@ export default function FamilySettings() {
                                 </div>
                                 <div>
                                   {/* @ts-ignore */}
-                                  <p className="font-medium">{invite.email || invite.name}</p> 
+                                  <p className="font-medium">{invite.email || invite.name}</p>
                                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                     {getRoleIcon(invite.role)}
                                     <span>{getRoleLabel(invite.role)}</span>
@@ -736,6 +867,83 @@ export default function FamilySettings() {
               <div className="flex justify-end">
                 <Button onClick={() => setShowGeneratedCode(false)}>
                   Entendi
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Dialog para migrar dados pessoais */}
+          <Dialog open={showMigrateData} onOpenChange={setShowMigrateData}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Importar dados pessoais? 📦</DialogTitle>
+                <DialogDescription>
+                  Você possui dados pessoais que podem ser importados para o grupo.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                {personalDataCount && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Encontramos:</p>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      {personalDataCount.transactions > 0 && (
+                        <div className="flex justify-between border rounded p-2">
+                          <span>Transações:</span>
+                          <span className="font-bold">{personalDataCount.transactions}</span>
+                        </div>
+                      )}
+                      {personalDataCount.budgets > 0 && (
+                        <div className="flex justify-between border rounded p-2">
+                          <span>Orçamentos:</span>
+                          <span className="font-bold">{personalDataCount.budgets}</span>
+                        </div>
+                      )}
+                      {personalDataCount.accounts > 0 && (
+                        <div className="flex justify-between border rounded p-2">
+                          <span>Contas:</span>
+                          <span className="font-bold">{personalDataCount.accounts}</span>
+                        </div>
+                      )}
+                      {personalDataCount.categories > 0 && (
+                        <div className="flex justify-between border rounded p-2">
+                          <span>Categorias:</span>
+                          <span className="font-bold">{personalDataCount.categories}</span>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Total: <strong>{personalDataCount.total}</strong> itens
+                    </p>
+                  </div>
+                )}
+                <Alert>
+                  <AlertTitle>O que isso faz?</AlertTitle>
+                  <AlertDescription className="space-y-2 mt-2">
+                    <p>• Seus dados pessoais serão movidos para o grupo</p>
+                    <p>• Todos os membros do grupo poderão visualizá-los</p>
+                    <p>• Você não perderá nenhum dado</p>
+                  </AlertDescription>
+                </Alert>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowMigrateData(false);
+                    setPersonalDataCount(null);
+                    setNewlyCreatedGroupId(null);
+                  }}
+                >
+                  Não, obrigado
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (newlyCreatedGroupId) {
+                      migratePersonalData(newlyCreatedGroupId);
+                    }
+                  }}
+                >
+                  Sim, importar dados
                 </Button>
               </div>
             </DialogContent>

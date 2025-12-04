@@ -11,10 +11,11 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { useFinancialStats, useProfile, useGoals, useFinancialProfile } from "@/hooks/useSupabaseData";
 import { LicenseStatus } from "@/components/LicenseGuard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  Wallet, 
-  TrendingUp, 
-  TrendingDown, 
+import { useFamily } from "@/hooks/useFamily";
+import {
+  Wallet,
+  TrendingUp,
+  TrendingDown,
   Target,
   Plus,
   Heart,
@@ -23,11 +24,13 @@ import {
 } from "lucide-react";
 
 const Dashboard = () => {
+  const { currentGroup } = useFamily();
   const [showTransactionForm, setShowTransactionForm] = useState(false);
-  const { stats, loading: statsLoading } = useFinancialStats();
+  const { stats, loading: statsLoading } = useFinancialStats(currentGroup?.id);
   const { profile } = useProfile();
-  const { goals, loading: goalsLoading } = useGoals();
+  const { goals, loading: goalsLoading } = useGoals(currentGroup?.id);
   const { financialProfile, hasCompletedQuiz, getFinancialHealthLevel } = useFinancialProfile();
+  const currentMonth = new Date();
 
   const FinancialHealthSection = () => {
     if (!hasCompletedQuiz) {
@@ -73,26 +76,6 @@ const Dashboard = () => {
               <Heart className="h-4 w-4 mr-1" />
               {healthLevel.level}
             </div>
-            <div className="text-2xl font-bold">{score}/100</div>
-            <div className="text-sm text-muted-foreground">Score de Saúde Financeira</div>
-          </div>
-          
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Progresso</span>
-              <span>{score}%</span>
-            </div>
-            <div className="w-full bg-muted rounded-full h-2">
-              <div 
-                className={`h-2 rounded-full transition-all duration-500 ${
-                  score >= 80 ? 'bg-green-500' :
-                  score >= 60 ? 'bg-blue-500' :
-                  score >= 40 ? 'bg-yellow-500' :
-                  score >= 20 ? 'bg-orange-500' : 'bg-red-500'
-                }`}
-                style={{ width: `${score}%` }}
-              />
-            </div>
           </div>
 
           <Button asChild variant="outline" className="w-full">
@@ -130,8 +113,8 @@ const Dashboard = () => {
           </div>
         ) : (
           goals.slice(0, 3).map((goal) => {
-            const percentage = Number(goal.valor_meta) > 0 
-              ? (Number(goal.valor_atual) / Number(goal.valor_meta)) * 100 
+            const percentage = Number(goal.valor_meta) > 0
+              ? (Number(goal.valor_atual) / Number(goal.valor_meta)) * 100
               : 0;
             const isOverTarget = percentage > 100;
 
@@ -147,11 +130,10 @@ const Dashboard = () => {
                   </span>
                 </div>
                 <div className="w-full bg-muted rounded-full h-2">
-                  <div 
-                    className={`h-2 rounded-full transition-all duration-1000 ${
-                      isOverTarget ? 'bg-expense' : 'bg-primary'
-                    }`}
-                    style={{width: `${Math.min(percentage, 100)}%`}}
+                  <div
+                    className={`h-2 rounded-full transition-all duration-1000 ${isOverTarget ? 'bg-expense' : 'bg-primary'
+                      }`}
+                    style={{ width: `${Math.min(percentage, 100)}%` }}
                   ></div>
                 </div>
               </div>
@@ -171,7 +153,9 @@ const Dashboard = () => {
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
               Olá{profile?.nome ? `, ${profile.nome}` : ''}! 👋
             </h1>
-            <p className="text-sm sm:text-base text-muted-foreground">Resumo das suas finanças hoje</p>
+            <p className="text-sm sm:text-base text-muted-foreground">
+              {currentGroup ? `Resumo do grupo: ${currentGroup.name}` : 'Resumo das suas finanças hoje'}
+            </p>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <LicenseStatus />
@@ -184,9 +168,10 @@ const Dashboard = () => {
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <TransactionForm 
+                <TransactionForm
                   onSuccess={() => setShowTransactionForm(false)}
                   onCancel={() => setShowTransactionForm(false)}
+                  groupId={currentGroup?.id}
                 />
               </DialogContent>
             </Dialog>
@@ -258,10 +243,10 @@ const Dashboard = () => {
 
         {/* Main Column */}
         <div className="lg:col-span-2 space-y-6">
-          <FinancialChart />
-          <RecentTransactions limit={5} />
+          <FinancialChart groupId={currentGroup?.id} />
+          <RecentTransactions limit={5} groupId={currentGroup?.id} />
         </div>
-        
+
         {/* Sidebar Column */}
         <div className="lg:col-span-1 space-y-6">
           <FinancialHealthSection />
@@ -269,7 +254,7 @@ const Dashboard = () => {
           <div className="hidden lg:block">
             <QuickActions />
           </div>
-          <BudgetSummary />
+          <BudgetSummary month={currentMonth} groupId={currentGroup?.id} />
           <GoalsSection />
         </div>
       </div>

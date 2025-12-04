@@ -74,7 +74,7 @@ export function useFamily() {
       if (error) throw error;
 
       setGroups(data || []);
-      
+
       // Se há grupos, selecionar o primeiro como atual
       if (data && data.length > 0) {
         setCurrentGroup(data[0]);
@@ -147,17 +147,26 @@ export function useFamily() {
   };
 
   // Criar novo grupo familiar
-  const createFamilyGroup = async (name: string) => {
-    if (!user) throw new Error('Usuário não autenticado');
+  const createFamilyGroup = async (name: string, description?: string) => {
+    console.log('useFamily: createFamilyGroup chamado com:', { name, description });
+    if (!user) {
+      console.error('useFamily: Usuário não autenticado');
+      throw new Error('Usuário não autenticado');
+    }
 
     try {
+      console.log('useFamily: Chamando RPC create_family_group...');
       const { data, error } = await supabase.rpc('create_family_group', {
-        p_group_name: name,
-        p_user_id: user.id 
+        group_name: name,
+        group_description: description
       });
 
-      if (error) throw error;
-      
+      if (error) {
+        console.error('useFamily: Erro na RPC:', error);
+        throw error;
+      }
+
+      console.log('useFamily: Sucesso na RPC, dados:', data);
       await loadFamilyGroups();
       return { success: true, message: 'Grupo criado com sucesso!', group_id: data };
     } catch (err) {
@@ -199,10 +208,9 @@ export function useFamily() {
 
     try {
       const { data, error } = await supabase.rpc('accept_family_invite', {
-        invite_token: token,
-        p_user_id: user.id
+        invite_token: token
       });
-      
+
       if (error) throw error;
 
       await loadFamilyGroups();

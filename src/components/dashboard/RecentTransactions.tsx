@@ -13,13 +13,13 @@ import { TransactionForm } from "@/components/forms/TransactionForm";
 import { toast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 
-export function RecentTransactions({ showViewAllButton = true, title = "Transações Recentes", limit = 5 }: { showViewAllButton?: boolean; title?: string; limit?: number }) {
-  const { transactions: allTransactions, loading, deleteTransaction } = useTransactions();
-  
+export function RecentTransactions({ showViewAllButton = true, title = "Transações Recentes", limit = 5, groupId }: { showViewAllButton?: boolean; title?: string; limit?: number; groupId?: string }) {
+  const { transactions: allTransactions, loading, deleteTransaction } = useTransactions(groupId);
+
   // Limit transactions for dashboard view
   const transactions = allTransactions.slice(0, limit);
-  const { accounts } = useAccounts();
-  const { categories } = useCategories();
+  const { accounts } = useAccounts(groupId);
+  const { categories } = useCategories(groupId);
 
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -126,7 +126,7 @@ export function RecentTransactions({ showViewAllButton = true, title = "Transaç
           </div>
         ) : (
           transactions.map((transaction) => (
-            <div 
+            <div
               key={transaction.id}
               className="flex items-center justify-between p-3 rounded-xl border border-border hover:bg-card-hover transition-colors group"
             >
@@ -139,22 +139,22 @@ export function RecentTransactions({ showViewAllButton = true, title = "Transaç
                     {transaction.descricao}
                   </p>
                   <div className="flex items-center gap-2">
-                    <Badge 
-                      variant="secondary" 
+                    <Badge
+                      variant="secondary"
                       className="text-xs px-2 py-0.5"
                     >
                       {getCategoryName(transaction.categoria_id)}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
                       {getAccountName(transaction.conta_origem_id)}
-                      {transaction.tipo === 'transferencia' && transaction.conta_destino_id && 
+                      {transaction.tipo === 'transferencia' && transaction.conta_destino_id &&
                         ` → ${getAccountName(transaction.conta_destino_id)}`
                       }
                     </span>
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-3">
                 <div className="text-right">
                   <p className={cn(
@@ -207,6 +207,7 @@ export function RecentTransactions({ showViewAllButton = true, title = "Transaç
             <TransactionForm
               mode="edit"
               initialData={selected}
+              groupId={groupId}
               onSuccess={() => {
                 setEditOpen(false);
                 setSelected(null);

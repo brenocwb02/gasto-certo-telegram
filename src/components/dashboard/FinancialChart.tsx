@@ -15,9 +15,9 @@ interface CategoryExpense {
   }>;
 }
 
-export function FinancialChart() {
+export function FinancialChart({ groupId }: { groupId?: string }) {
   const { user } = useAuth();
-  const { stats } = useFinancialStats();
+  const { stats } = useFinancialStats(groupId);
   const [categoryExpenses, setCategoryExpenses] = useState<CategoryExpense[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,23 +32,30 @@ export function FinancialChart() {
         const lastDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
 
         // Buscar despesas por categoria principal
-        const { data: expenses, error } = await supabase
+        let query = supabase
           .from('transactions')
           .select(`
             valor,
             categories!inner(id, nome, cor, parent_id)
           `)
-          .eq('user_id', user.id)
           .eq('tipo', 'despesa')
           .gte('data_transacao', firstDayOfMonth.toISOString().split('T')[0])
           .lte('data_transacao', lastDayOfMonth.toISOString().split('T')[0])
           .is('categories.parent_id', null);
 
+        if (groupId) {
+          query = query.eq('group_id', groupId);
+        } else {
+          query = query.eq('user_id', user.id);
+        }
+
+        const { data: expenses, error } = await query;
+
         if (error) throw error;
 
         // Agrupar por categoria
         const categoryMap = new Map<string, { total: number; color: string; id: string }>();
-        
+
         expenses?.forEach((expense: any) => {
           const categoryId = expense.categories.id;
           const categoryName = expense.categories.nome;
@@ -80,7 +87,7 @@ export function FinancialChart() {
     };
 
     fetchCategoryExpenses();
-  }, [user]);
+  }, [user, groupId]);
 
   const totalCategoryExpenses = categoryExpenses.reduce((sum, cat) => sum + cat.total, 0);
   const calculatePercentage = (value: number) => totalCategoryExpenses > 0 ? (value / totalCategoryExpenses) * 100 : 0;
@@ -123,14 +130,14 @@ export function FinancialChart() {
               {/* Category Chart */}
               <div className="space-y-3">
                 {categoryExpenses.map((category) => (
-                  <div 
+                  <div
                     key={category.category_name}
                     className="flex items-center gap-3 cursor-pointer hover:bg-card-hover p-2 rounded-lg transition-colors"
                     onClick={() => setSelectedCategory(
                       selectedCategory === category.category_name ? null : category.category_name
                     )}
                   >
-                    <div 
+                    <div
                       className="w-4 h-4 rounded-full flex-shrink-0"
                       style={{ backgroundColor: category.color }}
                     />
