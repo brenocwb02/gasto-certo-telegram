@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -95,12 +94,11 @@ export default function FamilySettings() {
     }
   }, [hasGroup]);
 
-  // Verificar dados pessoais do usuário
   const checkPersonalData = async () => {
     try {
       const { data, error } = await supabase.rpc('count_personal_data');
       if (error) throw error;
-      return data;
+      return data as { transactions: number; budgets: number; accounts: number; categories: number; total: number } | null;
     } catch (err) {
       console.error('Erro ao contar dados pessoais:', err);
       return null;
@@ -116,9 +114,12 @@ export default function FamilySettings() {
 
       if (error) throw error;
 
+      const result = (data as { total_migrated?: number } | null);
+      const migratedCount = result?.total_migrated ?? 0;
+
       toast({
         title: "Dados migrados!",
-        description: `${data.total_migrated} itens foram importados para o grupo.`,
+        description: `${migratedCount} itens foram importados para o grupo.`,
       });
 
       setShowMigrateData(false);
@@ -252,7 +253,7 @@ export default function FamilySettings() {
     if (!currentGroup) return;
 
     try {
-      const { data, error } = await supabase.rpc('dissolve_family_group', {
+      const { error } = await supabase.rpc('dissolve_family_group', {
         p_group_id: currentGroup.id
       });
 

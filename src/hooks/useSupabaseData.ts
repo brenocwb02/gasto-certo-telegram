@@ -474,7 +474,7 @@ export function useBudgets(month: Date, groupId?: string) {
       const { data: budgetsData, error: budgetsError } = await supabase
         .rpc('get_budgets_with_spent', {
           p_month: monthDate,
-          p_group_id: groupId || null
+          p_group_id: groupId ?? undefined
         });
 
       if (budgetsError) {
@@ -496,18 +496,7 @@ export function useBudgets(month: Date, groupId?: string) {
 
     fetchBudgets();
 
-    // Filtros para Realtime
-    const budgetFilter = groupId
-      ? `group_id=eq.${groupId}`
-      : `user_id=eq.${user.id}`; // Para pessoal, idealmente filtrar group_id=is.null, mas realtime filter syntax pode ser limitada. 
-    // O filtro user_id=eq.user.id pegaria orçamentos pessoais E de grupos que o usuário criou?
-    // Melhor simplificar: ouvir tudo da tabela e refetch. Ou filtrar por user_id se possível.
-    // Se for grupo, filtrar por group_id é seguro.
-    // Se for pessoal, filtrar por user_id pode trazer eventos de grupos onde o user é dono, mas o fetchBudgets vai filtrar corretamente.
-
-    const transactionFilter = groupId
-      ? `group_id=eq.${groupId}`
-      : `user_id=eq.${user.id}`;
+    // Inscreve em mudanças de budgets e transactions para refetch automático
 
     const channel = supabase
       .channel(`budgets-transactions-changes-${groupId || 'personal'}`)

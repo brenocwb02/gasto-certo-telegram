@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 export interface FamilyGroup {
   id: string;
   name: string;
-  description?: string;
+  description: string | null;
   owner_id: string;
   created_at: string;
   updated_at: string;
