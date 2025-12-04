@@ -38,7 +38,7 @@ export function useLicense() {
           .select('*')
           .eq('user_id', user.id)
           .eq('status', 'ativo')
-          .single();
+          .maybeSingle();
 
         if (supabaseError) {
           console.error('Erro ao buscar licença:', supabaseError);
@@ -46,7 +46,7 @@ export function useLicense() {
           return;
         }
 
-        setLicense(data as License);
+        setLicense(data as License | null);
       } catch (err) {
         console.error('Erro inesperado:', err);
         setError('Erro inesperado ao verificar licença');
