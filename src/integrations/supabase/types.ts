@@ -112,6 +112,7 @@ export type Database = {
           amount: number
           category_id: string
           created_at: string
+          group_id: string | null
           id: string
           month: string
           updated_at: string
@@ -121,6 +122,7 @@ export type Database = {
           amount?: number
           category_id: string
           created_at?: string
+          group_id?: string | null
           id?: string
           month: string
           updated_at?: string
@@ -130,12 +132,21 @@ export type Database = {
           amount?: number
           category_id?: string
           created_at?: string
+          group_id?: string | null
           id?: string
           month?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "budgets_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "family_groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       categories: {
         Row: {
@@ -197,6 +208,7 @@ export type Database = {
       family_groups: {
         Row: {
           created_at: string
+          description: string | null
           id: string
           name: string
           owner_id: string
@@ -204,6 +216,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          description?: string | null
           id?: string
           name?: string
           owner_id: string
@@ -211,6 +224,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          description?: string | null
           id?: string
           name?: string
           owner_id?: string
@@ -1003,7 +1017,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      accept_family_invite: { Args: { invite_token: string }; Returns: Json }
+      accept_family_invite:
+        | { Args: { p_invite_code: string }; Returns: string }
+        | { Args: { invite_token: string; p_user_id: string }; Returns: Json }
+        | { Args: { invite_token: string }; Returns: Json }
       auto_learn_category: {
         Args: {
           p_category_id: string
@@ -1020,10 +1037,14 @@ export type Database = {
         }
         Returns: string
       }
-      create_family_group: {
-        Args: { group_description?: string; group_name: string }
-        Returns: Json
-      }
+      count_personal_data: { Args: never; Returns: Json }
+      create_family_group:
+        | { Args: { p_group_name: string }; Returns: string }
+        | { Args: { p_group_name: string; p_user_id: string }; Returns: string }
+        | {
+            Args: { group_description?: string; group_name: string }
+            Returns: Json
+          }
       create_onboarding_column_if_not_exists: {
         Args: never
         Returns: undefined
@@ -1045,22 +1066,43 @@ export type Database = {
         }
         Returns: Json
       }
-      generate_activation_code: { Args: { user_uuid: string }; Returns: string }
-      get_budgets_with_spent: {
-        Args: { p_month: string }
-        Returns: {
-          amount: number
-          category_color: string
-          category_id: string
-          category_name: string
-          created_at: string
-          id: string
-          month: string
-          spent: number
-          updated_at: string
-          user_id: string
-        }[]
+      delete_family_group: {
+        Args: { p_group_id: string; p_user_id: string }
+        Returns: string
       }
+      dissolve_family_group: { Args: { p_group_id: string }; Returns: Json }
+      generate_activation_code: { Args: { user_uuid: string }; Returns: string }
+      get_budgets_with_spent:
+        | {
+            Args: { p_group_id?: string; p_month: string }
+            Returns: {
+              amount: number
+              category_color: string
+              category_id: string
+              category_name: string
+              created_at: string
+              id: string
+              month: string
+              spent: number
+              updated_at: string
+              user_id: string
+            }[]
+          }
+        | {
+            Args: { p_month: string }
+            Returns: {
+              amount: number
+              category_color: string
+              category_id: string
+              category_name: string
+              created_at: string
+              id: string
+              month: string
+              spent: number
+              updated_at: string
+              user_id: string
+            }[]
+          }
       get_dashboard_stats: {
         Args: never
         Returns: {
@@ -1083,13 +1125,17 @@ export type Database = {
         Returns: boolean
       }
       invite_family_member: {
-        Args: { email: string; group_id: string; role?: string }
+        Args: { p_group_id: string; p_name: string; p_role?: string }
         Returns: Json
       }
       is_family_group_admin: { Args: { group_uuid: string }; Returns: boolean }
       is_family_group_owner: { Args: { group_uuid: string }; Returns: boolean }
       is_family_member: { Args: { target_user_id: string }; Returns: boolean }
       is_in_family_group: { Args: { group_uuid: string }; Returns: boolean }
+      migrate_personal_data_to_group: {
+        Args: { p_group_id: string }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
