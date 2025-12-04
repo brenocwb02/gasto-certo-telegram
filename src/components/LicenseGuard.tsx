@@ -44,8 +44,8 @@ export function LicenseGuard({ children, fallback, requirePremium = false }: Lic
     );
   }
 
-  // Se não tem licença ou licença inválida
-  if (!license || !isLicenseValid) {
+  // Se tem licença mas ela é inválida
+  if (license && !isLicenseValid) {
     return fallback || (
       <Card className="border-warning bg-warning/5">
         <CardHeader>
@@ -56,21 +56,18 @@ export function LicenseGuard({ children, fallback, requirePremium = false }: Lic
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            {!license 
-              ? 'Nenhuma licença encontrada para sua conta.' 
-              : 'Sua licença não está ativa ou expirou.'
-            }
+            Sua licença não está ativa ou expirou.
           </p>
           <Badge variant="outline" className="text-warning border-warning">
-            {license?.status || 'Sem Licença'}
+            {license.status}
           </Badge>
         </CardContent>
       </Card>
     );
   }
 
-  // Se requer Premium mas usuário tem plano gratuito
-  if (requirePremium && license.plano === 'gratuito') {
+  // Se requer Premium, tratar ausência de licença como plano gratuito
+  if (requirePremium && (!license || license.plano === 'gratuito')) {
     return fallback || (
       <Card className="border-warning bg-warning/5">
         <CardHeader>
@@ -84,7 +81,7 @@ export function LicenseGuard({ children, fallback, requirePremium = false }: Lic
             Esta funcionalidade está disponível apenas no plano Premium.
           </p>
           <Badge variant="outline" className="text-warning border-warning">
-            Plano Gratuito
+            {license ? 'Plano Gratuito' : 'Sem plano (Gratuito)'}
           </Badge>
         </CardContent>
       </Card>
