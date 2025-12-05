@@ -8,7 +8,7 @@ import {
   Folders,
   Settings,
   LifeBuoy,
-  KeyRound,
+  Crown,
   LogOut,
   Calculator,
   Users,
@@ -223,18 +223,18 @@ export function Sidebar({ className, onClose }: SidebarProps) {
           <Tooltip>
             <TooltipTrigger asChild>
               <NavLink
-                to="/license"
+                to="/planos"
                 onClick={handleLinkClick}
                 className={({ isActive }) =>
                   `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${isActive ? "bg-accent text-accent-foreground" : ""
                   }`
                 }
               >
-                <KeyRound className="h-5 w-5" />
-                <span className="sr-only">Licença</span>
+                <Crown className="h-5 w-5" />
+                <span className="sr-only">Planos</span>
               </NavLink>
             </TooltipTrigger>
-            <TooltipContent side="right">Licença</TooltipContent>
+            <TooltipContent side="right">Planos</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
