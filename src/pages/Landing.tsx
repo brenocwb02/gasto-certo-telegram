@@ -2,331 +2,449 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { NavLink } from "react-router-dom";
-import { Heart, Users, BarChart3, Calendar, PiggyBank, FileText, CreditCard, Smartphone, Check, Star, Crown } from "lucide-react";
+import {
+  Heart,
+  Users,
+  Check,
+  Star,
+  Crown,
+  MessageCircle,
+  BrainCircuit,
+  TrendingUp,
+  User,
+  ShieldCheck,
+  Zap
+} from "lucide-react";
+
 const Landing = () => {
   const features = [{
-    icon: PiggyBank,
-    title: "Controle de Receitas e Despesas",
-    description: "Organize entradas e saídas com categorias personalizadas para sua família.",
+    icon: MessageCircle,
+    title: "Controle via Telegram",
+    description: "Envie áudios ou textos como 'Gastei 50 no mercado' e a IA registra tudo em segundos.",
     color: "text-blue-500"
   }, {
     icon: Users,
-    title: "Gestão Colaborativa",
-    description: "Todos os membros da família participam do controle financeiro em tempo real.",
+    title: "Gestão Familiar Real",
+    description: "Cada membro tem seu acesso. Defina quem pode ver ou editar o quê com permissões avançadas.",
     color: "text-green-500"
   }, {
-    icon: BarChart3,
-    title: "Metas Financeiras",
-    description: "Defina e acompanhe objetivos de poupança, quitação de dívidas e investimentos.",
-    color: "text-orange-500"
-  }, {
-    icon: Smartphone,
-    title: "Alertas Inteligentes",
-    description: "Receba lembretes de vencimento de contas e progresso das suas metas.",
+    icon: BrainCircuit,
+    title: "Inteligência Artificial",
+    description: "Não perca tempo categorizando. Nossa IA entende seus gastos e organiza tudo automaticamente.",
     color: "text-purple-500"
   }, {
-    icon: FileText,
-    title: "Relatórios e Dashboards",
-    description: "Visualize seu progresso financeiro com gráficos claros e intuitivos.",
-    color: "text-teal-500"
-  }, {
-    icon: CreditCard,
-    title: "Gestão de Cartões",
-    description: "Controle cartões de crédito, parcelamentos e limite disponível.",
-    color: "text-indigo-500"
-  }, {
-    icon: Calendar,
-    title: "Planejamento Anual",
-    description: "Organize suas finanças com visão de longo prazo e metas anuais.",
-    color: "text-pink-500"
-  }, {
-    icon: Heart,
-    title: "Valores Cristãos",
-    description: "Ferramenta baseada em princípios bíblicos de mordomia e responsabilidade.",
-    color: "text-red-500"
+    icon: TrendingUp,
+    title: "Metas e Relatórios",
+    description: "Saiba exatamente para onde vai seu dinheiro e economize para realizar os sonhos da família.",
+    color: "text-orange-500"
   }];
+
   const plans = [{
     name: "Gratuito",
     price: "R$ 0",
     period: "/mês",
-    description: "Perfeito para começar a organizar suas finanças",
+    description: "Para testar e organizar suas finanças pessoais",
     icon: Star,
-    features: ["Controle básico de receitas e despesas", "1 usuário", "Relatórios simples", "Suporte por email", "Até 50 transações por mês"],
+    features: [
+      "75 transações/mês (100 no 1º mês)",
+      "2 contas",
+      "10 categorias",
+      "Telegram (Texto + Áudio)",
+      "20 créditos de IA/mês"
+    ],
     buttonText: "Começar Grátis",
-    popular: false
+    popular: false,
+    highlight: false
   }, {
-    name: "Premium",
-    price: "R$ 29,90",
+    name: "Individual",
+    price: "R$ 14,90",
     period: "/mês",
-    description: "Solução completa para sua família",
-    icon: Crown,
-    features: ["Controle completo de receitas e despesas", "Até 5 usuários", "Metas financeiras ilimitadas", "Relatórios avançados com gráficos", "Alertas inteligentes", "Gestão de cartões e parcelamentos", "Transações ilimitadas", "Suporte prioritário"],
-    buttonText: "Escolher Premium",
-    popular: true
+    description: "Para quem quer controle total sem limites",
+    icon: User,
+    features: [
+      "Tudo ilimitado",
+      "IA ilimitada",
+      "Relatórios avançados",
+      "Exportação de dados",
+      "Suporte prioritário"
+    ],
+    buttonText: "Escolher Individual",
+    popular: false,
+    highlight: false
+  }, {
+    name: "Família",
+    price: "R$ 24,90",
+    period: "/mês",
+    description: "A melhor opção para casais e famílias",
+    icon: Users,
+    features: [
+      "Tudo do Individual, mais:",
+      "Até 5 usuários",
+      "Gestão de permissões (Roles)",
+      "Contas compartilhadas",
+      "Orçamento familiar",
+      "Notificações em grupo"
+    ],
+    buttonText: "Escolher Família",
+    popular: true,
+    highlight: true
   }, {
     name: "Família Plus",
-    price: "R$ 49,90",
+    price: "R$ 39,90",
     period: "/mês",
-    description: "Para famílias que querem o máximo controle",
-    icon: Users,
-    features: ["Tudo do Premium, mais:", "Usuários ilimitados", "Dashboard compartilhado avançado", "Planejamento financeiro anual", "Exportação de dados", "Integração com bancos (em breve)", "Suporte VIP com WhatsApp", "Consultorias mensais gratuitas"],
+    description: "Para grandes famílias e power users",
+    icon: Crown,
+    features: [
+      "Tudo do Família, mais:",
+      "Até 10 usuários",
+      "Suporte VIP (WhatsApp)",
+      "Consultoria mensal (30min)",
+      "API de integração",
+      "Onboarding personalizado"
+    ],
     buttonText: "Escolher Família Plus",
-    popular: false
+    popular: false,
+    highlight: false
   }];
+
   return <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <Heart className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-primary">Zaq</h1>
-              <p className="text-xs text-muted-foreground">Boas Contas</p>
-            </div>
+    {/* Header */}
+    <header className="border-b sticky top-0 bg-background/95 backdrop-blur z-50">
+      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+            <Heart className="h-6 w-6 text-primary-foreground" />
           </div>
-          <nav className="hidden md:flex items-center gap-6">
-            <a href="#funcionalidades" className="text-sm hover:text-primary transition-colors">
-              Funcionalidades
-            </a>
-            <a href="#planos" className="text-sm hover:text-primary transition-colors">
-              Planos
-            </a>
-            <a href="#sobre" className="text-sm hover:text-primary transition-colors">
-              Sobre
-            </a>
-            <NavLink to="/auth">
-              <Button>Entrar</Button>
-            </NavLink>
-            <NavLink to="/auth">
-              <Button variant="outline">Começar Grátis</Button>
-            </NavLink>
-          </nav>
+          <div>
+            <h1 className="text-xl font-bold text-primary">Zaq</h1>
+            <p className="text-xs text-muted-foreground">Boas Contas</p>
+          </div>
         </div>
-      </header>
+        <nav className="hidden md:flex items-center gap-6">
+          <a href="#funcionalidades" className="text-sm hover:text-primary transition-colors">
+            Funcionalidades
+          </a>
+          <a href="#planos" className="text-sm hover:text-primary transition-colors">
+            Planos
+          </a>
+          <NavLink to="/auth">
+            <Button variant="ghost">Entrar</Button>
+          </NavLink>
+          <NavLink to="/auth">
+            <Button>Começar Grátis</Button>
+          </NavLink>
+        </nav>
+      </div>
+    </header>
 
-      {/* Hero Section */}
-      <section className="py-20 bg-gradient-to-br from-primary/5 to-primary/10">
-        <div className="container mx-auto px-4 text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Heart className="h-5 w-5 text-primary" />
-            <span className="text-sm text-primary font-medium">Inspirado em valores cristãos</span>
-          </div>
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            Zaq - <span className="text-primary">Boas Contas</span>
-          </h1>
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Controle financeiro familiar com <span className="text-primary font-semibold">propósito</span>
-          </p>
-          <p className="text-lg text-muted-foreground mb-12 max-w-3xl mx-auto">
-            Transforme a relação da sua família com o dinheiro. Organize receitas, 
-            despesas e metas com uma ferramenta simples, prática e baseada em 
-            valores cristãos. <strong>Zaq</strong> é seu assistente financeiro pessoal, 
-            inspirado em Zaqueu da Bíblia - alguém que transformou sua relação com o dinheiro.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-            <NavLink to="/auth">
-              <Button size="lg" className="px-8">
-                Começar Grátis →
-              </Button>
-            </NavLink>
-            <Button variant="outline" size="lg">
-              Ver Demonstração
+    {/* Hero Section */}
+    <section className="py-20 lg:py-32 bg-gradient-to-br from-primary/5 to-primary/10 relative overflow-hidden">
+      <div className="container mx-auto px-4 text-center relative z-10">
+        <Badge variant="outline" className="mb-6 px-4 py-1 border-primary/20 bg-primary/5 text-primary">
+          <Zap className="w-3 h-3 mr-2 fill-primary" />
+          Nova IA 2.0 disponível
+        </Badge>
+
+        <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 tracking-tight">
+          Simplifique o Controle Financeiro <br className="hidden md:block" />
+          da sua <span className="text-primary">Família</span>
+        </h1>
+
+        <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto leading-relaxed">
+          Registre gastos pelo <strong>Telegram</strong> em 5 segundos.
+          Sem planilhas, sem complicação. A harmonia financeira que sua casa precisa.
+        </p>
+
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+          <NavLink to="/auth">
+            <Button size="lg" className="px-8 h-12 text-lg shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all">
+              Começar Grátis Agora
             </Button>
-          </div>
-
-          <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <div className="flex">
-                <div className="w-6 h-6 bg-blue-500 rounded-full border-2 border-background -mr-2"></div>
-                <div className="w-6 h-6 bg-green-500 rounded-full border-2 border-background -mr-2"></div>
-                <div className="w-6 h-6 bg-orange-500 rounded-full border-2 border-background"></div>
-              </div>
-              <span>+500 famílias organizadas</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section id="funcionalidades" className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">
-              Tudo que sua família precisa para{" "}
-              <span className="text-primary">organizar as finanças</span>
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Uma plataforma completa e intuitiva que transforma o controle financeiro em um hábito familiar 
-              saudável e baseado em propósito.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {features.map((feature, index) => <Card key={index} className="text-center hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <feature.icon className={`h-12 w-12 mx-auto ${feature.color}`} />
-                  <CardTitle className="text-lg">{feature.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">{feature.description}</p>
-                </CardContent>
-              </Card>)}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-primary/10 to-primary/5">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold mb-4">
-            Pronto para transformar suas <span className="text-primary">finanças familiares</span>?
-          </h2>
-          <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Junte-se a centenas de famílias que já organizaram suas finanças e conquistaram seus sonhos 
-            com o Zac - Boas Contas.
-          </p>
-          <Button size="lg" asChild>
-            <NavLink to="/auth">Falar com Especialista</NavLink>
+          </NavLink>
+          <Button variant="outline" size="lg" className="h-12 px-8">
+            Ver Como Funciona
           </Button>
         </div>
-      </section>
 
-      {/* Pricing Section */}
-      <section id="planos" className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <Badge className="mb-4">📊 Planos e Preços</Badge>
-            <h2 className="text-3xl font-bold mb-4">
-              Escolha o plano ideal para <span className="text-primary">sua família</span>
+        <div className="flex flex-col items-center gap-4">
+          <div className="flex items-center -space-x-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="w-10 h-10 rounded-full border-2 border-background bg-muted flex items-center justify-center overflow-hidden">
+                <User className="w-6 h-6 text-muted-foreground/50" />
+              </div>
+            ))}
+            <div className="w-10 h-10 rounded-full border-2 border-background bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+              +500
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Famílias organizadas e felizes usando o Zaq
+          </p>
+        </div>
+      </div>
+
+      {/* Background Elements */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/5 rounded-full blur-3xl -z-10" />
+    </section>
+
+    {/* Telegram Feature Highlight */}
+    <section className="py-20 border-b">
+      <div className="container mx-auto px-4">
+        <div className="flex flex-col lg:flex-row items-center gap-12">
+          <div className="flex-1 space-y-6">
+            <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-blue-200">
+              <MessageCircle className="w-3 h-3 mr-2" />
+              Integração Exclusiva
+            </Badge>
+            <h2 className="text-3xl md:text-4xl font-bold">
+              Controle suas finanças direto do <span className="text-blue-500">Telegram</span>
             </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Comece gratuitamente e evolua conforme suas necessidades. Todos os planos incluem suporte e 
-              atualizações constantes.
+            <p className="text-lg text-muted-foreground">
+              Esqueça os apps complicados. Com o Zaq, você conversa com suas finanças.
+            </p>
+
+            <div className="space-y-4">
+              <div className="flex items-start gap-4 p-4 bg-muted/50 rounded-lg">
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">1</div>
+                <div>
+                  <h3 className="font-semibold">Envie uma mensagem natural</h3>
+                  <p className="text-sm text-muted-foreground">"Gastei R$ 138 no mercado com o cartão Nubank"</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4 p-4 bg-muted/50 rounded-lg">
+                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-bold">2</div>
+                <div>
+                  <h3 className="font-semibold">IA entende tudo</h3>
+                  <p className="text-sm text-muted-foreground">Identifica valor, categoria (Mercado) e conta (Nubank) automaticamente.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 relative">
+            <div className="relative z-10 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border p-6 max-w-md mx-auto">
+              <div className="space-y-4">
+                <div className="flex items-end justify-end">
+                  <div className="bg-blue-500 text-white p-3 rounded-2xl rounded-tr-none max-w-[90%]">
+                    <p>Gastei R$ 138 no mercado com o cartão Nubank</p>
+                  </div>
+                </div>
+                <div className="flex items-end justify-start">
+                  <div className="bg-muted p-3 rounded-2xl rounded-tl-none max-w-[90%] space-y-2">
+                    <p className="font-semibold text-primary">✅ Transação registrada!</p>
+                    <div className="text-sm space-y-1">
+                      <p>💰 Valor: R$ 138,00</p>
+                      <p>📂 Categoria: Mercado</p>
+                      <p>🏦 Conta: Nubank</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Seu saldo atual é R$ 1.312,00
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {/* Decorative elements */}
+            <div className="absolute top-10 -right-10 w-24 h-24 bg-blue-500/20 rounded-full blur-xl" />
+            <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-500/20 rounded-full blur-xl" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {/* Values Section (Christian Essence) */}
+    <section className="py-20 bg-primary/5">
+      <div className="container mx-auto px-4 text-center">
+        <div className="flex justify-center mb-6">
+          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+            <Heart className="w-8 h-8 text-primary" />
+          </div>
+        </div>
+        <h2 className="text-3xl font-bold mb-6">
+          Mais que números, um <span className="text-primary">Propósito</span>
+        </h2>
+        <p className="text-lg text-muted-foreground max-w-3xl mx-auto mb-12">
+          O nome <strong>Zaq</strong> vem de Zaqueu, um cobrador de impostos que transformou sua relação com o dinheiro ao encontrar um propósito maior.
+          Acreditamos na <strong>mordomia cristã</strong>: cuidar bem dos recursos que Deus nos confiou para abençoar nossa família e o próximo.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+          <div className="bg-background p-6 rounded-xl shadow-sm">
+            <h3 className="font-bold text-xl mb-2">Transparência</h3>
+            <p className="text-muted-foreground text-sm">"A verdade vos libertará". Finanças claras entre o casal evitam conflitos e fortalecem a união.</p>
+          </div>
+          <div className="bg-background p-6 rounded-xl shadow-sm">
+            <h3 className="font-bold text-xl mb-2">Responsabilidade</h3>
+            <p className="text-muted-foreground text-sm">Planejar não é falta de fé, é sabedoria. Cuide do futuro da sua família com zelo.</p>
+          </div>
+          <div className="bg-background p-6 rounded-xl shadow-sm">
+            <h3 className="font-bold text-xl mb-2">Generosidade</h3>
+            <p className="text-muted-foreground text-sm">Ao organizar suas contas, sobra mais para doar e ajudar quem precisa.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {/* Features Grid */}
+    <section id="funcionalidades" className="py-20 bg-muted/30">
+      <div className="container mx-auto px-4">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl font-bold mb-4">
+            Tudo que sua família precisa
+          </h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Funcionalidades poderosas, mas simples de usar. Projetado para a realidade das famílias brasileiras.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {features.map((feature, index) => (
+            <Card key={index} className="border-none shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+              <CardHeader>
+                <div className={`w-12 h-12 rounded-lg bg-background flex items-center justify-center mb-4 shadow-sm ${feature.color}`}>
+                  <feature.icon className="h-6 w-6" />
+                </div>
+                <CardTitle className="text-xl">{feature.title}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    {/* Pricing Section */}
+    <section id="planos" className="py-20">
+      <div className="container mx-auto px-4">
+        <div className="text-center mb-16">
+          <Badge className="mb-4" variant="secondary">Planos Flexíveis</Badge>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            Escolha o plano ideal para <span className="text-primary">sua fase</span>
+          </h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Comece gratuitamente e evolua conforme suas necessidades.
+            Sem contratos de fidelidade.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+          {plans.map((plan, index) => (
+            <Card key={index} className={`relative flex flex-col ${plan.highlight ? 'border-primary shadow-xl scale-105 z-10' : 'border-border shadow-sm hover:shadow-md'}`}>
+              {plan.popular && (
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                  <Badge className="bg-primary text-primary-foreground px-3 py-1 text-sm shadow-lg">
+                    Mais Popular
+                  </Badge>
+                </div>
+              )}
+              <CardHeader className="text-center pb-2">
+                <div className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-4 ${plan.highlight ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                  <plan.icon className="h-6 w-6" />
+                </div>
+                <CardTitle className="text-xl">{plan.name}</CardTitle>
+                <p className="text-sm text-muted-foreground h-10 flex items-center justify-center">{plan.description}</p>
+              </CardHeader>
+              <CardContent className="flex-1 flex flex-col">
+                <div className="text-center mb-6">
+                  <span className="text-3xl font-bold">{plan.price}</span>
+                  <span className="text-muted-foreground">{plan.period}</span>
+                </div>
+
+                <ul className="space-y-3 mb-8 flex-1">
+                  {plan.features.map((feature, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm">
+                      <Check className={`h-4 w-4 mt-0.5 flex-shrink-0 ${plan.highlight ? 'text-primary' : 'text-muted-foreground'}`} />
+                      <span className="text-muted-foreground">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Button
+                  className="w-full mt-auto"
+                  variant={plan.highlight ? "default" : "outline"}
+                  asChild
+                >
+                  <NavLink to="/auth">{plan.buttonText}</NavLink>
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="mt-16 text-center space-y-4">
+          <p className="text-muted-foreground">
+            Dúvidas sobre os planos? <a href="#" className="text-primary hover:underline">Fale com nosso time</a>
+          </p>
+          <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-green-500" />
+              <span>Dados Criptografados</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Check className="h-4 w-4 text-green-500" />
+              <span>Cancele quando quiser</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Heart className="h-4 w-4 text-green-500" />
+              <span>Garantia de 14 dias</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {/* Footer */}
+    <footer className="border-t py-12 bg-muted/10">
+      <div className="container mx-auto px-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                <Heart className="h-5 w-5 text-primary-foreground" />
+              </div>
+              <span className="font-bold text-xl">Zaq</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Transformando a relação das famílias com o dinheiro através de organização e propósito.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {plans.map((plan, index) => <Card key={index} className={`relative ${plan.popular ? 'border-primary shadow-lg scale-105' : ''}`}>
-                {plan.popular && <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary">
-                    Mais Popular
-                  </Badge>}
-                <CardHeader className="text-center">
-                  <plan.icon className={`h-12 w-12 mx-auto mb-4 ${plan.popular ? 'text-primary' : 'text-muted-foreground'}`} />
-                  <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                  <p className="text-sm text-muted-foreground">{plan.description}</p>
-                  <div className="mt-4">
-                    <span className="text-4xl font-bold">{plan.price}</span>
-                    <span className="text-muted-foreground">{plan.period}</span>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <ul className="space-y-3">
-                    {plan.features.map((feature, i) => <li key={i} className="flex items-start gap-2">
-                        <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                        <span className="text-sm">{feature}</span>
-                      </li>)}
-                  </ul>
-                  <Button className="w-full" variant={plan.popular ? "default" : "outline"} asChild>
-                    <NavLink to="/auth">{plan.buttonText}</NavLink>
-                  </Button>
-                </CardContent>
-              </Card>)}
+          <div>
+            <h4 className="font-semibold mb-4">Produto</h4>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li><a href="#funcionalidades" className="hover:text-primary">Funcionalidades</a></li>
+              <li><a href="#planos" className="hover:text-primary">Planos</a></li>
+              <li><NavLink to="/auth" className="hover:text-primary">Entrar</NavLink></li>
+            </ul>
           </div>
 
-          <div className="text-center mt-12">
-            <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Crown className="h-4 w-4" />
-                <span>Todos os planos incluem 14 dias grátis</span>
-              </div>
-              <span>•</span>
-              <span>Cancele quando quiser</span>
-              <span>•</span>
-              <span>Sem taxas ocultas</span>
-            </div>
-            <div className="flex items-center justify-center gap-6 mt-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-green-500" />
-                <span>Segurança bancária</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-green-500" />
-                <span>Dados criptografados</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-green-500" />
-                <span>Suporte brasileiro</span>
-              </div>
-            </div>
+          <div>
+            <h4 className="font-semibold mb-4">Legal</h4>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li><a href="#" className="hover:text-primary">Termos de Uso</a></li>
+              <li><a href="#" className="hover:text-primary">Privacidade</a></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="font-semibold mb-4">Valores</h4>
+            <p className="text-sm text-muted-foreground mb-4">
+              Ferramenta baseada em princípios de mordomia, transparência e responsabilidade familiar.
+            </p>
           </div>
         </div>
-      </section>
 
-      {/* Footer */}
-      <footer className="border-t py-12">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                  <Heart className="h-5 w-5 text-primary-foreground" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-primary">Zaq</h3>
-                  <p className="text-xs text-muted-foreground">Boas Contas</p>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Transformando a relação das famílias com o dinheiro através de valores cristãos e 
-                organização financeira.
-              </p>
-              <p className="text-xs text-muted-foreground mt-4">
-                Feito com <Heart className="h-3 w-3 inline text-red-500" /> para famílias cristãs
-              </p>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4">Produto</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#funcionalidades" className="hover:text-primary">Funcionalidades</a></li>
-                <li><a href="#planos" className="hover:text-primary">Planos e Preços</a></li>
-                <li><a href="#" className="hover:text-primary">Demonstração</a></li>
-                <li><a href="#" className="hover:text-primary">Atualizações</a></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4">Suporte</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-primary">Central de Ajuda</a></li>
-                <li><a href="#" className="hover:text-primary">Tutoriais</a></li>
-                <li><a href="#" className="hover:text-primary">FAQ</a></li>
-                <li><a href="#" className="hover:text-primary">Contato</a></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4">Entre em Contato</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>✉️ contato@zacboascontas.com.br</li>
-                <li>📱 WhatsApp Suporte</li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="border-t mt-8 pt-8 text-center text-sm text-muted-foreground">
-            <p>© 2024 Zaq - Boas Contas. Todos os direitos reservados.</p>
-            <div className="flex justify-center gap-4 mt-2">
-              <a href="#" className="hover:text-primary">Privacidade</a>
-              <a href="#" className="hover:text-primary">Termos</a>
-              <a href="#" className="hover:text-primary">Cookies</a>
-            </div>
-          </div>
+        <div className="border-t pt-8 text-center text-sm text-muted-foreground">
+          <p>© 2024 Zaq - Boas Contas. Todos os direitos reservados.</p>
+          <p className="mt-2 text-xs">
+            Feito com <Heart className="h-3 w-3 inline text-red-500 mx-1" /> para famílias que querem crescer juntas.
+          </p>
         </div>
-      </footer>
-    </div>;
+      </div>
+    </footer>
+  </div>;
 };
+
 export default Landing;

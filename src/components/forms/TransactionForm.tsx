@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useTransactions, useAccounts, useCategories } from '@/hooks/useSupabaseData';
+import { useLimits } from '@/hooks/useLimits';
 import { Loader2, Plus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
@@ -52,6 +53,7 @@ export function TransactionForm({ onSuccess, onCancel, mode = 'create', initialD
   const { addTransaction, updateTransaction } = useTransactions(groupId);
   const { accounts } = useAccounts(groupId);
   const { categories } = useCategories(groupId);
+  const { isTransactionLimitReached } = useLimits();
 
   const form = useForm<TransactionFormData>({
     resolver: zodResolver(transactionSchema),
@@ -323,11 +325,11 @@ export function TransactionForm({ onSuccess, onCancel, mode = 'create', initialD
             <div className="flex gap-4 pt-4">
               <Button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || (mode === 'create' && isTransactionLimitReached)}
                 className="flex-1"
               >
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Salvar Transação
+                {mode === 'create' && isTransactionLimitReached ? 'Limite Atingido' : 'Salvar Transação'}
               </Button>
               {onCancel && (
                 <Button

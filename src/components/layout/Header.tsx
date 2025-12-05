@@ -45,17 +45,17 @@ export function Header({ onMenuClick }: HeaderProps) {
           <Menu className="h-5 w-5" />
         </Button>
         <div>
-           <h1 className="text-2xl font-bold text-foreground">Zaq - Boas Contas</h1>
+          <h1 className="text-2xl font-bold text-foreground">Zaq - Boas Contas</h1>
           <p className="text-sm text-muted-foreground">Controle Financeiro Inteligente</p>
         </div>
       </div>
-      
+
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" className="relative">
           <Bell className="h-5 w-5" />
           <span className="absolute -top-1 -right-1 h-3 w-3 bg-expense rounded-full"></span>
         </Button>
-        
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="p-2">
@@ -88,7 +88,7 @@ export function Header({ onMenuClick }: HeaderProps) {
               <User className="mr-2 h-4 w-4" />
               Meu Perfil
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate('/checkout')}>
+            <DropdownMenuItem onClick={() => navigate('/planos')}>
               <Crown className="mr-2 h-4 w-4" />
               Planos
             </DropdownMenuItem>

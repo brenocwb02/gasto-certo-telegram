@@ -26,6 +26,8 @@ import CheckoutPage from "@/pages/Checkout";
 import NetWorth from "@/pages/NetWorth";
 import FamilySettings from "@/pages/FamilySettings";
 import RecurringTransactions from "@/pages/RecurringTransactions";
+import Planos from "@/pages/Planos";
+import CheckoutSuccess from "@/pages/CheckoutSuccess";
 
 const queryClient = new QueryClient();
 
@@ -49,35 +51,36 @@ const AppRoutes = () => {
   return (
     <Routes>
       {/* Rota principal - Landing para não logados, Dashboard para logados */}
-      <Route 
-        path="/" 
+      <Route
+        path="/"
         element={
-          !user ? <Landing /> : 
-          needsOnboarding ? <Navigate to="/onboarding" replace /> : 
-          <Navigate to="/dashboard" replace />
-        } 
+          !user ? <Landing /> :
+            needsOnboarding ? <Navigate to="/onboarding" replace /> :
+              <Navigate to="/dashboard" replace />
+        }
       />
       <Route path="/auth" element={user ? <Navigate to="/dashboard" replace /> : <Auth />} />
-      <Route 
-        path="/onboarding" 
+      <Route
+        path="/onboarding"
         element={
           !user ? <Navigate to="/auth" replace /> :
-          profile?.onboarding_completed ? <Navigate to="/dashboard" replace /> :
-          <Onboarding />
-        } 
+            profile?.onboarding_completed ? <Navigate to="/dashboard" replace /> :
+              <Onboarding />
+        }
       />
       <Route path="/quiz-financeiro" element={<QuizFinanceiro />} />
+      <Route path="/checkout/success" element={<CheckoutSuccess />} />
 
       {/* Rotas Protegidas com Layout */}
       <Route
         path="/dashboard"
         element={
           needsOnboarding ? <Navigate to="/onboarding" replace /> :
-          <ProtectedRoute>
-            <AppLayout>
-              <Dashboard />
-            </AppLayout>
-          </ProtectedRoute>
+            <ProtectedRoute>
+              <AppLayout>
+                <Dashboard />
+              </AppLayout>
+            </ProtectedRoute>
         }
       />
       <Route
@@ -100,7 +103,7 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-       <Route
+      <Route
         path="/reports"
         element={
           <ProtectedRoute>
@@ -140,17 +143,17 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-       <Route
-          path="/support"
-          element={
-            <ProtectedRoute>
-              <AppLayout>
-                <Support />
-              </AppLayout>
-            </ProtectedRoute>
-          }
-        />
-       <Route
+      <Route
+        path="/support"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <Support />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/license"
         element={
           <ProtectedRoute>
@@ -160,7 +163,7 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-       <Route
+      <Route
         path="/categories"
         element={
           <ProtectedRoute>
@@ -206,6 +209,16 @@ const AppRoutes = () => {
           <ProtectedRoute>
             <AppLayout>
               <RecurringTransactions />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/planos"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <Planos />
             </AppLayout>
           </ProtectedRoute>
         }

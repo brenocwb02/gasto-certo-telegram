@@ -20,8 +20,12 @@ import {
   Plus,
   Heart,
   Award,
-  ArrowRight
+  ArrowRight,
+  AlertCircle,
+  Lock
 } from "lucide-react";
+import { useLimits } from "@/hooks/useLimits";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const Dashboard = () => {
   const { currentGroup } = useFamily();
@@ -30,6 +34,12 @@ const Dashboard = () => {
   const { profile } = useProfile();
   const { goals, loading: goalsLoading } = useGoals(currentGroup?.id);
   const { financialProfile, hasCompletedQuiz, getFinancialHealthLevel } = useFinancialProfile();
+  const {
+    isTransactionLimitReached,
+    transactionUsage,
+    transactionLimit,
+    plan
+  } = useLimits();
   const currentMonth = new Date();
 
   const FinancialHealthSection = () => {
@@ -161,8 +171,8 @@ const Dashboard = () => {
             <LicenseStatus />
             <Dialog open={showTransactionForm} onOpenChange={setShowTransactionForm}>
               <DialogTrigger asChild>
-                <Button className="flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
+                <Button className="flex items-center gap-2" disabled={isTransactionLimitReached}>
+                  {isTransactionLimitReached ? <Lock className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
                   <span className="hidden sm:inline">Nova Transação</span>
                   <span className="sm:hidden">Nova</span>
                 </Button>
@@ -177,6 +187,34 @@ const Dashboard = () => {
             </Dialog>
           </div>
         </div>
+
+        {/* Limit Warnings */}
+        {plan === 'gratuito' && (
+          <>
+            {isTransactionLimitReached ? (
+              <Alert variant="destructive">
+                <Lock className="h-4 w-4" />
+                <AlertTitle>Limite de transações atingido</AlertTitle>
+                <AlertDescription className="flex items-center justify-between">
+                  <span>
+                    Você atingiu o limite de {transactionLimit} transações do plano Gratuito.
+                  </span>
+                  <Button variant="outline" size="sm" className="ml-4 bg-white text-destructive hover:bg-white/90 border-none" asChild>
+                    <a href="/planos">Fazer Upgrade</a>
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            ) : (transactionUsage / transactionLimit) >= 0.8 ? (
+              <Alert className="border-yellow-500 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400">
+                <AlertCircle className="h-4 w-4 text-yellow-700 dark:text-yellow-400" />
+                <AlertTitle>Atenção ao limite</AlertTitle>
+                <AlertDescription>
+                  Você já usou {transactionUsage} de {transactionLimit} transações disponíveis este mês.
+                </AlertDescription>
+              </Alert>
+            ) : null}
+          </>
+        )}
       </div>
 
       {/* Stats Cards */}
