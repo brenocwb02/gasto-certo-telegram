@@ -5,12 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { CategoryForm } from "@/components/forms/CategoryForm";
-import { Plus, Edit, Trash2, ChevronRight, ChevronDown } from "lucide-react";
+import { Plus, Edit, Trash2, ChevronRight, ChevronDown, Lock } from "lucide-react";
 import { useCategories } from "@/hooks/useSupabaseData";
 import { useFamily } from "@/hooks/useFamily";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLimits } from "@/hooks/useLimits";
 
 interface Category {
   id: string;
@@ -28,11 +29,14 @@ export default function Categories() {
   const { categories: flatCategories, loading } = useCategories(currentGroup?.id);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { plan } = useLimits();
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [formOpen, setFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+
+  const isCategoryLimitReached = plan === 'gratuito' && flatCategories.length >= 10;
 
   // Organizar categorias hierarquicamente sempre que flatCategories mudar
   useEffect(() => {
@@ -203,7 +207,7 @@ export default function Categories() {
         <Dialog open={formOpen} onOpenChange={setFormOpen}>
           <DialogTrigger asChild>
             <Button onClick={() => setEditingCategory(null)}>
-              <Plus className="h-4 w-4 mr-2" />
+              {isCategoryLimitReached ? <Lock className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
               Nova Categoria
             </Button>
           </DialogTrigger>
@@ -213,14 +217,32 @@ export default function Categories() {
                 {editingCategory ? 'Editar Categoria' : 'Nova Categoria'}
               </DialogTitle>
             </DialogHeader>
-            <CategoryForm
-              category={editingCategory}
-              parentCategories={getParentCategories()}
-              onSuccess={() => {
-                setFormOpen(false);
-                setEditingCategory(null);
-              }}
-            />
+
+            {!editingCategory && isCategoryLimitReached ? (
+              <div className="space-y-4 py-4">
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-4 rounded-lg flex gap-3">
+                  <Lock className="h-5 w-5 text-yellow-600 dark:text-yellow-500 shrink-0" />
+                  <div>
+                    <h4 className="font-medium text-yellow-900 dark:text-yellow-400">Limite de Categorias Atingido</h4>
+                    <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                      O plano Gratuito permite apenas 10 categorias. Faça upgrade para criar categorias ilimitadas.
+                    </p>
+                  </div>
+                </div>
+                <Button className="w-full" asChild>
+                  <a href="/planos">Ver Planos Premium</a>
+                </Button>
+              </div>
+            ) : (
+              <CategoryForm
+                category={editingCategory}
+                parentCategories={getParentCategories()}
+                onSuccess={() => {
+                  setFormOpen(false);
+                  setEditingCategory(null);
+                }}
+              />
+            )}
           </DialogContent>
         </Dialog>
       </div>

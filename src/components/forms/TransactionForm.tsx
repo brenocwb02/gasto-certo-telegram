@@ -322,6 +322,15 @@ export function TransactionForm({ onSuccess, onCancel, mode = 'create', initialD
               )}
             />
 
+            {mode === 'create' && isTransactionLimitReached && (
+              <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md flex items-center justify-between">
+                <span>Limite de transações atingido.</span>
+                <Button variant="link" className="text-destructive underline h-auto p-0" asChild>
+                  <a href="/planos">Fazer Upgrade</a>
+                </Button>
+              </div>
+            )}
+
             <div className="flex gap-4 pt-4">
               <Button
                 type="submit"

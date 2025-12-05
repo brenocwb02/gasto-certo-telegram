@@ -2,17 +2,21 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Wallet, CreditCard, PiggyBank, Edit } from "lucide-react";
+import { Plus, Wallet, CreditCard, PiggyBank, Edit, Lock } from "lucide-react";
 import { useAccounts } from "@/hooks/useSupabaseData";
 import { useFamily } from "@/hooks/useFamily";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AccountForm } from "@/components/forms/AccountForm";
+import { useLimits } from "@/hooks/useLimits";
 
 const Accounts = () => {
   const { currentGroup } = useFamily();
   const { accounts, loading, error, getTotalBalance } = useAccounts(currentGroup?.id);
+  const { plan } = useLimits();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingAccount, setEditingAccount] = useState(null);
+  const [editingAccount, setEditingAccount] = useState<any>(null);
+
+  const isAccountLimitReached = plan === 'gratuito' && accounts.length >= 2;
 
   useEffect(() => {
     document.title = "Contas | Boas Contas";
@@ -67,7 +71,7 @@ const Accounts = () => {
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={() => setEditingAccount(null)}>
-              <Plus className="h-4 w-4 mr-2" />
+              {isAccountLimitReached ? <Lock className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
               Nova Conta
             </Button>
           </DialogTrigger>
@@ -78,10 +82,28 @@ const Accounts = () => {
                 {editingAccount ? 'Edite os dados da sua conta' : 'Adicione uma nova conta para organizar suas finanças'}
               </DialogDescription>
             </DialogHeader>
-            <AccountForm
-              account={editingAccount}
-              onSuccess={handleCloseDialog}
-            />
+
+            {!editingAccount && isAccountLimitReached ? (
+              <div className="space-y-4 py-4">
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-4 rounded-lg flex gap-3">
+                  <Lock className="h-5 w-5 text-yellow-600 dark:text-yellow-500 shrink-0" />
+                  <div>
+                    <h4 className="font-medium text-yellow-900 dark:text-yellow-400">Limite de Contas Atingido</h4>
+                    <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                      O plano Gratuito permite apenas 2 contas. Faça upgrade para criar contas ilimitadas.
+                    </p>
+                  </div>
+                </div>
+                <Button className="w-full" asChild>
+                  <a href="/planos">Ver Planos Premium</a>
+                </Button>
+              </div>
+            ) : (
+              <AccountForm
+                account={editingAccount}
+                onSuccess={handleCloseDialog}
+              />
+            )}
           </DialogContent>
         </Dialog>
       </div>

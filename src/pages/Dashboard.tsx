@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { StatsCard } from "@/components/dashboard/StatsCard";
+import { LimitsBanner } from "@/components/dashboard/LimitsBanner";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { FinancialChart } from "@/components/dashboard/FinancialChart";
@@ -189,32 +190,7 @@ const Dashboard = () => {
         </div>
 
         {/* Limit Warnings */}
-        {plan === 'gratuito' && (
-          <>
-            {isTransactionLimitReached ? (
-              <Alert variant="destructive">
-                <Lock className="h-4 w-4" />
-                <AlertTitle>Limite de transações atingido</AlertTitle>
-                <AlertDescription className="flex items-center justify-between">
-                  <span>
-                    Você atingiu o limite de {transactionLimit} transações do plano Gratuito.
-                  </span>
-                  <Button variant="outline" size="sm" className="ml-4 bg-white text-destructive hover:bg-white/90 border-none" asChild>
-                    <a href="/planos">Fazer Upgrade</a>
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            ) : (transactionUsage / transactionLimit) >= 0.8 ? (
-              <Alert className="border-yellow-500 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400">
-                <AlertCircle className="h-4 w-4 text-yellow-700 dark:text-yellow-400" />
-                <AlertTitle>Atenção ao limite</AlertTitle>
-                <AlertDescription>
-                  Você já usou {transactionUsage} de {transactionLimit} transações disponíveis este mês.
-                </AlertDescription>
-              </Alert>
-            ) : null}
-          </>
-        )}
+        <LimitsBanner />
       </div>
 
       {/* Stats Cards */}
