@@ -1,23 +1,17 @@
 import { Crown, AlertCircle, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useSubscription } from '@/hooks/useSubscription';
-import { useToast } from '@/hooks/use-toast';
+import { useLimits } from '@/hooks/useLimits';
+import { useNavigate } from 'react-router-dom';
 
 export const SubscriptionStatus = () => {
-  const { loading, isPremium, createCheckout } = useSubscription();
-  const { toast } = useToast();
+  const { loading, plan } = useLimits();
+  const navigate = useNavigate();
 
-  const handleUpgrade = async () => {
-    try {
-      await createCheckout();
-    } catch (error) {
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível iniciar o checkout.',
-        variant: 'destructive',
-      });
-    }
+  const isPremium = plan !== 'gratuito';
+
+  const handleUpgrade = () => {
+    navigate('/planos');
   };
 
   if (loading) {
@@ -31,20 +25,20 @@ export const SubscriptionStatus = () => {
 
   if (isPremium) {
     return (
-      <Badge variant="default" className="bg-success text-success-foreground">
+      <Badge variant="default" className="bg-green-500 hover:bg-green-600 text-white border-0">
         <Crown className="h-3 w-3 mr-1" />
-        Premium
+        {plan === 'familia' ? 'Família' : plan === 'familia_plus' ? 'Família+' : 'Premium'}
       </Badge>
     );
   }
 
   return (
     <div className="flex items-center gap-2">
-      <Badge variant="outline">
+      <Badge variant="outline" className="text-muted-foreground">
         <AlertCircle className="h-3 w-3 mr-1" />
         Gratuito
       </Badge>
-      <Button size="sm" onClick={handleUpgrade}>
+      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={handleUpgrade}>
         Upgrade
       </Button>
     </div>
