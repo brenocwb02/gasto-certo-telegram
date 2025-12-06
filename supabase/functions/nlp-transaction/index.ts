@@ -104,7 +104,12 @@ serve(async (req) => {
 
         const { data: categories, error: categoriesError } = await supabaseAdmin
             .from('categories')
-            .select('id, nome')
+            .select(`
+                id, 
+                nome, 
+                parent_id,
+                parent:categories!parent_id(nome)
+            `)
             .eq('user_id', userId);
 
         if (accountsError || categoriesError) {
@@ -112,7 +117,16 @@ serve(async (req) => {
         }
 
         const accountsList = accounts.map(a => a.nome).join(', ');
-        const categoriesList = categories.map(c => c.nome).join(', ');
+
+        // Criar lista de categorias incluindo hierarquia
+        const categoriesList = categories
+            .map(c => {
+                if (c.parent) {
+                    return `${c.parent.nome} > ${c.nome}`;
+                }
+                return c.nome;
+            })
+            .join(', ');
 
         // Construir o prompt melhorado para a IA
         const prompt = `Você é um assistente financeiro que extrai informações de transações.
