@@ -22,11 +22,9 @@ import {
   Heart,
   Award,
   ArrowRight,
-  AlertCircle,
   Lock
 } from "lucide-react";
 import { useLimits } from "@/hooks/useLimits";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const Dashboard = () => {
   const { currentGroup } = useFamily();
@@ -35,12 +33,7 @@ const Dashboard = () => {
   const { profile } = useProfile();
   const { goals, loading: goalsLoading } = useGoals(currentGroup?.id);
   const { financialProfile, hasCompletedQuiz, getFinancialHealthLevel } = useFinancialProfile();
-  const {
-    isTransactionLimitReached,
-    transactionUsage,
-    transactionLimit,
-    plan
-  } = useLimits();
+  const { isTransactionLimitReached } = useLimits();
   const currentMonth = new Date();
 
   const FinancialHealthSection = () => {

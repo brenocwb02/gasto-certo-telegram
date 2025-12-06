@@ -13,7 +13,7 @@ interface PlanGuardProps {
 
 export function PlanGuard({ children, fallback, requirePremium = false }: PlanGuardProps) {
   const { user, loading: authLoading } = useAuth();
-  const { subscription, loading: subscriptionLoading, error, isSubscriptionValid } = useSubscription();
+  const { subscriptionInfo, loading: subscriptionLoading, error, isPremium } = useSubscription();
 
   // Se ainda carregando autenticação ou assinatura
   if (authLoading || subscriptionLoading) {
@@ -44,30 +44,8 @@ export function PlanGuard({ children, fallback, requirePremium = false }: PlanGu
     );
   }
 
-  // Se tem assinatura mas ela é inválida
-  if (subscription && !isSubscriptionValid) {
-    return fallback || (
-      <Card className="border-warning bg-warning/5">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-warning">
-            <ShieldAlert className="h-5 w-5" />
-            Assinatura Necessária
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Sua assinatura não está ativa ou expirou.
-          </p>
-          <Badge variant="outline" className="text-warning border-warning">
-            {subscription.status}
-          </Badge>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Se requer Premium, tratar ausência de assinatura como plano gratuito
-  if (requirePremium && (!subscription || subscription.plano === 'gratuito')) {
+  // Se requer Premium e não tem
+  if (requirePremium && !isPremium) {
     return fallback || (
       <Card className="border-warning bg-warning/5">
         <CardHeader>
@@ -81,7 +59,7 @@ export function PlanGuard({ children, fallback, requirePremium = false }: PlanGu
             Esta funcionalidade está disponível apenas no plano Premium.
           </p>
           <Badge variant="outline" className="text-warning border-warning">
-            {subscription ? 'Plano Gratuito' : 'Sem plano (Gratuito)'}
+            {subscriptionInfo?.subscribed ? 'Plano Atual' : 'Plano Gratuito'}
           </Badge>
         </CardContent>
       </Card>
@@ -93,7 +71,7 @@ export function PlanGuard({ children, fallback, requirePremium = false }: PlanGu
 }
 
 export function PlanStatus() {
-  const { subscription, loading, error, isSubscriptionValid } = useSubscription();
+  const { subscriptionInfo, loading, error, isPremium } = useSubscription();
 
   if (loading) {
     return (
@@ -104,7 +82,7 @@ export function PlanStatus() {
     );
   }
 
-  if (error || !subscription) {
+  if (error || !subscriptionInfo?.subscribed) {
     return (
       <div className="flex items-center gap-2 text-sm">
         <ShieldAlert className="h-3 w-3 text-warning" />
@@ -113,26 +91,10 @@ export function PlanStatus() {
     );
   }
 
-  const getStatusColor = () => {
-    if (!isSubscriptionValid) return 'text-warning';
-    return 'text-success';
-  };
-
-  const getStatusIcon = () => {
-    if (!isSubscriptionValid) return <ShieldAlert className="h-3 w-3" />;
-    return <ShieldCheck className="h-3 w-3" />;
-  };
-
-  const getStatusText = () => {
-    if (!isSubscriptionValid) return 'Inativa';
-    if (subscription.tipo === 'vitalicia') return 'Vitalício';
-    return 'Premium';
-  };
-
   return (
-    <div className={`flex items-center gap-2 text-sm ${getStatusColor()}`}>
-      {getStatusIcon()}
-      <span>{getStatusText()}</span>
+    <div className={`flex items-center gap-2 text-sm ${isPremium ? 'text-success' : 'text-warning'}`}>
+      {isPremium ? <ShieldCheck className="h-3 w-3" /> : <ShieldAlert className="h-3 w-3" />}
+      <span>{isPremium ? 'Premium' : 'Básico'}</span>
     </div>
   );
 }

@@ -9,7 +9,7 @@ export interface LimitsState {
     transactionUsage: number;
     isTransactionLimitReached: boolean;
     aiLimit: number;
-    aiUsage: number; // Placeholder for now
+    aiUsage: number;
     isAiLimitReached: boolean;
     plan: 'gratuito' | 'premium' | 'familia' | 'familia_plus';
     isTrial: boolean;
@@ -19,7 +19,7 @@ export interface LimitsState {
 
 export function useLimits() {
     const { user } = useAuth();
-    const { subscription, loading: subscriptionLoading } = useSubscription();
+    const { subscriptionInfo, loading: subscriptionLoading, isPremium } = useSubscription();
     const [state, setState] = useState<LimitsState>({
         transactionLimit: 75,
         transactionUsage: 0,
@@ -38,11 +38,11 @@ export function useLimits() {
 
         const fetchUsage = async () => {
             try {
-                // Determine Plan
-                const plan = (subscription?.plano as any) || 'gratuito';
+                // Determine Plan based on subscription
+                const plan = isPremium ? 'premium' : 'gratuito';
 
                 // If Premium/Family, limits are effectively infinite
-                if (plan !== 'gratuito') {
+                if (isPremium) {
                     setState({
                         transactionLimit: -1,
                         transactionUsage: 0,
@@ -50,7 +50,7 @@ export function useLimits() {
                         aiLimit: -1,
                         aiUsage: 0,
                         isAiLimitReached: false,
-                        plan,
+                        plan: 'premium',
                         isTrial: false,
                         daysRemainingInTrial: 0,
                         loading: false
@@ -59,7 +59,6 @@ export function useLimits() {
                 }
 
                 // Calculate Trial Status
-                // We need user creation date. useAuth provides 'user' object which has created_at
                 const createdAt = new Date(user.created_at);
                 const now = new Date();
                 const diffTime = Math.abs(now.getTime() - createdAt.getTime());
@@ -77,14 +76,14 @@ export function useLimits() {
                     .from('transactions')
                     .select('*', { count: 'exact', head: true })
                     .eq('user_id', user.id)
-                    .gte('date', startOfMonthDate);
+                    .is('group_id', null)
+                    .gte('data_transacao', startOfMonthDate.split('T')[0]);
 
                 if (error) throw error;
 
                 const transactionUsage = count || 0;
 
-                // AI Usage - For now, we don't have a table, so we'll mock it or assume 0
-                // TODO: Implement AI usage tracking in backend
+                // AI Usage - placeholder
                 const aiUsage = 0;
                 const aiLimit = 20;
 
@@ -108,7 +107,7 @@ export function useLimits() {
         };
 
         fetchUsage();
-    }, [user, subscription, subscriptionLoading]);
+    }, [user, subscriptionInfo, subscriptionLoading, isPremium]);
 
     return state;
 }

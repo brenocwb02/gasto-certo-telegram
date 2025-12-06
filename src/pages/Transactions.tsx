@@ -57,7 +57,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TransactionForm } from "@/components/forms/TransactionForm";
 import { toast } from "@/hooks/use-toast";
 import { useFamily } from "@/hooks/useFamily";
-import { startOfMonth, endOfMonth, format } from "date-fns";
+import { startOfMonth, endOfMonth } from "date-fns";
 
 const Transactions = () => {
   const { currentGroup } = useFamily();
