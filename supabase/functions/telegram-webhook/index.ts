@@ -438,9 +438,10 @@ function shouldShowLimitAlert(
 
 /**
  * Vincula a conta de um utilizador do Telegram à sua licença.
+ * SEGURANÇA: Atualiza telegram_chat_id E telegram_id para evitar estado inconsistente.
  */
 async function linkUserWithLicense(supabase: any, telegramChatId: number, licenseCode: string): Promise<{ success: boolean; message: string }> {
-  console.log(`Tentando vincular a licença ${licenseCode} ao chat ${telegramChatId}`);
+  console.log(`[SECURITY] Tentando vincular a licença ${licenseCode} ao chat ${telegramChatId}`);
 
   // Verifica se a licença existe e está ativa
   const { data: license, error: licenseError } = await supabase
@@ -450,7 +451,7 @@ async function linkUserWithLicense(supabase: any, telegramChatId: number, licens
     .single();
 
   if (licenseError || !license || license.status !== 'ativo') {
-    console.error('Licença não encontrada ou inativa:', licenseError);
+    console.error('[SECURITY] Tentativa de vinculação com licença inválida:', { codigo: licenseCode });
     return {
       success: false,
       message: '❌ Código de licença inválido, expirado ou não encontrado.'
@@ -471,6 +472,7 @@ async function linkUserWithLicense(supabase: any, telegramChatId: number, licens
         message: '✅ Este chat já está vinculado à sua conta.'
       };
     } else {
+      console.error('[SECURITY] Tentativa de vincular chat já vinculado a outra conta:', { chatId: telegramChatId });
       return {
         success: false,
         message: '⚠️ Este chat do Telegram já está vinculado a outra conta.'
@@ -478,21 +480,41 @@ async function linkUserWithLicense(supabase: any, telegramChatId: number, licens
     }
   }
 
-  // Vincula o telegram_chat_id ao perfil do usuário
+  // ⚠️ CORREÇÃO DE SEGURANÇA: Atualiza AMBOS telegram_chat_id E telegram_id
   const { error: updateError } = await supabase
     .from('profiles')
-    .update({ telegram_chat_id: telegramChatId })
+    .update({
+      telegram_chat_id: telegramChatId,
+      telegram_id: telegramChatId.toString() // ✅ Adiciona telegram_id
+    })
     .eq('user_id', license.user_id);
 
   if (updateError) {
-    console.error('Erro ao vincular a conta:', updateError);
+    console.error('[SECURITY] Erro ao vincular a conta:', updateError);
     return {
       success: false,
       message: '❌ Ocorreu um erro ao vincular a sua conta. Tente novamente.'
     };
   }
 
-  console.log(`✅ Chat ${telegramChatId} vinculado com sucesso ao usuário ${license.user_id}`);
+  // ✅ CORREÇÃO: Cria configurações iniciais do Telegram
+  const { error: integrationError } = await supabase
+    .from('telegram_integration')
+    .upsert({
+      user_id: license.user_id,
+      telegram_chat_id: telegramChatId,
+      default_context: 'personal',
+      show_context_confirmation: true,
+      alert_at_80_percent: true,
+      alert_at_90_percent: true
+    }, { onConflict: 'user_id' });
+
+  if (integrationError) {
+    console.error('[SECURITY] Erro ao criar configurações do Telegram (não crítico):', integrationError);
+    // Não falha a vinculação se apenas as configurações falharem
+  }
+
+  console.log(`[SECURITY] ✅ Chat ${telegramChatId} vinculado com sucesso ao usuário ${license.user_id}`);
 
   return {
     success: true,

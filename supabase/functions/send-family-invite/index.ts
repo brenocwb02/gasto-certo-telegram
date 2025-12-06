@@ -12,26 +12,59 @@ serve(async (req) => {
   }
 
   try {
+    // 🔒 CORREÇÃO DE SEGURANÇA: Validar autenticação JWT
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Não autenticado. Token de autorização necessário.' }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // Criar cliente Supabase com token do usuário para validação
+    const supabaseUser = createClient(supabaseUrl, supabaseServiceKey, {
+      global: {
+        headers: { Authorization: authHeader }
+      }
+    });
+
+    // Verificar se o token é válido e obter usuário autenticado
+    const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
+
+    if (authError || !user) {
+      console.error('[SECURITY] Tentativa de acesso não autenticada:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Token inválido ou expirado' }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
     const { inviteId, groupName, inviterName } = await req.json();
 
     if (!inviteId) {
       return new Response(
         JSON.stringify({ error: 'inviteId é obrigatório' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
     }
 
-    // Buscar dados do convite
+    // Buscar dados do convite (usando Service Role para acesso completo)
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    
+
     const { data: invite, error: inviteError } = await supabase
       .from('family_invites')
       .select(`
         *,
-        family_groups!inner(name, description),
+        family_groups!inner(name, description, owner_id),
         inviter:profiles!family_invites_invited_by_fkey(nome)
       `)
       .eq('id', inviteId)
@@ -40,9 +73,28 @@ serve(async (req) => {
     if (inviteError || !invite) {
       return new Response(
         JSON.stringify({ error: 'Convite não encontrado' }),
-        { 
-          status: 404, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // 🔒 CORREÇÃO DE SEGURANÇA: Verificar autorização
+    // Apenas o criador do convite ou o dono do grupo podem acessar
+    const isInviter = invite.invited_by === user.id;
+    const isGroupOwner = invite.family_groups?.owner_id === user.id;
+
+    if (!isInviter && !isGroupOwner) {
+      console.error('[SECURITY] Tentativa de acesso não autorizado ao convite:', {
+        userId: user.id,
+        inviteId: inviteId
+      });
+      return new Response(
+        JSON.stringify({ error: 'Você não tem permissão para acessar este convite' }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
     }
@@ -51,9 +103,9 @@ serve(async (req) => {
     if (invite.status !== 'pending') {
       return new Response(
         JSON.stringify({ error: 'Convite já foi processado' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
     }
@@ -62,9 +114,9 @@ serve(async (req) => {
     if (new Date(invite.expires_at) < new Date()) {
       return new Response(
         JSON.stringify({ error: 'Convite expirado' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
     }
@@ -75,30 +127,35 @@ serve(async (req) => {
     const inviterNameData = invite.inviter?.nome || 'Um membro da família';
     const groupNameData = invite.family_groups?.name || 'Grupo Familiar';
 
-    // Por enquanto, retornar sucesso com URL do convite (sem envio de email)
-    // O envio de email via Resend pode ser ativado quando configurado corretamente
-    console.log('Convite preparado:', { inviteUrl, inviterNameData, groupNameData });
+    // 🔒 CORREÇÃO DE SEGURANÇA: Sanitizar logs - não expor token completo
+    console.log('[SECURITY] Convite preparado:', {
+      inviteId,
+      groupName: groupNameData,
+      inviterName: inviterNameData,
+      // ✅ Não logar o token ou URL completa
+      hasToken: !!invite.token
+    });
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         message: 'Convite criado com sucesso',
         inviteUrl: inviteUrl,
         note: 'Email não enviado - use o link diretamente'
       }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
 
   } catch (error) {
-    console.error('Erro ao processar convite familiar:', error);
+    console.error('[SECURITY] Erro ao processar convite familiar:', error);
     return new Response(
       JSON.stringify({ error: 'Erro interno do servidor' }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }
