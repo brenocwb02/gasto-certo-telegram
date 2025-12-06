@@ -26,6 +26,7 @@ import FamilySettings from "@/pages/FamilySettings";
 import RecurringTransactions from "@/pages/RecurringTransactions";
 import Planos from "@/pages/Planos";
 import CheckoutSuccess from "@/pages/CheckoutSuccess";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +59,10 @@ const AppRoutes = () => {
         }
       />
       <Route path="/auth" element={user ? <Navigate to="/dashboard" replace /> : <Auth />} />
+
+      {/* Política de Privacidade - Pública */}
+      <Route path="/privacidade" element={<PrivacyPolicy />} />
+
       <Route
         path="/onboarding"
         element={
