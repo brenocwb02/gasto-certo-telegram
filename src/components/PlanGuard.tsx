@@ -1,27 +1,27 @@
-import { useLicense } from '@/hooks/useLicense';
+import { useSubscription } from '@/hooks/useSubscription';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-interface LicenseGuardProps {
+interface PlanGuardProps {
   children: React.ReactNode;
   fallback?: React.ReactNode;
   requirePremium?: boolean;
 }
 
-export function LicenseGuard({ children, fallback, requirePremium = false }: LicenseGuardProps) {
+export function PlanGuard({ children, fallback, requirePremium = false }: PlanGuardProps) {
   const { user, loading: authLoading } = useAuth();
-  const { license, loading: licenseLoading, error, isLicenseValid } = useLicense();
+  const { subscription, loading: subscriptionLoading, error, isSubscriptionValid } = useSubscription();
 
-  // Se ainda carregando autenticação ou licença
-  if (authLoading || licenseLoading) {
+  // Se ainda carregando autenticação ou assinatura
+  if (authLoading || subscriptionLoading) {
     return (
       <div className="flex items-center justify-center min-h-[200px]">
         <div className="flex items-center gap-2 text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Verificando licença...</span>
+          <span>Verificando assinatura...</span>
         </div>
       </div>
     );
@@ -32,42 +32,42 @@ export function LicenseGuard({ children, fallback, requirePremium = false }: Lic
     return fallback || <div>Acesso negado</div>;
   }
 
-  // Se erro ao carregar licença
+  // Se erro ao carregar assinatura
   if (error) {
     return (
       <Alert variant="destructive">
         <ShieldAlert className="h-4 w-4" />
         <AlertDescription>
-          Erro ao verificar licença: {error}
+          Erro ao verificar assinatura: {error}
         </AlertDescription>
       </Alert>
     );
   }
 
-  // Se tem licença mas ela é inválida
-  if (license && !isLicenseValid) {
+  // Se tem assinatura mas ela é inválida
+  if (subscription && !isSubscriptionValid) {
     return fallback || (
       <Card className="border-warning bg-warning/5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-warning">
             <ShieldAlert className="h-5 w-5" />
-            Licença Necessária
+            Assinatura Necessária
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Sua licença não está ativa ou expirou.
+            Sua assinatura não está ativa ou expirou.
           </p>
           <Badge variant="outline" className="text-warning border-warning">
-            {license.status}
+            {subscription.status}
           </Badge>
         </CardContent>
       </Card>
     );
   }
 
-  // Se requer Premium, tratar ausência de licença como plano gratuito
-  if (requirePremium && (!license || license.plano === 'gratuito')) {
+  // Se requer Premium, tratar ausência de assinatura como plano gratuito
+  if (requirePremium && (!subscription || subscription.plano === 'gratuito')) {
     return fallback || (
       <Card className="border-warning bg-warning/5">
         <CardHeader>
@@ -81,19 +81,19 @@ export function LicenseGuard({ children, fallback, requirePremium = false }: Lic
             Esta funcionalidade está disponível apenas no plano Premium.
           </p>
           <Badge variant="outline" className="text-warning border-warning">
-            {license ? 'Plano Gratuito' : 'Sem plano (Gratuito)'}
+            {subscription ? 'Plano Gratuito' : 'Sem plano (Gratuito)'}
           </Badge>
         </CardContent>
       </Card>
     );
   }
 
-  // Licença válida - mostrar conteúdo
+  // Assinatura válida - mostrar conteúdo
   return <>{children}</>;
 }
 
-export function LicenseStatus() {
-  const { license, loading, error, isLicenseValid } = useLicense();
+export function PlanStatus() {
+  const { subscription, loading, error, isSubscriptionValid } = useSubscription();
 
   if (loading) {
     return (
@@ -104,29 +104,29 @@ export function LicenseStatus() {
     );
   }
 
-  if (error || !license) {
+  if (error || !subscription) {
     return (
       <div className="flex items-center gap-2 text-sm">
         <ShieldAlert className="h-3 w-3 text-warning" />
-        <span className="text-warning">Licença Inválida</span>
+        <span className="text-warning">Plano Gratuito</span>
       </div>
     );
   }
 
   const getStatusColor = () => {
-    if (!isLicenseValid) return 'text-warning';
+    if (!isSubscriptionValid) return 'text-warning';
     return 'text-success';
   };
 
   const getStatusIcon = () => {
-    if (!isLicenseValid) return <ShieldAlert className="h-3 w-3" />;
+    if (!isSubscriptionValid) return <ShieldAlert className="h-3 w-3" />;
     return <ShieldCheck className="h-3 w-3" />;
   };
 
   const getStatusText = () => {
-    if (!isLicenseValid) return 'Inativa';
-    if (license.tipo === 'vitalicia') return 'Vitalícia';
-    return 'Ativa';
+    if (!isSubscriptionValid) return 'Inativa';
+    if (subscription.tipo === 'vitalicia') return 'Vitalício';
+    return 'Premium';
   };
 
   return (

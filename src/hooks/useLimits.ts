@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useLicense } from './useLicense';
+import { useSubscription } from './useSubscription';
 import { startOfMonth } from 'date-fns';
 
 export interface LimitsState {
@@ -19,7 +19,7 @@ export interface LimitsState {
 
 export function useLimits() {
     const { user } = useAuth();
-    const { license, loading: licenseLoading } = useLicense();
+    const { subscription, loading: subscriptionLoading } = useSubscription();
     const [state, setState] = useState<LimitsState>({
         transactionLimit: 75,
         transactionUsage: 0,
@@ -34,12 +34,12 @@ export function useLimits() {
     });
 
     useEffect(() => {
-        if (!user || licenseLoading) return;
+        if (!user || subscriptionLoading) return;
 
         const fetchUsage = async () => {
             try {
                 // Determine Plan
-                const plan = (license?.plano as any) || 'gratuito';
+                const plan = (subscription?.plano as any) || 'gratuito';
 
                 // If Premium/Family, limits are effectively infinite
                 if (plan !== 'gratuito') {
@@ -108,7 +108,7 @@ export function useLimits() {
         };
 
         fetchUsage();
-    }, [user, license, licenseLoading]);
+    }, [user, subscription, subscriptionLoading]);
 
     return state;
 }

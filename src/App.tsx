@@ -19,10 +19,8 @@ import Reports from "@/pages/Reports";
 import Goals from "@/pages/Goals";
 import Settings from "@/pages/Settings";
 import Support from "@/pages/Support";
-import License from "@/pages/License";
 import Categories from "@/pages/Categories";
 import Budget from "@/pages/Budget";
-import CheckoutPage from "@/pages/Checkout";
 import NetWorth from "@/pages/NetWorth";
 import FamilySettings from "@/pages/FamilySettings";
 import RecurringTransactions from "@/pages/RecurringTransactions";
@@ -154,16 +152,6 @@ const AppRoutes = () => {
         }
       />
       <Route
-        path="/license"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <License />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
         path="/categories"
         element={
           <ProtectedRoute>
@@ -173,16 +161,7 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/checkout"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <CheckoutPage />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
+
       <Route
         path="/patrimonio"
         element={

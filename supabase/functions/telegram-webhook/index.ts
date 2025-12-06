@@ -175,19 +175,19 @@ function getRetirementPlanningLabel(value: string): string {
   const audioArrayBuffer = await audioBlob.arrayBuffer();
   // 3. Converter para Base64
   const base64Audio = encodeBase64(audioArrayBuffer);
-  
+
   // O Telegram geralmente envia áudio como OGG/Opus
   // Se o MIME type vier como application/octet-stream, corrigimos para audio/ogg
   let mimeType = audioBlob.type;
-  
+
   console.log('MIME type original do áudio:', mimeType);
-  
+
   // Corrigir MIME types problemáticos
   if (!mimeType || mimeType === 'application/octet-stream' || mimeType === '') {
     mimeType = 'audio/ogg';
     console.log('MIME type corrigido para:', mimeType);
   }
-  
+
   // Garantir que o MIME type é suportado pelo Gemini
   const supportedTypes = ['audio/wav', 'audio/mp3', 'audio/aiff', 'audio/aac', 'audio/ogg', 'audio/flac'];
   if (!supportedTypes.includes(mimeType)) {
@@ -233,9 +233,9 @@ function getRetirementPlanningLabel(value: string): string {
       }
     ]
   };
-  
+
   console.log('Enviando para o Gemini com MIME type:', mimeType, '(tamanho do áudio em bytes:', audioArrayBuffer.byteLength, ')');
-  
+
   const geminiResponse = await fetch(geminiUrl, {
     method: 'POST',
     headers: {
@@ -260,19 +260,195 @@ function getRetirementPlanningLabel(value: string): string {
   }
   return transcript;
 }
+
+/**
+ * MODELO 5 HÍBRIDO - Contexto Ativo
+ */
+async function getUserTelegramContext(supabase: any, userId: string): Promise<{
+  defaultContext: 'personal' | 'group';
+  showConfirmation: boolean;
+  alertAt80: boolean;
+  alertAt90: boolean;
+  groupId: string | null;
+  groupName: string | null;
+}> {
+  try {
+    const { data, error } = await supabase.rpc('get_telegram_context', {
+      p_user_id: userId
+    });
+
+    if (error || !data || data.length === 0) {
+      console.log('Contexto não encontrado, usando padrão: personal');
+      return {
+        defaultContext: 'personal',
+        showConfirmation: true,
+        alertAt80: true,
+        alertAt90: true,
+        groupId: null,
+        groupName: null
+      };
+    }
+
+    const context = data[0];
+    return {
+      defaultContext: context.default_context || 'personal',
+      showConfirmation: context.show_context_confirmation !== false,
+      alertAt80: context.alert_at_80_percent !== false,
+      alertAt90: context.alert_at_90_percent !== false,
+      groupId: context.current_group_id || null,
+      groupName: context.current_group_name || null
+    };
+  } catch (e) {
+    console.error('Erro ao obter contexto:', e);
+    return {
+      defaultContext: 'personal',
+      showConfirmation: true,
+      alertAt80: true,
+      alertAt90: true,
+      groupId: null,
+      groupName: null
+    };
+  }
+}
+
+async function setUserTelegramContext(
+  supabase: any,
+  userId: string,
+  context: 'personal' | 'group'
+): Promise<boolean> {
+  try {
+    const { error } = await supabase.rpc('set_telegram_context', {
+      p_user_id: userId,
+      p_context: context
+    });
+    if (error) {
+      console.error('Erro ao definir contexto:', error);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error('Erro ao definir contexto:', e);
+    return false;
+  }
+}
+
+function parseContextFromMessage(message: string): {
+  forcedContext: 'personal' | 'group' | null;
+  cleanMessage: string;
+} {
+  const lowerMessage = message.toLowerCase().trim();
+
+  if (lowerMessage.startsWith('#p ') || lowerMessage.startsWith('#pessoal ')) {
+    return {
+      forcedContext: 'personal',
+      cleanMessage: message.replace(/^#p(essoal)?\s+/i, '').trim()
+    };
+  }
+
+  if (lowerMessage.startsWith('#g ') || lowerMessage.startsWith('#grupo ')) {
+    return {
+      forcedContext: 'group',
+      cleanMessage: message.replace(/^#g(rupo)?\s+/i, '').trim()
+    };
+  }
+
+  return {
+    forcedContext: null,
+    cleanMessage: message
+  };
+}
+
+function formatTransactionConfirmation(params: {
+  tipo: string;
+  valor: number;
+  descricao: string;
+  categoria: string;
+  context: 'personal' | 'group';
+  groupName: string | null;
+  usage?: number;
+  limit?: number;
+  showUsage?: boolean;
+}): string {
+  const { tipo, valor, descricao, categoria, context, groupName, usage, limit, showUsage } = params;
+
+  const tipoEmoji = tipo === 'receita' ? '💚' : tipo === 'despesa' ? '💸' : '🔄';
+  const tipoLabel = tipo === 'receita' ? 'Receita' : tipo === 'despesa' ? 'Despesa' : 'Transferência';
+
+  const contextEmoji = context === 'group' ? '🏠' : '👤';
+  const contextLabel = context === 'group'
+    ? (groupName || 'Grupo Familiar')
+    : 'Pessoal';
+  const visibilityInfo = context === 'group'
+    ? '\nOutras pessoas do grupo verão esta transação.'
+    : '\n(só você vê)';
+
+  let message = `✅ ${tipoLabel} registrada!\n\n`;
+  message += `💰 Valor: ${formatCurrency(valor)}\n`;
+  message += `📁 Categoria: ${categoria}\n`;
+  message += `${contextEmoji} ${contextLabel}${visibilityInfo}`;
+
+  if (context === 'personal' && showUsage && usage !== undefined && limit !== undefined) {
+    const percentage = Math.round((usage / limit) * 100);
+    message += `\n\n📊 Uso: ${usage}/${limit} transações (${percentage}%)`;
+
+    if (limit - usage <= 10 && limit - usage > 0) {
+      message += `\n⚠️ ${limit - usage} transações restantes este mês`;
+    }
+  }
+
+  if (Math.random() < 0.2) {
+    message += context === 'group'
+      ? '\n\n💡 Dica: Use #p para registrar uma despesa pessoal'
+      : '\n\n💡 Dica: Use #g para registrar no grupo familiar';
+  }
+
+  return message;
+}
+
+function shouldShowLimitAlert(
+  usage: number,
+  limit: number,
+  alertAt80: boolean,
+  alertAt90: boolean
+): { show: boolean; message: string } {
+  const percentage = (usage / limit) * 100;
+
+  if (percentage >= 90 && alertAt90) {
+    return {
+      show: true,
+      message: `⚠️ *ATENÇÃO: Limite de Transações Pessoais*\n\n` +
+        `📊 Você usou ${usage} de ${limit} transações este mês (${Math.round(percentage)}%)\n` +
+        `📅 Restam ${limit - usage} transações\n\n` +
+        `💡 *Dica:* Transações do grupo são ILIMITADAS!\n` +
+        `   Use /g para alternar para o grupo familiar.\n\n` +
+        `💎 Ou faça upgrade para Individual (ilimitado) → /planos`
+    };
+  }
+
+  if (percentage >= 80 && percentage < 90 && alertAt80) {
+    return {
+      show: true,
+      message: `⚠️ Você está próximo do limite (${usage}/${limit} transações pessoais).\n\n` +
+        `💡 Dica: Use /g para registrar no grupo (ilimitado).`
+    };
+  }
+
+  return { show: false, message: '' };
+}
+
 /**
  * Vincula a conta de um utilizador do Telegram à sua licença.
  */
-async function linkUserWithLicense(supabase: any, telegramChatId: number, licenseCode: string): Promise<{success: boolean; message: string}> {
+async function linkUserWithLicense(supabase: any, telegramChatId: number, licenseCode: string): Promise<{ success: boolean; message: string }> {
   console.log(`Tentando vincular a licença ${licenseCode} ao chat ${telegramChatId}`);
-  
+
   // Verifica se a licença existe e está ativa
   const { data: license, error: licenseError } = await supabase
     .from('licenses')
     .select('user_id, status')
     .eq('codigo', licenseCode)
     .single();
-    
+
   if (licenseError || !license || license.status !== 'ativo') {
     console.error('Licença não encontrada ou inativa:', licenseError);
     return {
@@ -280,14 +456,14 @@ async function linkUserWithLicense(supabase: any, telegramChatId: number, licens
       message: '❌ Código de licença inválido, expirado ou não encontrado.'
     };
   }
-  
+
   // Verifica se este chat_id já está vinculado a algum perfil
   const { data: existingProfile } = await supabase
     .from('profiles')
     .select('user_id')
     .eq('telegram_chat_id', telegramChatId)
     .single();
-    
+
   if (existingProfile) {
     if (existingProfile.user_id === license.user_id) {
       return {
@@ -301,13 +477,13 @@ async function linkUserWithLicense(supabase: any, telegramChatId: number, licens
       };
     }
   }
-  
+
   // Vincula o telegram_chat_id ao perfil do usuário
   const { error: updateError } = await supabase
     .from('profiles')
     .update({ telegram_chat_id: telegramChatId })
     .eq('user_id', license.user_id);
-    
+
   if (updateError) {
     console.error('Erro ao vincular a conta:', updateError);
     return {
@@ -315,9 +491,9 @@ async function linkUserWithLicense(supabase: any, telegramChatId: number, licens
       message: '❌ Ocorreu um erro ao vincular a sua conta. Tente novamente.'
     };
   }
-  
+
   console.log(`✅ Chat ${telegramChatId} vinculado com sucesso ao usuário ${license.user_id}`);
-  
+
   return {
     success: true,
     message: '✅ Conta vinculada com sucesso! Agora você pode usar todos os comandos:\n\n🔍 /saldo - Ver saldo das suas contas\n📊 /resumo - Resumo financeiro do mês\n🎯 /metas - Acompanhar suas metas\n❓ /ajuda - Ver lista completa de comandos\n\n💬 Ou simplesmente escreva como "Gastei 25 reais com almoço" que eu registro automaticamente!'
@@ -340,6 +516,12 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
 • /extrato - Últimas transações
 • /resumo - Resumo do mês
 
+🔄 *Contexto (Novo!)*
+• /contexto - Escolher onde registrar (Pessoal/Grupo)
+• /p - Alternar para Pessoal
+• /g - Alternar para Grupo
+• Use #p ou #g em mensagens
+
 📊 *Análises Inteligentes*
 • /perguntar [pergunta] - Pergunte sobre seus gastos
 • /top_gastos - Top 5 categorias do mês
@@ -353,8 +535,11 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
 • /metas - Ver progresso das metas
 • /orcamento - Status do orçamento
 
+⚙️ *Configurações*
+• /config - Configurações do bot
+
 💡 /ajuda - Ver este menu`;
-      
+
       await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
       break;
     }
@@ -504,7 +689,7 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
         .sort(([, a]: any, [, b]: any) => b - a)
         .slice(0, 5);
 
-      const list = sorted.map(([cat, val]: any, i: number) => 
+      const list = sorted.map(([cat, val]: any, i: number) =>
         `${i + 1}. *${cat}*: ${formatCurrency(val)}`
       ).join('\n');
 
@@ -613,7 +798,7 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
         ]
       };
 
-      await sendTelegramMessage(chatId, message, { 
+      await sendTelegramMessage(chatId, message, {
         parse_mode: 'Markdown',
         reply_markup: keyboard
       });
@@ -647,16 +832,16 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
         }
 
         let message = '📋 *Contas Recorrentes Ativas*\n\n';
-        
+
         recurring.forEach((item, index) => {
           const emoji = item.type === 'receita' ? '💰' : '💸';
           const status = item.next_due_date <= new Date().toISOString().split('T')[0] ? '🔴' : '🟢';
           const frequency = item.frequency === 'diaria' ? 'Diária' :
-                           item.frequency === 'semanal' ? 'Semanal' :
-                           item.frequency === 'mensal' ? 'Mensal' :
-                           item.frequency === 'trimestral' ? 'Trimestral' :
-                           item.frequency === 'semestral' ? 'Semestral' : 'Anual';
-          
+            item.frequency === 'semanal' ? 'Semanal' :
+              item.frequency === 'mensal' ? 'Mensal' :
+                item.frequency === 'trimestral' ? 'Trimestral' :
+                  item.frequency === 'semestral' ? 'Semestral' : 'Anual';
+
           message += `${emoji} *${item.title}*\n`;
           message += `   ${formatCurrency(item.amount)} - ${frequency}\n`;
           message += `   ${status} Próxima: ${new Date(item.next_due_date).toLocaleDateString('pt-BR')}\n`;
@@ -694,8 +879,8 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
           }])
         };
 
-        await sendTelegramMessage(chatId, '📋 *Pausar/Reativar Conta Recorrente*\n\nSelecione uma transação:', { 
-          reply_markup: keyboard 
+        await sendTelegramMessage(chatId, '📋 *Pausar/Reativar Conta Recorrente*\n\nSelecione uma transação:', {
+          reply_markup: keyboard
         });
       } catch (error) {
         console.error('Erro ao buscar contas recorrentes:', error);
@@ -733,7 +918,7 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
       const score = financialProfile.financial_health_score;
       let healthLevel = '';
       let healthEmoji = '';
-      
+
       if (score >= 80) {
         healthLevel = 'Excelente';
         healthEmoji = '🟢';
@@ -754,16 +939,126 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
       // Processar recomendações
       let recommendations = [];
       try {
-        recommendations = Array.isArray(financialProfile.recommendations) 
-          ? financialProfile.recommendations 
+        recommendations = Array.isArray(financialProfile.recommendations)
+          ? financialProfile.recommendations
           : JSON.parse(financialProfile.recommendations as string);
       } catch {
         recommendations = [];
       }
 
-      const message = `📊 *Seu Perfil Financeiro*\n\n${healthEmoji} *Score de Saúde Financeira: ${score}/100 - ${healthLevel}*\n\n📈 *Progresso:*\n${'█'.repeat(Math.floor(score/10))}${'░'.repeat(10-Math.floor(score/10))} ${score}%\n\n🎯 *Suas Respostas:*\n• Fundo de Emergência: ${getEmergencyFundLabel(financialProfile.emergency_fund)}\n• Dívidas: ${getDebtSituationLabel(financialProfile.debt_situation)}\n• Poupança: ${getSavingsRateLabel(financialProfile.savings_rate)}\n• Investimentos: ${getInvestmentKnowledgeLabel(financialProfile.investment_knowledge)}\n• Objetivos: ${getFinancialGoalsLabel(financialProfile.financial_goals)}\n• Orçamento: ${getBudgetControlLabel(financialProfile.budget_control)}\n• Seguros: ${getInsuranceCoverageLabel(financialProfile.insurance_coverage)}\n• Aposentadoria: ${getRetirementPlanningLabel(financialProfile.retirement_planning)}\n\n💡 *Recomendações:*\n${recommendations.slice(0, 3).map((rec: string, i: number) => `${i+1}. ${rec}`).join('\n')}\n\n🔗 [Ver Perfil Completo](https://app.boascontas.com/quiz-financeiro)\n\n📅 *Última atualização:* ${new Date(financialProfile.completed_at).toLocaleDateString('pt-BR')}`;
-      
+      const message = `📊 *Seu Perfil Financeiro*\n\n${healthEmoji} *Score de Saúde Financeira: ${score}/100 - ${healthLevel}*\n\n📈 *Progresso:*\n${'█'.repeat(Math.floor(score / 10))}${'░'.repeat(10 - Math.floor(score / 10))} ${score}%\n\n🎯 *Suas Respostas:*\n• Fundo de Emergência: ${getEmergencyFundLabel(financialProfile.emergency_fund)}\n• Dívidas: ${getDebtSituationLabel(financialProfile.debt_situation)}\n• Poupança: ${getSavingsRateLabel(financialProfile.savings_rate)}\n• Investimentos: ${getInvestmentKnowledgeLabel(financialProfile.investment_knowledge)}\n• Objetivos: ${getFinancialGoalsLabel(financialProfile.financial_goals)}\n• Orçamento: ${getBudgetControlLabel(financialProfile.budget_control)}\n• Seguros: ${getInsuranceCoverageLabel(financialProfile.insurance_coverage)}\n• Aposentadoria: ${getRetirementPlanningLabel(financialProfile.retirement_planning)}\n\n💡 *Recomendações:*\n${recommendations.slice(0, 3).map((rec: string, i: number) => `${i + 1}. ${rec}`).join('\n')}\n\n🔗 [Ver Perfil Completo](https://app.boascontas.com/quiz-financeiro)\n\n📅 *Última atualização:* ${new Date(financialProfile.completed_at).toLocaleDateString('pt-BR')}`;
+
       await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
+      break;
+    }
+
+    case '/contexto':
+    case '/ctx': {
+      const context = await getUserTelegramContext(supabase, userId);
+
+      const message = `📌 *Escolha o contexto padrão*\n\n` +
+        `Onde suas próximas transações serão registradas?\n\n` +
+        `*Contexto atual:* ${context.defaultContext === 'personal' ? '👤 Pessoal' : '🏠 ' + (context.groupName || 'Grupo')}\n\n` +
+        `${context.groupId ? '🏠 *Grupo:* Transações compartilhadas (ILIMITADAS)\n' : ''}` +
+        `👤 *Pessoal:* Apenas você vê (75/mês para free)`;
+
+      const keyboard: any = {
+        inline_keyboard: [
+          [{ text: context.defaultContext === 'personal' ? '✅ 👤 Pessoal' : '👤 Pessoal', callback_data: 'context_personal' }]
+        ]
+      };
+
+      if (context.groupId) {
+        keyboard.inline_keyboard.push([
+          { text: context.defaultContext === 'group' ? `✅ 🏠 ${context.groupName}` : `🏠 ${context.groupName}`, callback_data: 'context_group' }
+        ]);
+      } else {
+        keyboard.inline_keyboard.push([
+          { text: '⚠️ Você não está em nenhum grupo', callback_data: 'context_no_group' }
+        ]);
+      }
+
+      keyboard.inline_keyboard.push([{ text: '❌ Cancelar', callback_data: 'context_cancel' }]);
+
+      await sendTelegramMessage(chatId, message, {
+        parse_mode: 'Markdown',
+        reply_markup: keyboard
+      });
+      break;
+    }
+
+    case '/p': {
+      await setUserTelegramContext(supabase, userId, 'personal');
+
+      const { data: limits } = await supabase.rpc('check_transaction_limit', { user_id: userId });
+      const usage = limits?.usage || 0;
+      const limit = limits?.limit || 75;
+
+      const message = `✅ *Contexto alterado!*\n\n` +
+        `📌 Suas transações agora vão para:\n` +
+        `👤 *Pessoal* (só você vê)\n\n` +
+        `📊 Limite: ${usage}/${limit} transações este mês\n\n` +
+        `💡 Para voltar ao grupo: /g`;
+
+      await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
+      break;
+    }
+
+    case '/g':
+    case '/grupo': {
+      const context = await getUserTelegramContext(supabase, userId);
+
+      if (!context.groupId) {
+        await sendTelegramMessage(
+          chatId,
+          '⚠️ Você não está em nenhum grupo familiar.\n\n' +
+          '👥 Para criar ou entrar em um grupo, acesse:\n' +
+          '🔗 [App Boas Contas](https://app.boascontas.com/familia)',
+          { parse_mode: 'Markdown' }
+        );
+        return;
+      }
+
+      await setUserTelegramContext(supabase, userId, 'group');
+
+      const message = `✅ *Contexto alterado!*\n\n` +
+        `📌 Suas transações agora vão para:\n` +
+        `🏠 *${context.groupName}*\n\n` +
+        `♾️ Transações do grupo: ILIMITADAS\n` +
+        `👥 Todos do grupo verão suas transações\n\n` +
+        `💡 Para voltar ao pessoal: /p`;
+
+      await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
+      break;
+    }
+
+    case '/config': {
+      const context = await getUserTelegramContext(supabase, userId);
+
+      const message = `⚙️ *Configurações do Telegram*\n\n` +
+        `📌 *Contexto Padrão:*\n` +
+        `${context.defaultContext === 'personal' ? '● ' : '○ '}👤 Pessoal\n` +
+        `${context.defaultContext === 'group' ? '● ' : '○ '}🏠 ${context.groupName || 'Grupo'}\n\n` +
+        `🔔 *Avisos de Limite:*\n` +
+        `${context.alertAt80 ? '✅' : '☐'} Avisar em 80% (60/75)\n` +
+        `${context.alertAt90 ? '✅' : '☐'} Avisar em 90% (68/75)\n\n` +
+        `━━━━━━━━━━━━━━━━\n` +
+        `💡 *Sobre o contexto:*\n` +
+        `• Transações do grupo: ILIMITADAS\n` +
+        `• Transações pessoais: 75/mês (free)\n` +
+        `• Use #p ou #g para mudar pontualmente`;
+
+      const keyboard = {
+        inline_keyboard: [
+          [{ text: '📌 Trocar Contexto', callback_data: 'config_context' }],
+          [{ text: '❌ Fechar', callback_data: 'config_close' }]
+        ]
+      };
+
+      await sendTelegramMessage(chatId, message, {
+        parse_mode: 'Markdown',
+        reply_markup: keyboard
+      });
       break;
     }
 
@@ -774,7 +1069,7 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
       }
 
       const thinking = await sendTelegramMessage(chatId, '🤔 Processando compra...');
-      
+
       try {
         const response = await supabase.functions.invoke('nlp-transaction', {
           body: { message: `COMPRA DE ATIVO: ${argument}`, userId }
@@ -783,12 +1078,12 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
         if (response.error) throw response.error;
 
         const result = response.data;
-        
+
         // Extrair dados da transação
         const ticker = result.description?.match(/[A-Z]{4}\d{1,2}/)?.[0];
         const quantidade = parseFloat(result.amount || 0);
         const preco = result.additionalInfo?.price || 0;
-        
+
         if (!ticker || quantidade <= 0) {
           await editTelegramMessage(chatId, thinking.message_id, '❌ Não consegui identificar o ativo ou quantidade. Use o formato:\n"Comprei 10 ações PETR4 a R$ 35,50"');
           return;
@@ -811,8 +1106,8 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
         if (insertError) throw insertError;
 
         await editTelegramMessage(
-          chatId, 
-          thinking.message_id, 
+          chatId,
+          thinking.message_id,
           `✅ *Compra Registrada!*\n\n📈 ${ticker}\n💰 ${quantidade} ações\n💵 R$ ${preco.toFixed(2)} cada\n\n💎 Total: ${formatCurrency(quantidade * preco)}`,
           { parse_mode: 'Markdown' }
         );
@@ -830,7 +1125,7 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
       }
 
       const thinking = await sendTelegramMessage(chatId, '🤔 Processando venda...');
-      
+
       try {
         const response = await supabase.functions.invoke('nlp-transaction', {
           body: { message: `VENDA DE ATIVO: ${argument}`, userId }
@@ -839,11 +1134,11 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
         if (response.error) throw response.error;
 
         const result = response.data;
-        
+
         const ticker = result.description?.match(/[A-Z]{4}\d{1,2}/)?.[0];
         const quantidade = parseFloat(result.amount || 0);
         const preco = result.additionalInfo?.price || 0;
-        
+
         if (!ticker || quantidade <= 0) {
           await editTelegramMessage(chatId, thinking.message_id, '❌ Não consegui identificar o ativo ou quantidade. Use o formato:\n"Vendi 5 ações VALE3 a R$ 68,20"');
           return;
@@ -865,8 +1160,8 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
         if (insertError) throw insertError;
 
         await editTelegramMessage(
-          chatId, 
-          thinking.message_id, 
+          chatId,
+          thinking.message_id,
           `✅ *Venda Registrada!*\n\n📉 ${ticker}\n💰 ${quantidade} ações\n💵 R$ ${preco.toFixed(2)} cada\n\n💎 Total: ${formatCurrency(quantidade * preco)}`,
           { parse_mode: 'Markdown' }
         );
@@ -884,12 +1179,12 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
       }
 
       const thinking = await sendTelegramMessage(chatId, '🤔 Registrando provento...');
-      
+
       try {
         const ticker = argument.match(/[A-Z]{4}\d{1,2}/)?.[0];
         const valorMatch = argument.match(/R?\$?\s*(\d+(?:[.,]\d{2})?)/);
         const valor = valorMatch ? parseFloat(valorMatch[1].replace(',', '.')) : 0;
-        
+
         if (!ticker || valor <= 0) {
           await editTelegramMessage(chatId, thinking.message_id, '❌ Não consegui identificar o ativo ou valor. Use o formato:\n"Recebi R$ 12,50 de dividendos de ITSA4"');
           return;
@@ -911,8 +1206,8 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
         if (insertError) throw insertError;
 
         await editTelegramMessage(
-          chatId, 
-          thinking.message_id, 
+          chatId,
+          thinking.message_id,
           `✅ *Provento Registrado!*\n\n💰 ${ticker}\n💵 ${formatCurrency(valor)}\n\n📅 ${new Date().toLocaleDateString('pt-BR')}`,
           { parse_mode: 'Markdown' }
         );
@@ -944,18 +1239,18 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
           const costBasis = inv.quantity * inv.average_price;
           const profit = currentValue - costBasis;
           const profitPercent = ((profit / costBasis) * 100).toFixed(2);
-          
+
           totalValue += currentValue;
           totalProfit += profit;
-          
+
           const profitIcon = profit >= 0 ? '📈' : '📉';
           return `${profitIcon} *${inv.ticker}*\n   ${inv.quantity} ações × R$ ${inv.current_price.toFixed(2)}\n   PM: R$ ${inv.average_price.toFixed(2)} | ${profitPercent}%\n   ${formatCurrency(currentValue)}`;
         }).join('\n\n');
 
         const totalProfitPercent = totalValue > 0 ? ((totalProfit / (totalValue - totalProfit)) * 100).toFixed(2) : '0';
-        
+
         const message = `📊 *Sua Carteira de Investimentos*\n\n${list}\n\n━━━━━━━━━━━━━━━━\n💎 *Valor Total:* ${formatCurrency(totalValue)}\n${totalProfit >= 0 ? '📈' : '📉'} *Lucro:* ${formatCurrency(totalProfit)} (${totalProfitPercent}%)`;
-        
+
         await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
       } catch (error) {
         console.error('Erro ao buscar carteira:', error);
@@ -966,7 +1261,7 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
 
     case '/patrimonio': {
       const thinking = await sendTelegramMessage(chatId, '🤔 Calculando patrimônio...');
-      
+
       try {
         const response = await supabase.functions.invoke('calculate-net-worth');
 
@@ -979,7 +1274,7 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
         const debts = data.breakdown?.debts || 0;
 
         const message = `💎 *Seu Patrimônio Líquido*\n\n━━━━━━━━━━━━━━━━\n💰 *Total:* ${formatCurrency(netWorth)}\n━━━━━━━━━━━━━━━━\n\n📊 *Composição:*\n\n💵 Contas: ${formatCurrency(cash)}\n📈 Investimentos: ${formatCurrency(investments)}\n💳 Dívidas: ${formatCurrency(debts)}\n\n📅 Atualizado em: ${new Date(data.calculatedAt).toLocaleString('pt-BR')}`;
-        
+
         await editTelegramMessage(chatId, thinking.message_id, message, { parse_mode: 'Markdown' });
       } catch (error) {
         console.error('Erro ao calcular patrimônio:', error);
@@ -1007,29 +1302,29 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
         const list = debts.map((debt: any) => {
           const balance = Math.abs(parseFloat(debt.saldo_atual || 0));
           totalDebt += balance;
-          
+
           let details = `💳 *${debt.nome}*\n   Saldo: ${formatCurrency(balance)}`;
-          
+
           if (debt.tipo === 'cartao_credito') {
             details += `\n   Limite: ${formatCurrency(parseFloat(debt.limite_credito || 0))}`;
             if (debt.dia_vencimento) {
               details += `\n   Vencimento: dia ${debt.dia_vencimento}`;
             }
           }
-          
+
           if (debt.monthly_payment) {
             details += `\n   Parcela: ${formatCurrency(parseFloat(debt.monthly_payment))}`;
           }
-          
+
           if (debt.remaining_installments) {
             details += `\n   Faltam: ${debt.remaining_installments} parcelas`;
           }
-          
+
           return details;
         }).join('\n\n');
 
         const message = `💳 *Suas Dívidas*\n\n${list}\n\n━━━━━━━━━━━━━━━━\n⚠️ *Total de Dívidas:* ${formatCurrency(totalDebt)}`;
-        
+
         await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
       } catch (error) {
         console.error('Erro ao buscar dívidas:', error);
@@ -1053,19 +1348,19 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
 
         let totalBudget = 0;
         let totalSpent = 0;
-        
+
         const list = budgets.map((b: any) => {
           const budget = parseFloat(b.amount);
           const spent = parseFloat(b.spent);
           const remaining = budget - spent;
           const percent = budget > 0 ? ((spent / budget) * 100).toFixed(0) : '0';
-          
+
           totalBudget += budget;
           totalSpent += spent;
-          
+
           const icon = spent > budget ? '🔴' : spent > budget * 0.8 ? '🟡' : '🟢';
           const bar = '█'.repeat(Math.min(10, Math.floor((spent / budget) * 10))) + '░'.repeat(Math.max(0, 10 - Math.floor((spent / budget) * 10)));
-          
+
           return `${icon} *${b.category_name}*\n${bar} ${percent}%\n${formatCurrency(spent)} / ${formatCurrency(budget)}\n${remaining >= 0 ? '✅' : '⚠️'} Restante: ${formatCurrency(Math.abs(remaining))}`;
         }).join('\n\n');
 
@@ -1073,7 +1368,7 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
         const totalRemaining = totalBudget - totalSpent;
 
         const message = `📊 *Orçamento de ${new Date().toLocaleDateString('pt-BR', { month: 'long' })}*\n\n${list}\n\n━━━━━━━━━━━━━━━━\n💰 *Total Orçado:* ${formatCurrency(totalBudget)}\n💸 *Total Gasto:* ${formatCurrency(totalSpent)} (${totalPercent}%)\n${totalRemaining >= 0 ? '✅' : '⚠️'} *Saldo:* ${formatCurrency(Math.abs(totalRemaining))}`;
-        
+
         await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
       } catch (error) {
         console.error('Erro ao buscar orçamento:', error);
@@ -1135,7 +1430,7 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
   }
 }
 // --- Lógica Principal do Webhook ---
-serve(async (req)=>{
+serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', {
       headers: corsHeaders
@@ -1157,7 +1452,7 @@ serve(async (req)=>{
         .select('user_id')
         .eq('telegram_chat_id', chatId)
         .single();
-        
+
       if (!profile) {
         return new Response('OK', { status: 200, headers: corsHeaders });
       }
@@ -1173,7 +1468,7 @@ serve(async (req)=>{
           .single();
 
         const transactionId = session?.contexto?.editing_transaction_id;
-        
+
         if (!transactionId) {
           await editTelegramMessage(chatId, messageId, '❌ Sessão expirada. Use /editar_ultima novamente.');
           return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
@@ -1198,8 +1493,8 @@ serve(async (req)=>{
         // Salvar campo a editar
         await supabaseAdmin
           .from('telegram_sessions')
-          .update({ 
-            contexto: { 
+          .update({
+            contexto: {
               editing_transaction_id: transactionId,
               editing_field: data.replace('edit_', '')
             }
@@ -1221,7 +1516,7 @@ serve(async (req)=>{
       // Ações de toggle de transações recorrentes
       if (data.startsWith('toggle_recurring_')) {
         const recurringId = data.replace('toggle_recurring_', '');
-        
+
         try {
           // Buscar transação recorrente
           const { data: recurring, error: fetchError } = await supabaseAdmin
@@ -1250,9 +1545,9 @@ serve(async (req)=>{
 
           const statusText = newStatus ? 'ativada' : 'pausada';
           const emoji = newStatus ? '▶️' : '⏸️';
-          
+
           await editTelegramMessage(chatId, messageId, `✅ Transação recorrente "${recurring.title}" foi ${statusText}!\n\n${emoji} Status: ${newStatus ? 'Ativa' : 'Pausada'}`);
-          
+
         } catch (error) {
           console.error('Erro ao toggle transação recorrente:', error);
           await editTelegramMessage(chatId, messageId, '❌ Erro interno. Tente novamente.');
@@ -1262,6 +1557,78 @@ serve(async (req)=>{
           status: 200,
           headers: corsHeaders
         });
+      }
+
+      // Callbacks de contexto (Modelo 5 Híbrido)
+      if (data === 'context_personal') {
+        await setUserTelegramContext(supabaseAdmin, userId, 'personal');
+        await editTelegramMessage(chatId, messageId,
+          '✅ Contexto alterado para 👤 Pessoal\n\nSuas próximas transações serão pessoais (75/mês para free).'
+        );
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      if (data === 'context_group') {
+        await setUserTelegramContext(supabaseAdmin, userId, 'group');
+        const context = await getUserTelegramContext(supabaseAdmin, userId);
+        await editTelegramMessage(chatId, messageId,
+          `✅ Contexto alterado para 🏠 ${context.groupName}\n\nSuas próximas transações serão compartilhadas (ILIMITADAS).`
+        );
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      if (data === 'context_cancel') {
+        await editTelegramMessage(chatId, messageId, '❌ Operação cancelada.');
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      if (data === 'context_no_group') {
+        await editTelegramMessage(chatId, messageId,
+          '⚠️ Você não está em nenhum grupo.\n\n' +
+          'Para criar ou entrar em um grupo familiar, acesse:\n' +
+          '🔗 https://app.boascontas.com/familia'
+        );
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      if (data === 'config_context') {
+        // Redirecionar para o comando /contexto
+        const context = await getUserTelegramContext(supabaseAdmin, userId);
+
+        const message = `📌 *Escolha o contexto padrão*\n\n` +
+          `Onde suas próximas transações serão registradas?\n\n` +
+          `*Contexto atual:* ${context.defaultContext === 'personal' ? '👤 Pessoal' : '🏠 ' + (context.groupName || 'Grupo')}\n\n` +
+          `${context.groupId ? '🏠 *Grupo:* Transações compartilhadas (ILIMITADAS)\n' : ''}` +
+          `👤 *Pessoal:* Apenas você vê (75/mês para free)`;
+
+        const keyboard: any = {
+          inline_keyboard: [
+            [{ text: context.defaultContext === 'personal' ? '✅ 👤 Pessoal' : '👤 Pessoal', callback_data: 'context_personal' }]
+          ]
+        };
+
+        if (context.groupId) {
+          keyboard.inline_keyboard.push([
+            { text: context.defaultContext === 'group' ? `✅ 🏠 ${context.groupName}` : `🏠 ${context.groupName}`, callback_data: 'context_group' }
+          ]);
+        } else {
+          keyboard.inline_keyboard.push([
+            { text: '⚠️ Você não está em nenhum grupo', callback_data: 'context_no_group' }
+          ]);
+        }
+
+        keyboard.inline_keyboard.push([{ text: '❌ Cancelar', callback_data: 'context_cancel' }]);
+
+        await editTelegramMessage(chatId, messageId, message, {
+          parse_mode: 'Markdown',
+          reply_markup: keyboard
+        });
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      if (data === 'config_close') {
+        await editTelegramMessage(chatId, messageId, '⚙️ Configurações fechadas.');
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
 
       // Ações de confirmação de transações (sistema antigo)
@@ -1295,9 +1662,9 @@ serve(async (req)=>{
         headers: corsHeaders
       });
     }
-    
+
     const message = body.message;
-    
+
     // ⚠️ CRÍTICO: Ignorar mensagens enviadas pelo próprio bot para evitar loops
     if (message.from?.is_bot) {
       console.log("Ignorando mensagem do próprio bot para evitar loop");
@@ -1306,7 +1673,7 @@ serve(async (req)=>{
         headers: corsHeaders
       });
     }
-    
+
     const chatId = message.chat.id;
     let text = message.text ? message.text.trim() : null;
     const voice = message.voice;
@@ -1320,7 +1687,7 @@ serve(async (req)=>{
     if (text && text.startsWith('/entrar ')) {
       const inviteToken = text.replace('/entrar ', '').trim().toUpperCase();
       console.log('👨‍👩‍👧‍👦 Tentando aceitar convite familiar:', inviteToken);
-      
+
       // Verificar se usuário está vinculado
       const { data: profile } = await supabaseAdmin
         .from('profiles')
@@ -1343,7 +1710,7 @@ serve(async (req)=>{
       // !! MODIFICAÇÃO IMPORTANTE !!
       // Agora passamos o 'p_user_id'
       const { data: result, error: inviteError } = await supabaseAdmin
-        .rpc('accept_family_invite', { 
+        .rpc('accept_family_invite', {
           invite_token: inviteToken,
           p_user_id: profile.user_id // Enviando o ID do usuário
         });
@@ -1356,7 +1723,7 @@ serve(async (req)=>{
         if (inviteError && inviteError.message.includes('USER_ALREADY_IN_GROUP')) {
           errorMessage = '⚠️ Você já faz parte de um grupo familiar. Só é permitido um grupo por conta.';
         }
-        
+
         await sendTelegramMessage(
           chatId,
           errorMessage // Usa a nova mensagem de erro
@@ -1398,7 +1765,7 @@ serve(async (req)=>{
       .select('user_id')
       .eq('telegram_chat_id', chatId)
       .single();
-      
+
     if (!profile) {
       await sendTelegramMessage(chatId, '🔗 *Sua conta não está vinculada*\n\nUse:\n`/start SEU_CODIGO_DE_LICENCA`');
       return new Response('Utilizador não vinculado', {
@@ -1502,7 +1869,7 @@ serve(async (req)=>{
       const questionKeywords = ['quanto', 'quantos', 'quantas', 'qual', 'quais', 'onde', 'quando', 'como'];
       if (questionKeywords.some(kw => text.toLowerCase().startsWith(kw))) {
         const thinking = await sendTelegramMessage(chatId, '🤔 Deixe-me verificar...');
-        
+
         try {
           const response = await supabaseAdmin.functions.invoke('query-engine', {
             body: { question: text, userId }

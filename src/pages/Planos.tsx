@@ -167,6 +167,26 @@ const Planos = () => {
         }
     };
 
+    const handleManageSubscription = async () => {
+        try {
+            setLoading('portal');
+            const { data, error } = await supabase.functions.invoke('customer-portal');
+            if (error) throw error;
+            if (data?.url) {
+                window.location.href = data.url;
+            }
+        } catch (error) {
+            console.error("Erro ao abrir portal:", error);
+            toast({
+                title: "Erro ao abrir portal",
+                description: "Não foi possível redirecionar para o portal de cobrança.",
+                variant: "destructive"
+            });
+        } finally {
+            setLoading(null);
+        }
+    };
+
     return (
         <div className="container mx-auto px-4 py-8 max-w-7xl">
             {/* Header */}
@@ -190,17 +210,27 @@ const Planos = () => {
                         Planos e Preços
                     </h1>
 
-                    <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                    <div className="text-lg text-muted-foreground max-w-2xl mx-auto">
                         {currentPlan === 'gratuito' ? (
-                            <>
+                            <p>
                                 Você está usando o plano <strong>Gratuito</strong>.
                                 {isTrial && ` Período de teste: ${transactionUsage}/${transactionLimit} transações.`}
                                 {!isTrial && ` Este mês: ${transactionUsage}/${transactionLimit} transações.`}
-                            </>
+                            </p>
                         ) : (
-                            `Gerencie sua assinatura ou faça upgrade para um plano superior.`
+                            <div className="flex flex-col items-center gap-4">
+                                <p>Gerencie sua assinatura ou faça upgrade para um plano superior.</p>
+                                <Button
+                                    variant="outline"
+                                    onClick={handleManageSubscription}
+                                    disabled={loading === 'portal'}
+                                >
+                                    {loading === 'portal' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Gerenciar Assinatura
+                                </Button>
+                            </div>
                         )}
-                    </p>
+                    </div>
                 </div>
             </div>
 

@@ -92,10 +92,7 @@ export function Header({ onMenuClick }: HeaderProps) {
               <Crown className="mr-2 h-4 w-4" />
               Planos
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate('/license')}>
-              <Shield className="mr-2 h-4 w-4" />
-              Licença
-            </DropdownMenuItem>
+
             <DropdownMenuItem onClick={() => navigate('/settings')}>
               <Settings className="mr-2 h-4 w-4" />
               Configurações

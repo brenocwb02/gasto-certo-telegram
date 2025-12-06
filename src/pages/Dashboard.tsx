@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { useFinancialStats, useProfile, useGoals, useFinancialProfile } from "@/hooks/useSupabaseData";
-import { LicenseStatus } from "@/components/LicenseGuard";
+import { PlanStatus } from "@/components/PlanGuard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFamily } from "@/hooks/useFamily";
 import {
@@ -169,7 +169,7 @@ const Dashboard = () => {
             </p>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            <LicenseStatus />
+            <PlanStatus />
             <Dialog open={showTransactionForm} onOpenChange={setShowTransactionForm}>
               <DialogTrigger asChild>
                 <Button className="flex items-center gap-2" disabled={isTransactionLimitReached}>
