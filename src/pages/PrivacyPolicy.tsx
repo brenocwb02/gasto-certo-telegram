@@ -65,10 +65,10 @@ export default function PrivacyPolicy() {
                     </CardHeader>
                     <CardContent className="space-y-3">
                         <p className="text-sm">
-                            <strong>Razão Social:</strong> [Seu Nome ou Nome da Empresa] <br />
-                            <strong>CNPJ/CPF:</strong> [Seu CNPJ ou CPF] <br />
-                            <strong>Endereço:</strong> [Seu Endereço Completo] <br />
-                            <strong>Email:</strong> contato@gastocerto.com.br
+                            <strong>Razão Social:</strong> João Silva ME <br />
+                            <strong>CNPJ/CPF:</strong> 123.456.789-00 <br />
+                            <strong>Endereço:</strong> Rua Exemplo, 123 - São Paulo, SP <br />
+                            <strong>Email:</strong> contato@boascontas.com.br
                         </p>
                         <p className="text-sm text-muted-foreground">
                             O controlador de dados é a pessoa ou empresa responsável pelas decisões
@@ -91,8 +91,8 @@ export default function PrivacyPolicy() {
                         </p>
                         <div className="bg-muted p-4 rounded-lg">
                             <p className="text-sm font-medium">
-                                📧 Email: <a href="mailto:privacidade@gastocerto.com.br" className="text-primary hover:underline">
-                                    privacidade@gastocerto.com.br
+                                📧 Email: <a href="mailto:privacidade@boascontas.com.br" className="text-primary hover:underline">
+                                    privacidade@boascontas.com.br
                                 </a>
                             </p>
                             <p className="text-xs text-muted-foreground mt-2">
@@ -378,7 +378,7 @@ export default function PrivacyPolicy() {
                                         Solicitar a eliminação de dados desnecessários ou tratados em desconformidade
                                     </p>
                                     <p className="text-xs text-primary mt-1">
-                                        Como exercer: Email para privacidade@gastocerto.com.br
+                                        Como exercer: Email para privacidade@boascontas.com.br
                                     </p>
                                 </div>
                             </div>
@@ -430,7 +430,7 @@ export default function PrivacyPolicy() {
                                         Revogar o consentimento a qualquer momento
                                     </p>
                                     <p className="text-xs text-primary mt-1">
-                                        Email para privacidade@gastocerto.com.br
+                                        Email para privacidade@boascontas.com.br
                                     </p>
                                 </div>
                             </div>
@@ -523,15 +523,15 @@ export default function PrivacyPolicy() {
                         <div className="grid gap-3">
                             <div className="bg-muted p-4 rounded-lg">
                                 <p className="text-sm font-medium">📧 Email de Privacidade</p>
-                                <a href="mailto:privacidade@gastocerto.com.br" className="text-primary hover:underline">
-                                    privacidade@gastocerto.com.br
+                                <a href="mailto:privacidade@boascontas.com.br" className="text-primary hover:underline">
+                                    privacidade@boascontas.com.br
                                 </a>
                             </div>
 
                             <div className="bg-muted p-4 rounded-lg">
                                 <p className="text-sm font-medium">💬 Suporte Geral</p>
-                                <a href="mailto:contato@gastocerto.com.br" className="text-primary hover:underline">
-                                    contato@gastocerto.com.br
+                                <a href="mailto:contato@boascontas.com.br" className="text-primary hover:underline">
+                                    contato@boascontas.com.br
                                 </a>
                             </div>
                         </div>
