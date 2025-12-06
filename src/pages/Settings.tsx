@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Link, Copy, Shield, Bot, User } from "lucide-react";
 import { useProfile } from "@/hooks/useSupabaseData";
-import { useSubscription } from "@/hooks/useSubscription";
+import { useLicense } from "@/hooks/useLicense";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { NotificationSettings } from "@/components/NotificationSettings";
@@ -17,7 +17,7 @@ import { NotificationSettings } from "@/components/NotificationSettings";
 const Settings = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { profile, loading: profileLoading } = useProfile();
-  const { subscription, loading: subscriptionLoading } = useSubscription();
+  const { license, loading: licenseLoading } = useLicense();
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -37,8 +37,8 @@ const Settings = () => {
   }, []);
 
   const copySubscriptionCode = () => {
-    if (subscription?.codigo) {
-      navigator.clipboard.writeText(subscription.codigo);
+    if (license?.codigo) {
+      navigator.clipboard.writeText(license.codigo);
       toast({
         title: "Código copiado!",
         description: "Código de assinatura copiado para a área de transferência.",
@@ -118,20 +118,20 @@ const Settings = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-5">
-                {subscriptionLoading ? (
+                {licenseLoading ? (
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <div className="h-4 bg-muted rounded w-1/3"></div>
                       <div className="h-11 bg-muted rounded"></div>
                     </div>
                   </div>
-                ) : subscription ? (
+                ) : license ? (
                   <div className="space-y-5">
                     <div className="space-y-2">
                       <Label className="text-sm font-semibold">Código da Assinatura</Label>
                       <div className="flex items-center gap-2">
                         <Input
-                          value={subscription.codigo}
+                          value={license.codigo}
                           disabled
                           className="font-mono h-11 flex-1"
                         />
@@ -152,10 +152,10 @@ const Settings = () => {
                         <Label className="text-sm font-semibold">Status</Label>
                         <div>
                           <Badge
-                            variant={subscription.status === 'ativo' ? 'default' : 'secondary'}
+                            variant={license.status === 'ativo' ? 'default' : 'secondary'}
                             className="text-sm px-3 py-1"
                           >
-                            {subscription.status === 'ativo' ? '✓ Ativa' : 'Inativa'}
+                            {license.status === 'ativo' ? '✓ Ativa' : 'Inativa'}
                           </Badge>
                         </div>
                       </div>
@@ -164,7 +164,7 @@ const Settings = () => {
                         <Label className="text-sm font-semibold">Tipo</Label>
                         <div>
                           <Badge variant="outline" className="text-sm px-3 py-1">
-                            {subscription.tipo === 'vitalicia' ? '∞ Vitalícia' : subscription.tipo}
+                            {license.tipo === 'vitalicia' ? '∞ Vitalícia' : license.tipo}
                           </Badge>
                         </div>
                       </div>
@@ -245,7 +245,7 @@ const Settings = () => {
                         <div className="bg-background/80 p-3 rounded-lg border border-border">
                           <p className="text-sm text-muted-foreground mb-1">Envie este comando:</p>
                           <code className="bg-muted px-3 py-2 rounded text-sm font-mono block">
-                            /start {subscription?.codigo || 'SEU_CODIGO'}
+                            /start {license?.codigo || 'SEU_CODIGO'}
                           </code>
                         </div>
                       </div>

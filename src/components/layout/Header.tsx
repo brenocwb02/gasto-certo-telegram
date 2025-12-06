@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Bell, Settings, User, Menu, LogOut, Shield, Crown } from "lucide-react";
+import { Bell, Settings, User, Menu, LogOut, Crown } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";

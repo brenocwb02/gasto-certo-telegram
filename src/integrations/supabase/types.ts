@@ -107,6 +107,30 @@ export type Database = {
           },
         ]
       }
+      ai_usage_logs: {
+        Row: {
+          created_at: string
+          feature_type: string
+          id: string
+          tokens_used: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          feature_type: string
+          id?: string
+          tokens_used?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          feature_type?: string
+          id?: string
+          tokens_used?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       budgets: {
         Row: {
           amount: number
@@ -847,6 +871,42 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_integration: {
+        Row: {
+          alert_at_80_percent: boolean | null
+          alert_at_90_percent: boolean | null
+          created_at: string
+          default_context: string | null
+          id: string
+          show_context_confirmation: boolean | null
+          telegram_chat_id: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          alert_at_80_percent?: boolean | null
+          alert_at_90_percent?: boolean | null
+          created_at?: string
+          default_context?: string | null
+          id?: string
+          show_context_confirmation?: boolean | null
+          telegram_chat_id: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          alert_at_80_percent?: boolean | null
+          alert_at_90_percent?: boolean | null
+          created_at?: string
+          default_context?: string | null
+          id?: string
+          show_context_confirmation?: boolean | null
+          telegram_chat_id?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       telegram_sessions: {
         Row: {
           chat_id: string
@@ -1037,6 +1097,7 @@ export type Database = {
         }
         Returns: string
       }
+      check_transaction_limit: { Args: { user_id: string }; Returns: Json }
       count_personal_data: { Args: never; Returns: Json }
       create_family_group:
         | { Args: { p_group_name: string }; Returns: string }
@@ -1112,6 +1173,17 @@ export type Database = {
           total_balance: number
         }[]
       }
+      get_telegram_context: {
+        Args: { p_user_id: string }
+        Returns: {
+          alert_at_80_percent: boolean
+          alert_at_90_percent: boolean
+          current_group_id: string
+          current_group_name: string
+          default_context: string
+          show_context_confirmation: boolean
+        }[]
+      }
       get_user_group_id: { Args: never; Returns: string }
       get_user_license_plan: {
         Args: { target_user_id: string }
@@ -1135,6 +1207,19 @@ export type Database = {
       migrate_personal_data_to_group: {
         Args: { p_group_id: string }
         Returns: Json
+      }
+      set_telegram_context: {
+        Args: { p_context: string; p_user_id: string }
+        Returns: boolean
+      }
+      update_telegram_settings: {
+        Args: {
+          p_alert_at_80_percent?: boolean
+          p_alert_at_90_percent?: boolean
+          p_show_context_confirmation?: boolean
+          p_user_id: string
+        }
+        Returns: boolean
       }
     }
     Enums: {
