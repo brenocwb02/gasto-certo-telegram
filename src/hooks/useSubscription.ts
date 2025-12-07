@@ -24,9 +24,9 @@ export const useSubscription = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const { data, error: functionError } = await supabase.functions.invoke('check-subscription');
-      
+
       if (functionError) {
         throw functionError;
       }
@@ -48,7 +48,7 @@ export const useSubscription = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke('create-checkout');
-      
+
       if (error) {
         throw error;
       }
@@ -69,7 +69,7 @@ export const useSubscription = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke('customer-portal');
-      
+
       if (error) {
         throw error;
       }
@@ -98,7 +98,8 @@ export const useSubscription = () => {
     return () => clearInterval(interval);
   }, [user]);
 
-  const isPremium = subscriptionInfo?.subscribed && subscriptionInfo?.product_id === 'prod_T85pcP4M0yhBaG';
+  // Consider any active subscription as premium (Pessoal or Família)
+  const isPremium = subscriptionInfo?.subscribed === true;
 
   return {
     subscriptionInfo,
