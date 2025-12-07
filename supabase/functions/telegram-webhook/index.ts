@@ -4,13 +4,13 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 import { corsHeaders } from '../_shared/cors.ts';
 import {
-  handleFaturasCommand,
+  handleFaturaCommand,
   handlePagarCommand,
   handlePaymentCallback,
   handleConfigCartaoCommand,
-  handleCardConfigCallback,
-  handleActivateAutoPayment,
-  handleDeactivateAutoPayment
+  handleConfigCallback,
+  toggleAutoPayment,
+  toggleReminder
 } from '../_shared/creditCardCommands.ts';
 
 /**
