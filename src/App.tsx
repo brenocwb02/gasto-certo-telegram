@@ -208,6 +208,11 @@ const AppRoutes = () => {
         }
       />
 
+
+      {/* Redirects para rotas antigas */}
+      <Route path="/license" element={<Navigate to="/planos" replace />} />
+      <Route path="/checkout" element={<Navigate to="/planos" replace />} />
+
       {/* Rota não encontrada */}
       <Route path="*" element={<NotFound />} />
     </Routes>
