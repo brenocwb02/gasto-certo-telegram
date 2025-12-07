@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -116,7 +116,7 @@ serve(async (req) => {
         // Handle parent which could be an object or array from supabase join
         const parentData = c.parent as unknown;
         let parentName: string | null = null;
-        
+
         if (parentData) {
           if (Array.isArray(parentData) && parentData.length > 0) {
             parentName = (parentData[0] as { nome: string }).nome;
@@ -185,7 +185,7 @@ Retorne APENAS o JSON (sem markdown, sem explicações):
         // Build hierarchical name from DB category to compare
         const parentData = c.parent as unknown;
         let parentName: string | null = null;
-        
+
         if (parentData) {
           if (Array.isArray(parentData) && parentData.length > 0) {
             parentName = (parentData[0] as { nome: string }).nome;
@@ -217,7 +217,7 @@ Retorne APENAS o JSON (sem markdown, sem explicações):
     if (matchedCategory) {
       const parentData = matchedCategory.parent as unknown;
       let parentName: string | null = null;
-      
+
       if (parentData) {
         if (Array.isArray(parentData) && parentData.length > 0) {
           parentName = (parentData[0] as { nome: string }).nome;
@@ -226,8 +226,8 @@ Retorne APENAS o JSON (sem markdown, sem explicações):
         }
       }
 
-      finalCategoryName = parentName 
-        ? `${parentName} > ${matchedCategory.nome}` 
+      finalCategoryName = parentName
+        ? `${parentName} > ${matchedCategory.nome}`
         : matchedCategory.nome;
     }
 
