@@ -3,6 +3,15 @@ import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 import { corsHeaders } from '../_shared/cors.ts';
+import {
+  handleFaturasCommand,
+  handlePagarCommand,
+  handlePaymentCallback,
+  handleConfigCartaoCommand,
+  handleCardConfigCallback,
+  handleActivateAutoPayment,
+  handleDeactivateAutoPayment
+} from '../_shared/creditCardCommands.ts';
 
 /**
  * Converte valores do quiz em labels legíveis
@@ -528,41 +537,104 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
 
   switch (cmd.toLowerCase()) {
     case '/start': {
-      const message = `🎉 *Bem-vindo ao Zaq - Boas Contas!*
+      const message = `🤖 *Menu Zaq - Boas Contas*
 
-🎯 Comandos disponíveis:
+📝 *Registro Rápido*
+Apenas digite: "Almoço 25 reais" ou envie áudio!
 
-💰 *Finanças*
-• Registre gastos naturalmente (ex: "Almoço 25 reais")
-• /saldo - Ver saldo das contas
-• /extrato - Últimas transações
-• /resumo - Resumo do mês
+💳 *Cartões de Crédito*
+/faturas - Faturas pendentes
+/pagar - Pagar fatura agora
+/config_cartao - Automatizar pagamentos
 
-🔄 *Contexto (Novo!)*
-• /contexto - Escolher onde registrar (Pessoal/Grupo)
-• /p - Alternar para Pessoal
-• /g - Alternar para Grupo
-• Use #p ou #g em mensagens
+👤 *Contexto & Família*
+/contexto - Escolher (Pessoal vs Grupo)
+/p - Mudar para Pessoal
+/g - Mudar para Grupo
 
-📊 *Análises Inteligentes*
-• /perguntar [pergunta] - Pergunte sobre seus gastos
-• /top_gastos - Top 5 categorias do mês
-• /comparar_meses - Compare mês atual vs anterior
-• /previsao - Previsão de gastos
+📊 *Relatórios*
+/saldo - Saldos atuais
+/extrato - Últimas transações
+/resumo - Balanço do mês
+/top_gastos - Onde você gastou mais
+/comparar_meses - Evolução de gastos
 
-✏️ *Edição*
-• /editar_ultima - Editar última transação
+🎯 *Planejamento*
+/metas - Suas metas
+/previsao - Projeção de gastos
+/recorrentes - Contas fixas
 
-🎯 *Metas e Orçamento*
-• /metas - Ver progresso das metas
-• /orcamento - Status do orçamento
-
-⚙️ *Configurações*
-• /config - Configurações do bot
-
-💡 /ajuda - Ver este menu`;
+⚙️ *Outros*
+/ajuda - Este menu
+/editar_ultima - Corrigir erro`;
 
       await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
+      break;
+    }
+
+    // --- Comandos de Contexto ---
+    case '/contexto': {
+      const context = await getUserTelegramContext(supabase, userId);
+
+      const message = `📌 *Escolha o contexto padrão*\n\n` +
+        `Onde suas próximas transações serão registradas?\n\n` +
+        `*Contexto atual:* ${context.defaultContext === 'personal' ? '👤 Pessoal' : '🏠 ' + (context.groupName || 'Grupo')}\n\n` +
+        `${context.groupId ? '🏠 *Grupo:* Transações compartilhadas (ILIMITADAS)\n' : ''}` +
+        `👤 *Pessoal:* Apenas você vê (75/mês para free)`;
+
+      const keyboard: any = {
+        inline_keyboard: [
+          [{ text: context.defaultContext === 'personal' ? '✅ 👤 Pessoal' : '👤 Pessoal', callback_data: 'context_personal' }]
+        ]
+      };
+
+      if (context.groupId) {
+        keyboard.inline_keyboard.push([
+          { text: context.defaultContext === 'group' ? `✅ 🏠 ${context.groupName || 'Grupo'}` : `🏠 ${context.groupName || 'Grupo'}`, callback_data: 'context_group' }
+        ]);
+      } else {
+        keyboard.inline_keyboard.push([
+          { text: '⚠️ Sem Grupo Familiar (Criar)', callback_data: 'context_no_group' }
+        ]);
+      }
+      keyboard.inline_keyboard.push([{ text: '❌ Cancelar', callback_data: 'context_cancel' }]);
+
+      await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown', reply_markup: keyboard });
+      break;
+    }
+
+    case '/p': {
+      const { data: session } = await supabase.from('telegram_sessions').select('contexto').eq('telegram_id', chatId.toString()).single();
+      const newContext = { ...(session?.contexto || {}), default_context: 'personal' };
+      await supabase.from('telegram_sessions').upsert({
+        user_id: userId, telegram_id: chatId.toString(), chat_id: chatId.toString(), contexto: newContext
+      }, { onConflict: 'user_id,telegram_id' });
+      await sendTelegramMessage(chatId, '✅ Contexto definido para: 👤 *Pessoal*');
+      break;
+    }
+
+    case '/g': {
+      const { data: session } = await supabase.from('telegram_sessions').select('contexto').eq('telegram_id', chatId.toString()).single();
+      const newContext = { ...(session?.contexto || {}), default_context: 'group' };
+      await supabase.from('telegram_sessions').upsert({
+        user_id: userId, telegram_id: chatId.toString(), chat_id: chatId.toString(), contexto: newContext
+      }, { onConflict: 'user_id,telegram_id' });
+      await sendTelegramMessage(chatId, '✅ Contexto definido para: 🏠 *Grupo*');
+      break;
+    }
+
+    case '/faturas': {
+      await handleFaturasCommand(supabase, chatId, userId);
+      break;
+    }
+
+    case '/pagar': {
+      await handlePagarCommand(supabase, chatId, userId);
+      break;
+    }
+
+    case '/config_cartao': {
+      await handleConfigCartaoCommand(supabase, chatId, userId);
       break;
     }
 
@@ -1401,52 +1473,41 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
 
     case '/ajuda':
     default: {
-      // Dividido em múltiplas mensagens para evitar erro de parse
-      const part1 = `💡 *Guia Completo de Comandos*
+      const message = `🤖 *Menu Zaq - Boas Contas*
 
-📊 *FINANÇAS BÁSICAS*
-• Registro natural: "Gastei R$ 50 no mercado"
-• /saldo - Ver saldo de todas as contas
-• /extrato - Últimas 10 transações
-• /resumo - Resumo financeiro do mês
+📝 *Registro Rápido*
+Apenas digite: "Almoço 25 reais" ou envie áudio!
 
-💰 *INVESTIMENTOS*
-• /comprar_ativo - Registrar compra de ativos
-• /vender_ativo - Registrar venda de ativos
-• /provento - Registrar dividendos recebidos
-• /carteira - Ver seu portfólio completo
-• /patrimonio - Patrimônio líquido total
-• /dividas - Listar dívidas ativas`;
+💳 *Cartões de Crédito*
+/faturas - Faturas pendentes
+/pagar - Pagar fatura agora
+/config_cartao - Automatizar pagamentos
 
-      const part2 = `🤖 *ANÁLISES INTELIGENTES*
-• /perguntar [pergunta] - Pergunte sobre seus gastos
-• /top_gastos - Top 5 categorias do mês
-• /comparar_meses - Comparar mês atual vs anterior
-• /previsao - Projeção de gastos do mês
+👤 *Contexto & Família*
+/contexto - Escolher (Pessoal vs Grupo)
+/p - Mudar para Pessoal
+/g - Mudar para Grupo
 
-✏️ *EDIÇÃO & GESTÃO*
-• /editar_ultima - Editar última transação
-• /orcamento - Ver status do orçamento
+📊 *Relatórios*
+/saldo - Saldos atuais
+/extrato - Últimas transações
+/resumo - Balanço do mês
+/top_gastos - Onde você gastou mais
+/comparar_meses - Evolução de gastos
 
-🔄 *CONTAS RECORRENTES*
-• /recorrente_nova - Criar nova recorrência
-• /recorrentes - Ver todas as recorrências ativas
-• /pausar_recorrente - Pausar/reativar recorrência`;
+🎯 *Planejamento*
+/metas - Suas metas
+/previsao - Projeção de gastos
+/recorrentes - Contas fixas
 
-      const part3 = `🎯 *METAS & PERFIL*
-• /metas - Ver progresso das suas metas
-• /meuperfil - Score de saúde financeira
-
-🎓 *AJUDA*
-• /tutorial - Tutorial completo
-• /ajuda - Este menu
+⚙️ *Outros*
+/ajuda - Este menu
+/editar_ultima - Corrigir erro
 
 🌐 *Acesse o app web:*
 📱 https://app.boascontas.com`;
 
-      await sendTelegramMessage(chatId, part1, { parse_mode: 'Markdown' });
-      await sendTelegramMessage(chatId, part2, { parse_mode: 'Markdown' });
-      await sendTelegramMessage(chatId, part3, { parse_mode: 'Markdown' });
+      await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
       break;
     }
   }
@@ -1653,6 +1714,42 @@ serve(async (req) => {
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
 
+      // --- Callbacks de Cartão de Crédito ---
+      if (data.startsWith('pay_')) {
+        const accountId = data.replace('pay_', '');
+        if (accountId !== 'cancel') {
+          await handlePaymentCallback(supabaseAdmin, chatId, userId, accountId);
+        } else {
+          await editTelegramMessage(chatId, messageId, '❌ Pagamento cancelado.');
+        }
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      if (data.startsWith('config_')) {
+        const accountId = data.replace('config_', '');
+        if (accountId === 'cancel') {
+          await editTelegramMessage(chatId, messageId, '❌ Operação cancelada.');
+        } else if (accountId === 'back') {
+          await handleConfigCartaoCommand(supabaseAdmin, chatId, userId);
+        } else {
+          await handleCardConfigCallback(supabaseAdmin, chatId, userId, accountId);
+        }
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      if (data.startsWith('auto_on_')) {
+        const accountId = data.replace('auto_on_', '');
+        await handleActivateAutoPayment(supabaseAdmin, chatId, userId, accountId);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      if (data.startsWith('auto_off_')) {
+        const accountId = data.replace('auto_off_', '');
+        await handleDeactivateAutoPayment(supabaseAdmin, chatId, userId, accountId);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+      // --- Fim Callbacks Cartão ---
+
       // Ações de confirmação de transações (sistema antigo)
       const [action, sessionId] = data.split(':');
       const { data: session } = await supabaseAdmin.from('telegram_sessions').select('contexto').eq('id', sessionId).single();
@@ -1667,7 +1764,8 @@ serve(async (req) => {
         const transactionData = session.contexto;
         const { error: transactionError } = await supabaseAdmin.from('transactions').insert(transactionData);
         if (transactionError) throw transactionError;
-        await editTelegramMessage(chatId, messageId, `✅ Transação registada!\n*${transactionData.descricao}*: ${formatCurrency(transactionData.valor)}`);
+        const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+        await editTelegramMessage(chatId, messageId, `✅ Lançamento de ${formatCurrency(transactionData.valor)} registrado com sucesso!\n${time}`);
       } else if (action === 'cancel_transaction') {
         await editTelegramMessage(chatId, messageId, "❌ Registo cancelado.");
       }
@@ -1768,10 +1866,23 @@ serve(async (req) => {
     }
 
     // Comando /start para vincular conta
+    // Comando /start para vincular conta
     if (text && text.startsWith('/start')) {
       const licenseCode = text.split(' ')[1];
       if (!licenseCode) {
-        await sendTelegramMessage(chatId, '👋 *Bem-vindo ao Zaq - Boas Contas!*\n\nPara vincular sua conta, use o comando:\n`/start SEU_CODIGO_DE_LICENCA`\n\n📍 Você encontra seu código na aba "Licença" do aplicativo web.\n\n❓ Use /ajuda para ver todos os comandos disponíveis.');
+        // Verificar se usuário já está vinculado
+        const { data: existingProfile } = await supabaseAdmin
+          .from('profiles')
+          .select('user_id')
+          .eq('telegram_chat_id', chatId)
+          .single();
+
+        if (existingProfile) {
+          // Usuário já existe, mostra menu principal
+          await handleCommand(supabaseAdmin, '/start', existingProfile.user_id, chatId);
+        } else {
+          await sendTelegramMessage(chatId, '👋 *Bem-vindo ao Zaq - Boas Contas!*\n\nPara vincular sua conta, use o comando:\n`/start SEU_CODIGO_DE_LICENCA`\n\n📍 Você encontra seu código na aba "Licença" do aplicativo web.\n\n❓ Use /ajuda para ver todos os comandos disponíveis.');
+        }
       } else {
         const result = await linkUserWithLicense(supabaseAdmin, chatId, licenseCode);
         await sendTelegramMessage(chatId, result.message);
@@ -1920,14 +2031,7 @@ serve(async (req) => {
 
     // Processar como transação (voz ou texto)
     if (true) {
-      const { data: license } = await supabaseAdmin.from('licenses').select('plano, status').eq('user_id', userId).eq('status', 'ativo').single();
-      if (!license || license.plano !== 'premium') {
-        await sendTelegramMessage(chatId, `🔒 *Funcionalidade Premium*\n\nOlá! A adição de transações pelo Telegram é uma funcionalidade exclusiva do plano Premium.\n\n✨ Com o Premium você terá:\n• Registro de transações por IA\n• Contas e categorias ilimitadas\n• Relatórios avançados\n• Metas e orçamentos\n\n📱 Visite nossa página de licenças para fazer upgrade e desbloquear todo o poder do Zaq - Boas Contas!\n\n🌐 Acesse: [Fazer Upgrade](${Deno.env.get('SUPABASE_URL')?.replace('supabase.co', 'lovable.app')}/license)`);
-        return new Response('Premium required', {
-          status: 200,
-          headers: corsHeaders
-        });
-      }
+      // Verificação de licença removida para permitir acesso a todos os planos
       const analyzingMessage = await sendTelegramMessage(chatId, voice ? "🎤 Ouvindo e analisando seu áudio..." : "🧠 Analisando sua mensagem...");
       try {
         if (voice) {
@@ -1963,8 +2067,13 @@ serve(async (req) => {
         });
       }
       const { valor, descricao, tipo, categoria, conta, ...rest } = nlpData;
+
+      // Buscar contexto atual para saber se é grupo ou pessoal
+      const context = await getUserTelegramContext(supabaseAdmin, userId);
+
       const transactionData = {
         user_id: userId,
+        group_id: context.groupId || null, // Usa o ID do grupo se estiver no contexto de grupo
         valor,
         descricao,
         tipo,
@@ -1983,12 +2092,26 @@ serve(async (req) => {
         onConflict: 'telegram_id'
       }).select('id').single();
       if (sessionError) throw sessionError;
-      let confirmationMessage = `✅ *Entendido! Registado.*\nPor favor, confirme se está tudo certo:\n\n`;
+      let confirmationMessage = `✅ *Entendido! Registrado.*\nPor favor, confirme se está tudo certo:\n\n`;
       confirmationMessage += `*Tipo:* ${tipo.charAt(0).toUpperCase() + tipo.slice(1)}\n`;
       confirmationMessage += `*Descrição:* ${descricao}\n`;
       confirmationMessage += `*Valor:* ${formatCurrency(valor)}\n`;
       confirmationMessage += `*Conta:* ${conta}\n`;
-      if (categoria) confirmationMessage += `*Categoria:* ${categoria}\n`;
+
+      if (categoria) {
+        if (categoria.includes('>')) {
+          const parts = categoria.split('>').map((s: string) => s.trim());
+          const cat = parts[0] || 'Geral';
+          const sub = parts[1] || '';
+
+          confirmationMessage += `*Categoria:* ${cat}\n`;
+          if (sub) {
+            confirmationMessage += `*Subcategoria:* ${sub}\n`;
+          }
+        } else {
+          confirmationMessage += `*Categoria:* ${categoria}\n`;
+        }
+      }
       const inline_keyboard = [
         [
           {

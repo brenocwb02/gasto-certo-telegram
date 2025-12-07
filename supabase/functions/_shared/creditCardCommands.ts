@@ -188,12 +188,14 @@ export async function handlePaymentCallback(
         id,
         nome,
         saldo_atual,
-        credit_card_settings!inner(default_payment_account_id)
+        credit_card_settings!credit_card_settings_account_id_fkey!inner(default_payment_account_id)
       `)
             .eq('id', accountId)
             .single();
 
-        if (!card || !card.credit_card_settings[0]?.default_payment_account_id) {
+        const settings = Array.isArray(card.credit_card_settings) ? card.credit_card_settings[0] : card.credit_card_settings;
+
+        if (!card || !settings?.default_payment_account_id) {
             await sendTelegramMessage(
                 chatId,
                 `❌ *Erro*\n\nConta de pagamento não configurada.\n` +
@@ -203,7 +205,7 @@ export async function handlePaymentCallback(
         }
 
         const fatura = Math.abs(card.saldo_atual);
-        const paymentAccountId = card.credit_card_settings[0].default_payment_account_id;
+        const paymentAccountId = settings.default_payment_account_id;
 
         // Processar pagamento via RPC
         const { data: result, error } = await supabase
@@ -242,11 +244,10 @@ export async function handlePaymentCallback(
 
     } catch (error) {
         console.error('Erro ao processar pagamento:', error);
+        const errorMsg = error instanceof Error ? error.message : JSON.stringify(error);
         await sendTelegramMessage(
             chatId,
-            `❌ Erro ao processar pagamento.\n` +
-            `Tente novamente ou use o aplicativo.\n\n` +
-            `Erro: ${error.message}`
+            `❌ Erro ao processar pagamento.\n\nDetalhe técnico: ${errorMsg}`
         );
     }
 }
@@ -268,7 +269,7 @@ export async function handleConfigCartaoCommand(
         id,
         nome,
         dia_vencimento,
-        credit_card_settings(
+        credit_card_settings!credit_card_settings_account_id_fkey(
           auto_payment,
           default_payment_account_id,
           send_reminder,
@@ -314,9 +315,10 @@ export async function handleConfigCartaoCommand(
 
     } catch (error) {
         console.error('Erro em /config_cartao:', error);
+        const errorMsg = error instanceof Error ? error.message : JSON.stringify(error);
         await sendTelegramMessage(
             chatId,
-            `❌ Erro ao carregar configurações.\nTente novamente.`
+            `❌ Erro ao carregar configurações.\n\nDetalhe técnico: ${errorMsg}`
         );
     }
 }
@@ -338,7 +340,7 @@ export async function handleCardConfigCallback(
         id,
         nome,
         dia_vencimento,
-        credit_card_settings!inner(
+        credit_card_settings!credit_card_settings_account_id_fkey!inner(
           auto_payment,
           default_payment_account_id,
           send_reminder,
@@ -355,7 +357,7 @@ export async function handleCardConfigCallback(
             return;
         }
 
-        const settings = card.credit_card_settings[0];
+        const settings = Array.isArray(card.credit_card_settings) ? card.credit_card_settings[0] : card.credit_card_settings;
         const autoIcon = settings.auto_payment ? '✅' : '❌';
         const reminderIcon = settings.send_reminder ? '🔔' : '🔕';
 
@@ -402,7 +404,8 @@ export async function handleCardConfigCallback(
 
     } catch (error) {
         console.error('Erro ao mostrar config:', error);
-        await sendTelegramMessage(chatId, `❌ Erro ao carregar configurações.`);
+        const errorMsg = error instanceof Error ? error.message : JSON.stringify(error);
+        await sendTelegramMessage(chatId, `❌ Erro ao carregar configurações.\n\nDetalhe técnico: ${errorMsg}`);
     }
 }
 

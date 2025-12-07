@@ -108,6 +108,7 @@ serve(async (req) => {
                 id, 
                 nome, 
                 parent_id,
+                keywords,
                 parent:categories!parent_id(nome)
             `)
             .eq('user_id', userId);
@@ -118,15 +119,19 @@ serve(async (req) => {
 
         const accountsList = accounts.map(a => a.nome).join(', ');
 
-        // Criar lista de categorias incluindo hierarquia
+        // Criar lista de categorias incluindo hierarquia e keywords
         const categoriesList = categories
             .map(c => {
+                const keywordsStr = c.keywords && c.keywords.length > 0
+                    ? ` (keywords: ${c.keywords.join(', ')})`
+                    : '';
+
                 if (c.parent) {
-                    return `${c.parent.nome} > ${c.nome}`;
+                    return `${c.parent.nome} > ${c.nome}${keywordsStr}`;
                 }
-                return c.nome;
+                return `${c.nome}${keywordsStr}`;
             })
-            .join(', ');
+            .join('\n');
 
         // Construir o prompt melhorado para a IA
         const prompt = `Você é um assistente financeiro que extrai informações de transações.
@@ -134,14 +139,16 @@ serve(async (req) => {
 Analise esta frase: "${text}"
 
 Contas disponíveis: ${accountsList}
-Categorias disponíveis: ${categoriesList}
+
+Categorias disponíveis (com palavras-chave para ajudar na identificação):
+${categoriesList}
 
 Regras OBRIGATÓRIAS:
 1. Tipo: identifique se é 'receita', 'despesa' ou 'transferencia'
 2. Valor: extraia APENAS o número (ex: 50, 25.50)
-3. Descrição: crie uma descrição curta. Se for vaga (ex: "gastei 10"), use algo como "Gasto diverso".
+3. Descrição: Extraia o NOME do estabelecimento, serviço ou produto. Seja específico. Elimine verbos ("Gastei", "Fui"). Ex: "Almoço no Tche Costela" -> "Almoço Tche Costela". "Mercado Muffato" -> "Mercado Muffato". NÃO generalize se houver nome próprio.
 4. Conta: escolha UMA conta da lista de contas disponíveis. Se não mencionar conta, use a primeira da lista
-5. Categoria: escolha UMA categoria da lista. Se a descrição for vaga e não houver contexto claro (ex: "gastei 10 reais"), procure por "Outros", "Geral" ou "Diversos". NÃO assuma "Alimentação" a menos que haja palavras relacionadas a comida/restaurante.
+5. Categoria: Retorne o nome EXATO da lista, preservando a hierarquia "Pai > Filho" se houver.
 6. validation_errors: [] (vazio se tudo ok)
 
 Retorne APENAS o JSON (sem markdown, sem explicações):
@@ -150,7 +157,7 @@ Retorne APENAS o JSON (sem markdown, sem explicações):
   "valor": 50.00,
   "descricao": "Compra no mercado",
   "conta": "Cartão Nubank",
-  "categoria": "Alimentação",
+  "categoria": "Alimentação > Supermercado",
   "conta_destino": null,
   "validation_errors": []
 }`;
@@ -166,13 +173,39 @@ Retorne APENAS o JSON (sem markdown, sem explicações):
 
         // Mapear nomes para IDs
         const account = accounts.find(a => a.nome.toLowerCase() === extractedData.conta?.toLowerCase());
-        const category = categories.find(c => c.nome.toLowerCase() === extractedData.categoria?.toLowerCase());
+
+        // Lógica de match de Categoria mais inteligente
+        let matchedCategory = null;
+        if (extractedData.categoria) {
+            const catNameInfo = extractedData.categoria.toLowerCase();
+
+            // 1. Tenta match exato da string retornada
+            matchedCategory = categories.find(c => {
+                // Monta o nome hierárquico da categoria do banco para comparar
+                const hierarchicalName = c.parent ? `${c.parent.nome} > ${c.nome}` : c.nome;
+                return hierarchicalName.toLowerCase() === catNameInfo || c.nome.toLowerCase() === catNameInfo;
+            });
+
+            // 2. Se falhar e tiver separador, tenta pelo último nome (filho)
+            if (!matchedCategory && catNameInfo.includes('>')) {
+                const parts = catNameInfo.split('>');
+                const childName = parts[parts.length - 1].trim();
+                matchedCategory = categories.find(c => c.nome.toLowerCase() === childName);
+            }
+        }
+
         const destinationAccount = accounts.find(a => a.nome.toLowerCase() === extractedData.conta_destino?.toLowerCase());
+
+        // Reconstrói o nome da categoria para o formato "Pai > Filho" oficial para exibição correta
+        const finalCategoryName = matchedCategory
+            ? (matchedCategory.parent ? `${matchedCategory.parent.nome} > ${matchedCategory.nome}` : matchedCategory.nome)
+            : extractedData.categoria;
 
         const responseData = {
             ...extractedData,
+            categoria: finalCategoryName,
             conta_origem_id: account?.id ?? null,
-            categoria_id: category?.id ?? null,
+            categoria_id: matchedCategory?.id ?? null,
             conta_destino_id: destinationAccount?.id ?? null,
         };
 

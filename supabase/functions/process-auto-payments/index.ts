@@ -50,10 +50,10 @@ function formatCurrency(value: number): string {
 /**
  * Processa pagamento de um cartão específico
  */
-async function processCard Payment(
+async function processCardPayment(
     supabase: any,
     card: CreditCard
-): Promise < { success: boolean; message: string } > {
+): Promise<{ success: boolean; message: string }> {
     const fatura = Math.abs(card.saldo_atual);
 
     try {
@@ -64,68 +64,68 @@ async function processCard Payment(
             p_amount: null // null = pagar fatura completa
         });
 
-        if(error) throw error;
+        if (error) throw error;
 
-        if(data.success) {
-    // Sucesso!
-    const message =
-        `✅ *Fatura Paga Automaticamente!*\n\n` +
-        `💳 *${card.nome}*\n` +
-        `💰 Valor: *${formatCurrency(data.amount_paid)}*\n` +
-        `🏦 De: ${data.payment_account_name}\n\n` +
-        `📊 *Novo Saldo*\n` +
-        `• ${data.payment_account_name}: ${formatCurrency(data.new_payment_balance)}\n` +
-        `• ${card.nome}: ${formatCurrency(data.new_card_balance)}\n\n` +
-        `✓ Pagamento processado com sucesso!`;
+        if (data.success) {
+            // Sucesso!
+            const message =
+                `✅ *Fatura Paga Automaticamente!*\n\n` +
+                `💳 *${card.nome}*\n` +
+                `💰 Valor: *${formatCurrency(data.amount_paid)}*\n` +
+                `🏦 De: ${data.payment_account_name}\n\n` +
+                `📊 *Novo Saldo*\n` +
+                `• ${data.payment_account_name}: ${formatCurrency(data.new_payment_balance)}\n` +
+                `• ${card.nome}: ${formatCurrency(data.new_card_balance)}\n\n` +
+                `✓ Pagamento processado com sucesso!`;
 
-    await sendTelegramMessage(card.telegram_chat_id, message);
+            await sendTelegramMessage(card.telegram_chat_id, message);
 
-    return { success: true, message: 'Pago com sucesso' };
+            return { success: true, message: 'Pago com sucesso' };
 
-} else {
-    // Falha - saldo insuficiente
-    const message =
-        `⚠️ *FALHA NO PAGAMENTO AUTOMÁTICO*\n\n` +
-        `💳 ${card.nome}\n` +
-        `💰 Fatura: ${formatCurrency(data.required)}\n` +
-        `🏦 Disponível: ${formatCurrency(data.available)}\n` +
-        `❌ Faltam: ${formatCurrency(data.missing)}\n\n` +
-        `🔴 *Pagamento automático foi DESATIVADO*\n` +
-        `para evitar tentativas repetidas.\n\n` +
-        `📲 Quando tiver saldo, use:\n` +
-        `• /pagar - para pagar manualmente\n` +
-        `• /config_cartao - para reativar automático`;
+        } else {
+            // Falha - saldo insuficiente
+            const message =
+                `⚠️ *FALHA NO PAGAMENTO AUTOMÁTICO*\n\n` +
+                `💳 ${card.nome}\n` +
+                `💰 Fatura: ${formatCurrency(data.required)}\n` +
+                `🏦 Disponível: ${formatCurrency(data.available)}\n` +
+                `❌ Faltam: ${formatCurrency(data.missing)}\n\n` +
+                `🔴 *Pagamento automático foi DESATIVADO*\n` +
+                `para evitar tentativas repetidas.\n\n` +
+                `📲 Quando tiver saldo, use:\n` +
+                `• /pagar - para pagar manualmente\n` +
+                `• /config_cartao - para reativar automático`;
 
-    await sendTelegramMessage(card.telegram_chat_id, message);
+            await sendTelegramMessage(card.telegram_chat_id, message);
 
-    // Desativar pagamento automático
-    await supabase
-        .from('credit_card_settings')
-        .update({ auto_payment: false })
-        .eq('account_id', card.id);
+            // Desativar pagamento automático
+            await supabase
+                .from('credit_card_settings')
+                .update({ auto_payment: false })
+                .eq('account_id', card.id);
 
-    return {
-        success: false,
-        message: `Saldo insuficiente. Faltam ${formatCurrency(data.missing)}`
-    };
-}
+            return {
+                success: false,
+                message: `Saldo insuficiente. Faltam ${formatCurrency(data.missing)}`
+            };
+        }
 
-  } catch (error) {
-    console.error(`Erro ao processar pagamento do cartão ${card.id}:`, error);
+    } catch (error) {
+        console.error(`Erro ao processar pagamento do cartão ${card.id}:`, error);
 
-    // Notificar erro
-    const message =
-        `❌ *ERRO NO PROCESSAMENTO*\n\n` +
-        `💳 ${card.nome}\n` +
-        `⚠️ Erro técnico ao processar pagamento automático.\n\n` +
-        `Por favor, pague manualmente usando /pagar\n` +
-        `ou acesse o aplicativo.\n\n` +
-        `Erro: ${error.message}`;
+        // Notificar erro
+        const message =
+            `❌ *ERRO NO PROCESSAMENTO*\n\n` +
+            `💳 ${card.nome}\n` +
+            `⚠️ Erro técnico ao processar pagamento automático.\n\n` +
+            `Por favor, pague manualmente usando /pagar\n` +
+            `ou acesse o aplicativo.\n\n` +
+            `Erro: ${error.message}`;
 
-    await sendTelegramMessage(card.telegram_chat_id, message);
+        await sendTelegramMessage(card.telegram_chat_id, message);
 
-    return { success: false, message: error.message };
-}
+        return { success: false, message: error.message };
+    }
 }
 
 /**

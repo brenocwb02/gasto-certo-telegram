@@ -94,9 +94,13 @@ export function CategoryForm({ category, parentCategories = [], onSuccess }: Cat
       onSuccess?.();
     } catch (error) {
       console.error("Erro ao salvar categoria:", error);
+
+      const errorMessage = error instanceof Error ? error.message : "Erro ao salvar a categoria.";
+      // Tratamento específico para erro de duplicidade (Supabase retorna código 23505 geralmente, ou mensagem específica)
+
       toast({
-        title: "Erro",
-        description: "Erro ao salvar a categoria. Tente novamente.",
+        title: "Erro ao salvar",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -104,10 +108,12 @@ export function CategoryForm({ category, parentCategories = [], onSuccess }: Cat
     }
   };
 
-  const filteredParentCategories = parentCategories.filter(pCat => pCat.tipo === watchedType);
+  const filteredParentCategories = parentCategories
+    .filter(pCat => pCat.tipo === watchedType)
+    .filter(pCat => !category || pCat.id !== category.id);
 
   const iconOptions = [
-    "shopping-bag", "home", "car", "utensils", "heart", "gamepad-2", 
+    "shopping-bag", "home", "car", "utensils", "heart", "gamepad-2",
     "banknote", "laptop", "trending-up", "coffee", "shirt", "gas-pump",
     "plane", "book", "music", "camera", "phone", "graduation-cap"
   ];
@@ -212,9 +218,9 @@ export function CategoryForm({ category, parentCategories = [], onSuccess }: Cat
               <FormControl>
                 <div className="flex items-center space-x-2">
                   <Input type="color" className="w-16 h-10 p-1" {...field} />
-                  <Input 
-                    placeholder="#6366f1" 
-                    {...field} 
+                  <Input
+                    placeholder="#6366f1"
+                    {...field}
                     className="flex-1"
                   />
                 </div>
@@ -232,9 +238,9 @@ export function CategoryForm({ category, parentCategories = [], onSuccess }: Cat
               <FormLabel>Palavras-chave</FormLabel>
               <FormControl>
                 <TagInput
-                    value={field.value || []}
-                    onChange={field.onChange}
-                    placeholder="Adicione palavras-chave (ex: mercado, ifood)"
+                  value={field.value || []}
+                  onChange={field.onChange}
+                  placeholder="Adicione palavras-chave (ex: mercado, ifood)"
                 />
               </FormControl>
               <FormDescription>

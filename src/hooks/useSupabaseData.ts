@@ -331,9 +331,11 @@ export function useCategories(groupId?: string) {
           .order('nome');
 
         if (groupId) {
-          query = query.eq('group_id', groupId);
+          // Em um grupo, mostramos categorias do grupo E categorias pessoais
+          query = query.or(`group_id.eq.${groupId},and(user_id.eq.${user.id},group_id.is.null)`);
         } else {
-          query = query.eq('user_id', user.id);
+          // Apenas categorias pessoais (sem grupo)
+          query = query.eq('user_id', user.id).is('group_id', null);
         }
 
         const { data, error } = await query;
