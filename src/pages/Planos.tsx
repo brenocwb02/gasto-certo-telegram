@@ -155,6 +155,20 @@ const Planos = () => {
         setLoading(plan.id);
 
         try {
+            // If user already has an active subscription, redirect to portal for upgrade
+            if (currentPlan && currentPlan !== 'gratuito') {
+                const { data, error } = await supabase.functions.invoke('customer-portal');
+                if (error) throw error;
+                if (data?.url) {
+                    toast({
+                        title: "Redirecionando para o portal",
+                        description: "Use o portal para alterar seu plano atual.",
+                    });
+                    window.location.href = data.url;
+                }
+                return;
+            }
+
             const priceId = isYearly ? plan.stripePriceIdYearly : plan.stripePriceIdMonthly;
 
             const { data, error } = await supabase.functions.invoke('create-checkout-session', {
@@ -400,7 +414,9 @@ const Planos = () => {
                                         ? 'Plano Atual'
                                         : plan.id === 'gratuito'
                                             ? 'Começar Grátis'
-                                            : `Assinar ${plan.name}`
+                                            : currentPlan && currentPlan !== 'gratuito'
+                                                ? `Upgrade para ${plan.name}`
+                                                : `Assinar ${plan.name}`
                                     }
                                 </Button>
                             </CardFooter>
