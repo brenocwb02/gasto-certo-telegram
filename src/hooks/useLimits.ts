@@ -11,25 +11,51 @@ export interface LimitsState {
     aiLimit: number;
     aiUsage: number;
     isAiLimitReached: boolean;
-    plan: 'gratuito' | 'premium' | 'familia' | 'familia_plus';
+    plan: 'gratuito' | 'pessoal' | 'premium' | 'familia' | 'familia_plus' | 'individual';
     isTrial: boolean;
     daysRemainingInTrial: number;
+    isTrialActive: boolean; // True if within 7-day trial period
     loading: boolean;
 }
+
+// Plan limits configuration
+const PLAN_LIMITS = {
+    free: {
+        transactions: 30,
+        aiCredits: 2,
+        accounts: 1,
+        categories: 5
+    },
+    trial: {
+        transactions: -1, // Unlimited during trial
+        aiCredits: -1,    // Unlimited during trial
+        accounts: -1,
+        categories: -1
+    },
+    paid: {
+        transactions: -1, // Unlimited
+        aiCredits: -1,    // Unlimited
+        accounts: -1,
+        categories: -1
+    }
+};
+
+const TRIAL_DURATION_DAYS = 7;
 
 export function useLimits() {
     const { user } = useAuth();
     const { subscriptionInfo, loading: subscriptionLoading, isPremium } = useSubscription();
     const [state, setState] = useState<LimitsState>({
-        transactionLimit: 75,
+        transactionLimit: PLAN_LIMITS.free.transactions,
         transactionUsage: 0,
         isTransactionLimitReached: false,
-        aiLimit: 20,
+        aiLimit: PLAN_LIMITS.free.aiCredits,
         aiUsage: 0,
         isAiLimitReached: false,
         plan: 'gratuito',
         isTrial: false,
         daysRemainingInTrial: 0,
+        isTrialActive: false,
         loading: true
     });
 
@@ -38,8 +64,24 @@ export function useLimits() {
 
         const fetchUsage = async () => {
             try {
+                // Calculate Trial Status (7 days)
+                const createdAt = new Date(user.created_at);
+                const now = new Date();
+                const diffTime = now.getTime() - createdAt.getTime();
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                const isTrialActive = diffDays < TRIAL_DURATION_DAYS;
+                const daysRemainingInTrial = Math.max(0, TRIAL_DURATION_DAYS - diffDays);
+
                 // Determine Plan based on subscription
-                const plan = isPremium ? 'premium' : 'gratuito';
+                let plan: LimitsState['plan'] = 'gratuito';
+                if (isPremium) {
+                    // Check specific plan from subscription info
+                    if (subscriptionInfo?.productId?.includes('familia')) {
+                        plan = 'familia';
+                    } else {
+                        plan = 'pessoal';
+                    }
+                }
 
                 // If Premium/Family, limits are effectively infinite
                 if (isPremium) {
@@ -50,42 +92,68 @@ export function useLimits() {
                         aiLimit: -1,
                         aiUsage: 0,
                         isAiLimitReached: false,
-                        plan: 'premium',
+                        plan,
                         isTrial: false,
                         daysRemainingInTrial: 0,
+                        isTrialActive: false,
                         loading: false
                     });
                     return;
                 }
 
-                // Calculate Trial Status
-                const createdAt = new Date(user.created_at);
-                const now = new Date();
-                const diffTime = Math.abs(now.getTime() - createdAt.getTime());
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                const isTrial = diffDays <= 30;
-                const daysRemainingInTrial = Math.max(0, 30 - diffDays);
+                // If in trial period, give full access
+                if (isTrialActive) {
+                    setState({
+                        transactionLimit: -1, // Unlimited during trial
+                        transactionUsage: 0,
+                        isTransactionLimitReached: false,
+                        aiLimit: -1, // Unlimited during trial
+                        aiUsage: 0,
+                        isAiLimitReached: false,
+                        plan: 'gratuito',
+                        isTrial: true,
+                        daysRemainingInTrial,
+                        isTrialActive: true,
+                        loading: false
+                    });
+                    return;
+                }
 
-                // Determine Transaction Limit
-                const transactionLimit = isTrial ? 100 : 75;
+                // Free plan after trial - apply limits
+                const transactionLimit = PLAN_LIMITS.free.transactions;
+                const aiLimit = PLAN_LIMITS.free.aiCredits;
 
                 // Fetch Transaction Usage for Current Month
                 const startOfMonthDate = startOfMonth(new Date()).toISOString();
 
-                const { count, error } = await supabase
+                const { count: transactionCount, error: txError } = await supabase
                     .from('transactions')
                     .select('*', { count: 'exact', head: true })
                     .eq('user_id', user.id)
                     .is('group_id', null)
                     .gte('data_transacao', startOfMonthDate.split('T')[0]);
 
-                if (error) throw error;
+                if (txError) throw txError;
 
-                const transactionUsage = count || 0;
+                const transactionUsage = transactionCount || 0;
 
-                // AI Usage - placeholder
-                const aiUsage = 0;
-                const aiLimit = 20;
+                // Fetch AI Usage for Current Month (from usage_tracking table if exists)
+                let aiUsage = 0;
+                try {
+                    const { data: usageData } = await supabase
+                        .from('usage_tracking')
+                        .select('ai_credits_used')
+                        .eq('user_id', user.id)
+                        .gte('created_at', startOfMonthDate)
+                        .order('created_at', { ascending: false })
+                        .limit(1)
+                        .maybeSingle();
+
+                    aiUsage = usageData?.ai_credits_used || 0;
+                } catch {
+                    // Table might not exist yet, ignore
+                    aiUsage = 0;
+                }
 
                 setState({
                     transactionLimit,
@@ -94,9 +162,10 @@ export function useLimits() {
                     aiLimit,
                     aiUsage,
                     isAiLimitReached: aiUsage >= aiLimit,
-                    plan,
-                    isTrial,
-                    daysRemainingInTrial,
+                    plan: 'gratuito',
+                    isTrial: false,
+                    daysRemainingInTrial: 0,
+                    isTrialActive: false,
                     loading: false
                 });
 
@@ -111,3 +180,6 @@ export function useLimits() {
 
     return state;
 }
+
+// Export limits config for use elsewhere
+export { PLAN_LIMITS, TRIAL_DURATION_DAYS };
