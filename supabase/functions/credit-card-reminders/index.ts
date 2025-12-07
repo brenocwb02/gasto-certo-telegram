@@ -1,215 +1,186 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders } from "../_shared/cors.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
-const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN');
-const TELEGRAM_API = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
-interface PendingInvoice {
-    account_id: string;
-    account_name: string;
-    invoice_amount: number;
-    due_date: number;
-    days_until_due: number;
-    has_auto_payment: boolean;
-    payment_account_name: string;
-    has_sufficient_balance: boolean;
-}
-
-interface UserProfile {
-    user_id: string;
-    telegram_chat_id: number;
-    full_name: string;
-}
-
-/**
- * Envia mensagem via Telegram
- */
-async function sendTelegramMessage(
-    chatId: number,
-    text: string,
-    options: any = {}
-): Promise<void> {
-    try {
-        await fetch(`${TELEGRAM_API}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: chatId,
-                text,
-                parse_mode: 'Markdown',
-                ...options
-            })
-        });
-    } catch (error) {
-        console.error(`Erro ao enviar mensagem para ${chatId}:`, error);
-    }
-}
-
-/**
- * Formata valor em reais
- */
+// Helper to format currency
 function formatCurrency(value: number): string {
-    return `R$ ${value.toFixed(2).replace('.', ',')}`;
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(value);
 }
 
-/**
- * Processa lembretes para um usuário específico
- */
-async function processUserReminders(
-    supabase: any,
-    profile: UserProfile
-): Promise<number> {
-    let sentMessages = 0;
+// Send Telegram message
+async function sendTelegramMessage(chatId: number, text: string): Promise<void> {
+  const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
+  if (!botToken) {
+    console.log('No Telegram bot token configured');
+    return;
+  }
 
-    try {
-        // Buscar faturas pendentes
-        const { data: invoices, error } = await supabase
-            .rpc('get_pending_invoices', { p_user_id: profile.user_id });
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+        parse_mode: 'Markdown'
+      })
+    });
 
-        if (error) {
-            console.error(`Erro ao buscar faturas para ${profile.user_id}:`, error);
-            return 0;
-        }
-
-        if (!invoices || invoices.length === 0) {
-            return 0;
-        }
-
-        // Processar cada fatura
-        for (const invoice of invoices as PendingInvoice[]) {
-            // Buscar configurações do cartão
-            const { data: settings } = await supabase
-                .from('credit_card_settings')
-                .select('*')
-                .eq('account_id', invoice.account_id)
-                .single();
-
-            // Decidir se deve enviar lembrete
-            const shouldSendReminder = settings?.send_reminder &&
-                invoice.days_until_due <= (settings?.reminder_days_before || 3) &&
-                invoice.days_until_due > 0;
-
-            if (!shouldSendReminder) {
-                continue; // Pular esta fatura
-            }
-
-            // Montar mensagem
-            let message = `⏰ *Lembrete de Fatura*\n\n`;
-            message += `💳 *${invoice.account_name}*\n`;
-            message += `💰 Valor: *${formatCurrency(invoice.invoice_amount)}*\n`;
-            message += `📅 Vence em: *${invoice.days_until_due} dia(s)*\n`;
-            message += `📆 Dia: *${invoice.due_date}*\n\n`;
-
-            if (invoice.has_auto_payment) {
-                // Modo automático
-                message += `🤖 *Pagamento Automático: ATIVADO*\n`;
-                message += `🏦 Conta: ${invoice.payment_account_name || 'Não configurada'}\n\n`;
-
-                if (invoice.has_sufficient_balance) {
-                    message += `✅ Saldo suficiente disponível\n`;
-                    message += `✓ O pagamento será processado automaticamente no vencimento`;
-                } else {
-                    message += `⚠️ *ATENÇÃO: Saldo insuficiente!*\n`;
-                    message += `Para evitar falha no pagamento automático, adicione saldo na conta *${invoice.payment_account_name}*\n\n`;
-                    message += `💡 Use /desativar_auto para desativar o pagamento automático`;
-                }
-            } else {
-                // Modo manual
-                message += `📲 *Pagamento Manual*\n\n`;
-                message += `Para pagar esta fatura:\n`;
-                message += `• Use o comando /pagar\n`;
-                message += `• Ou acesse o app\n\n`;
-                message += `💡 Quer automatizar? Use /config_cartao`;
-            }
-
-            // Enviar mensagem
-            await sendTelegramMessage(profile.telegram_chat_id, message);
-            sentMessages++;
-
-            // Delay para não sobrecarregar API do Telegram
-            await new Promise(resolve => setTimeout(resolve, 100));
-        }
-
-    } catch (error) {
-        console.error(`Erro ao processar lembretes para ${profile.user_id}:`, error);
+    if (!response.ok) {
+      console.error('Failed to send Telegram message:', await response.text());
     }
-
-    return sentMessages;
+  } catch (error) {
+    console.error('Error sending Telegram message:', error);
+  }
 }
 
-/**
- * Edge Function principal
- */
 serve(async (req) => {
-    // Handle CORS
-    if (req.method === 'OPTIONS') {
-        return new Response(null, { headers: corsHeaders });
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    console.log('[CREDIT-CARD-REMINDERS] Iniciando processamento...');
+
+    const today = new Date();
+    const todayDay = today.getDate();
+
+    // Get cards with reminders enabled
+    const { data: cardsWithSettings, error: settingsError } = await supabase
+      .from('credit_card_settings')
+      .select(`
+        id,
+        account_id,
+        send_reminder,
+        reminder_days_before,
+        user_id
+      `)
+      .eq('send_reminder', true);
+
+    if (settingsError) throw settingsError;
+
+    if (!cardsWithSettings || cardsWithSettings.length === 0) {
+      console.log('[CREDIT-CARD-REMINDERS] Nenhum cartão com lembrete ativo');
+      return new Response(
+        JSON.stringify({ success: true, message: 'No reminders to send', sent: 0 }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    try {
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const result = {
+      processed: 0,
+      sent: 0,
+      errors: 0,
+      details: [] as { cardId: string; userId: string; status: string }[]
+    };
 
-        console.log('[CREDIT-CARD-REMINDERS] Iniciando processamento...');
+    for (const settings of cardsWithSettings) {
+      try {
+        // Get card details
+        const { data: card, error: cardError } = await supabase
+          .from('accounts')
+          .select('id, nome, saldo_atual, dia_vencimento')
+          .eq('id', settings.account_id)
+          .single();
 
-        // Buscar todos os usuários com Telegram integrado
-        const { data: profiles, error: profilesError } = await supabase
-            .from('profiles')
-            .select('user_id, telegram_chat_id, full_name')
-            .not('telegram_chat_id', 'is', null);
-
-        if (profilesError) {
-            throw profilesError;
+        if (cardError || !card) {
+          console.log(`Card not found: ${settings.account_id}`);
+          continue;
         }
 
-        if (!profiles || profiles.length === 0) {
-            console.log('[CREDIT-CARD-REMINDERS] Nenhum usuário com Telegram encontrado');
-            return new Response(
-                JSON.stringify({ success: true, message: 'Nenhum usuário para processar' }),
-                { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
+        // Only process cards with pending invoice
+        if (card.saldo_atual >= 0) {
+          continue;
         }
 
-        let totalSent = 0;
-        let processedUsers = 0;
+        result.processed++;
 
-        // Processar cada usuário
-        for (const profile of profiles as UserProfile[]) {
-            const sent = await processUserReminders(supabase, profile);
-            totalSent += sent;
-            if (sent > 0) processedUsers++;
+        // Check if today is reminder day
+        const dueDay = card.dia_vencimento || 10;
+        const reminderDaysBefore = settings.reminder_days_before || 3;
+        
+        // Calculate reminder day
+        let reminderDay = dueDay - reminderDaysBefore;
+        if (reminderDay <= 0) reminderDay += 30;
+
+        if (todayDay !== reminderDay) {
+          continue;
         }
 
-        const result = {
-            success: true,
-            timestamp: new Date().toISOString(),
-            stats: {
-                total_users: profiles.length,
-                users_with_reminders: processedUsers,
-                messages_sent: totalSent
-            }
-        };
+        // Get user's Telegram chat ID
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('telegram_chat_id')
+          .eq('user_id', settings.user_id)
+          .single();
 
-        console.log('[CREDIT-CARD-REMINDERS] Concluído:', result);
+        if (profileError || !profile?.telegram_chat_id) {
+          result.details.push({
+            cardId: settings.account_id,
+            userId: settings.user_id,
+            status: 'no_telegram'
+          });
+          continue;
+        }
 
-        return new Response(
-            JSON.stringify(result),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        // Send reminder
+        const invoiceAmount = Math.abs(card.saldo_atual);
+        const message = `🔔 *Lembrete de Fatura*\n\n` +
+          `💳 *${card.nome}*\n` +
+          `💰 Valor: ${formatCurrency(invoiceAmount)}\n` +
+          `📅 Vencimento: dia ${dueDay}\n\n` +
+          `Use /pagar para pagar agora.`;
 
-    } catch (error) {
-        console.error('[CREDIT-CARD-REMINDERS] Erro:', error);
-        return new Response(
-            JSON.stringify({
-                success: false,
-                error: error.message
-            }),
-            {
-                status: 500,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            }
-        );
+        await sendTelegramMessage(profile.telegram_chat_id, message);
+
+        result.sent++;
+        result.details.push({
+          cardId: settings.account_id,
+          userId: settings.user_id,
+          status: 'sent'
+        });
+
+      } catch (innerError) {
+        console.error(`Error processing card ${settings.account_id}:`, innerError);
+        result.errors++;
+        result.details.push({
+          cardId: settings.account_id,
+          userId: settings.user_id,
+          status: 'error'
+        });
+      }
     }
+
+    console.log('[CREDIT-CARD-REMINDERS] Concluído:', result);
+
+    return new Response(
+      JSON.stringify(result),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
+  } catch (error) {
+    console.error('[CREDIT-CARD-REMINDERS] Erro:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: errorMessage
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
+  }
 });

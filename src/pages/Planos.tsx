@@ -208,7 +208,7 @@ const Planos = () => {
 
     const getPlanDisplayName = () => {
         if (currentPlan === 'gratuito') return 'Gratuito';
-        if (currentPlan === 'premium' || currentPlan === 'individual') return 'Pessoal';
+        if (currentPlan === 'premium' || currentPlan === 'individual' || currentPlan === 'pessoal') return 'Pessoal';
         if (currentPlan === 'familia') return 'Família';
         return currentPlan;
     };
