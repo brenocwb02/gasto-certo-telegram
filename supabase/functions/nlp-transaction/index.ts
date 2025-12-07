@@ -1,140 +1,139 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/cors.ts';
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
-const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
-const model = 'gemini-2.5-flash'; // Modelo estável mais recente do Gemini
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
-// Helper function to call Google AI API
-async function callGoogleAi(prompt: string) {
-    if (!GOOGLE_AI_API_KEY) {
-        throw new Error('A chave da API da Google AI não está configurada.');
-    }
-
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GOOGLE_AI_API_KEY}`;
-
-    try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
-                generation_config: {
-                    response_mime_type: "application/json",
-                },
-                // CORREÇÃO: Adicionando configurações de segurança para evitar bloqueios desnecessários.
-                safetySettings: [
-                    {
-                        "category": "HARM_CATEGORY_HARASSMENT",
-                        "threshold": "BLOCK_NONE"
-                    },
-                    {
-                        "category": "HARM_CATEGORY_HATE_SPEECH",
-                        "threshold": "BLOCK_NONE"
-                    },
-                    {
-                        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                        "threshold": "BLOCK_NONE"
-                    },
-                    {
-                        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-                        "threshold": "BLOCK_NONE"
-                    }
-                ]
-            }),
-        });
-
-        if (!response.ok) {
-            const errorBody = await response.json();
-            console.error('Google AI API Error:', errorBody);
-            throw new Error(errorBody.error.message);
-        }
-
-        const data = await response.json();
-        // Adiciona log para depurar a resposta completa da IA
-        console.log('Resposta completa da Google AI:', JSON.stringify(data, null, 2));
-
-        const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!jsonText) {
-            // Verifica se a resposta foi bloqueada por segurança
-            if (data.candidates?.[0]?.finishReason === 'SAFETY') {
-                console.error('Resposta bloqueada por configurações de segurança.', data.candidates[0].safetyRatings);
-                throw new Error("A resposta da IA foi bloqueada por filtros de segurança.");
-            }
-            throw new Error("A resposta da IA não contém o texto JSON esperado.");
-        }
-
-        return JSON.parse(jsonText);
-
-    } catch (error) {
-        console.error('Erro ao chamar a API do Google AI:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        throw new Error(`Erro na IA: ${errorMessage}`);
-    }
+interface CategoryData {
+  id: string;
+  nome: string;
+  tipo: string;
+  parent_id: string | null;
+  keywords: string[] | null;
+  parent: { nome: string } | null;
 }
 
+interface AccountData {
+  id: string;
+  nome: string;
+}
+
+async function callGoogleAi(prompt: string): Promise<any> {
+  const apiKey = Deno.env.get('GOOGLE_AI_API_KEY');
+  if (!apiKey) {
+    throw new Error('GOOGLE_AI_API_KEY not configured');
+  }
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 512
+        }
+      })
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    console.error('Google AI error:', error);
+    throw new Error('Failed to call Google AI');
+  }
+
+  const data = await response.json();
+  const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+  // Clean and parse JSON
+  const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error('No valid JSON in response');
+  }
+
+  return JSON.parse(jsonMatch[0]);
+}
 
 serve(async (req) => {
-    if (req.method === 'OPTIONS') {
-        return new Response('ok', { headers: corsHeaders });
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { text, userId } = await req.json();
+
+    if (!text || !userId) {
+      return new Response(
+        JSON.stringify({ validation_errors: ['Texto e userId são obrigatórios'] }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
     }
 
-    try {
-        const { text, userId } = await req.json();
+    console.log(`[NLP] Processing: "${text}" for user ${userId}`);
 
-        if (!text || !userId) {
-            return new Response(JSON.stringify({ error: 'Texto e ID do usuário são obrigatórios.' }), {
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                status: 400,
-            });
+    // Fetch user accounts
+    const { data: accounts, error: accountsError } = await supabase
+      .from('accounts')
+      .select('id, nome')
+      .eq('user_id', userId)
+      .eq('ativo', true);
+
+    // Fetch user categories with parent info
+    const { data: categories, error: categoriesError } = await supabase
+      .from('categories')
+      .select(`
+        id,
+        nome,
+        tipo,
+        parent_id,
+        keywords,
+        parent:categories!parent_id(nome)
+      `)
+      .eq('user_id', userId);
+
+    if (accountsError || categoriesError) {
+      throw new Error('Erro ao buscar dados do usuário.');
+    }
+
+    const accountsList = (accounts as AccountData[] || []).map(a => a.nome).join(', ');
+
+    // Create categories list including hierarchy and keywords
+    const categoriesList = (categories as CategoryData[] || [])
+      .map(c => {
+        const keywordsStr = c.keywords && c.keywords.length > 0
+          ? ` (keywords: ${c.keywords.join(', ')})`
+          : '';
+
+        // Handle parent which could be an object or array from supabase join
+        const parentData = c.parent as unknown;
+        let parentName: string | null = null;
+        
+        if (parentData) {
+          if (Array.isArray(parentData) && parentData.length > 0) {
+            parentName = (parentData[0] as { nome: string }).nome;
+          } else if (typeof parentData === 'object' && 'nome' in (parentData as object)) {
+            parentName = (parentData as { nome: string }).nome;
+          }
         }
 
-        const supabaseAdmin = createClient(
-            Deno.env.get('SUPABASE_URL') ?? '',
-            Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-        );
-
-        // Buscar contas e categorias do usuário
-        const { data: accounts, error: accountsError } = await supabaseAdmin
-            .from('accounts')
-            .select('id, nome, tipo')
-            .eq('user_id', userId);
-
-        const { data: categories, error: categoriesError } = await supabaseAdmin
-            .from('categories')
-            .select(`
-                id, 
-                nome, 
-                parent_id,
-                keywords,
-                parent:categories!parent_id(nome)
-            `)
-            .eq('user_id', userId);
-
-        if (accountsError || categoriesError) {
-            throw new Error('Erro ao buscar dados do usuário.');
+        if (parentName) {
+          return `${parentName} > ${c.nome}${keywordsStr}`;
         }
+        return `${c.nome}${keywordsStr}`;
+      })
+      .join('\n');
 
-        const accountsList = accounts.map(a => a.nome).join(', ');
-
-        // Criar lista de categorias incluindo hierarquia e keywords
-        const categoriesList = categories
-            .map(c => {
-                const keywordsStr = c.keywords && c.keywords.length > 0
-                    ? ` (keywords: ${c.keywords.join(', ')})`
-                    : '';
-
-                if (c.parent) {
-                    return `${c.parent.nome} > ${c.nome}${keywordsStr}`;
-                }
-                return `${c.nome}${keywordsStr}`;
-            })
-            .join('\n');
-
-        // Construir o prompt melhorado para a IA
-        const prompt = `Você é um assistente financeiro que extrai informações de transações.
+    // Build improved AI prompt
+    const prompt = `Você é um assistente financeiro que extrai informações de transações.
 
 Analise esta frase: "${text}"
 
@@ -162,65 +161,99 @@ Retorne APENAS o JSON (sem markdown, sem explicações):
   "validation_errors": []
 }`;
 
-        const extractedData = await callGoogleAi(prompt);
+    const extractedData = await callGoogleAi(prompt);
 
-        if (extractedData.validation_errors && extractedData.validation_errors.length > 0) {
-            return new Response(JSON.stringify(extractedData), {
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                status: 200,
-            });
-        }
-
-        // Mapear nomes para IDs
-        const account = accounts.find(a => a.nome.toLowerCase() === extractedData.conta?.toLowerCase());
-
-        // Lógica de match de Categoria mais inteligente
-        let matchedCategory = null;
-        if (extractedData.categoria) {
-            const catNameInfo = extractedData.categoria.toLowerCase();
-
-            // 1. Tenta match exato da string retornada
-            matchedCategory = categories.find(c => {
-                // Monta o nome hierárquico da categoria do banco para comparar
-                const hierarchicalName = c.parent ? `${c.parent.nome} > ${c.nome}` : c.nome;
-                return hierarchicalName.toLowerCase() === catNameInfo || c.nome.toLowerCase() === catNameInfo;
-            });
-
-            // 2. Se falhar e tiver separador, tenta pelo último nome (filho)
-            if (!matchedCategory && catNameInfo.includes('>')) {
-                const parts = catNameInfo.split('>');
-                const childName = parts[parts.length - 1].trim();
-                matchedCategory = categories.find(c => c.nome.toLowerCase() === childName);
-            }
-        }
-
-        const destinationAccount = accounts.find(a => a.nome.toLowerCase() === extractedData.conta_destino?.toLowerCase());
-
-        // Reconstrói o nome da categoria para o formato "Pai > Filho" oficial para exibição correta
-        const finalCategoryName = matchedCategory
-            ? (matchedCategory.parent ? `${matchedCategory.parent.nome} > ${matchedCategory.nome}` : matchedCategory.nome)
-            : extractedData.categoria;
-
-        const responseData = {
-            ...extractedData,
-            categoria: finalCategoryName,
-            conta_origem_id: account?.id ?? null,
-            categoria_id: matchedCategory?.id ?? null,
-            conta_destino_id: destinationAccount?.id ?? null,
-        };
-
-        return new Response(JSON.stringify(responseData), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 200,
-        });
-
-    } catch (error) {
-        console.error('Error in nlp-transaction function:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        return new Response(JSON.stringify({ error: errorMessage }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 500,
-        });
+    if (extractedData.validation_errors && extractedData.validation_errors.length > 0) {
+      return new Response(JSON.stringify(extractedData), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      });
     }
-});
 
+    // Map names to IDs
+    const account = (accounts as AccountData[] || []).find(
+      a => a.nome.toLowerCase() === extractedData.conta?.toLowerCase()
+    );
+
+    // Smarter category matching logic
+    let matchedCategory: CategoryData | null = null;
+    if (extractedData.categoria) {
+      const catNameInfo = extractedData.categoria.toLowerCase();
+
+      // 1. Try exact match of returned string
+      matchedCategory = (categories as CategoryData[] || []).find(c => {
+        // Build hierarchical name from DB category to compare
+        const parentData = c.parent as unknown;
+        let parentName: string | null = null;
+        
+        if (parentData) {
+          if (Array.isArray(parentData) && parentData.length > 0) {
+            parentName = (parentData[0] as { nome: string }).nome;
+          } else if (typeof parentData === 'object' && 'nome' in (parentData as object)) {
+            parentName = (parentData as { nome: string }).nome;
+          }
+        }
+
+        const hierarchicalName = parentName ? `${parentName} > ${c.nome}` : c.nome;
+        return hierarchicalName.toLowerCase() === catNameInfo || c.nome.toLowerCase() === catNameInfo;
+      }) || null;
+
+      // 2. If failed and has separator, try by last name (child)
+      if (!matchedCategory && catNameInfo.includes('>')) {
+        const parts = catNameInfo.split('>');
+        const childName = parts[parts.length - 1].trim();
+        matchedCategory = (categories as CategoryData[] || []).find(
+          c => c.nome.toLowerCase() === childName
+        ) || null;
+      }
+    }
+
+    const destinationAccount = (accounts as AccountData[] || []).find(
+      a => a.nome.toLowerCase() === extractedData.conta_destino?.toLowerCase()
+    );
+
+    // Rebuild category name in official "Parent > Child" format for correct display
+    let finalCategoryName = extractedData.categoria;
+    if (matchedCategory) {
+      const parentData = matchedCategory.parent as unknown;
+      let parentName: string | null = null;
+      
+      if (parentData) {
+        if (Array.isArray(parentData) && parentData.length > 0) {
+          parentName = (parentData[0] as { nome: string }).nome;
+        } else if (typeof parentData === 'object' && 'nome' in (parentData as object)) {
+          parentName = (parentData as { nome: string }).nome;
+        }
+      }
+
+      finalCategoryName = parentName 
+        ? `${parentName} > ${matchedCategory.nome}` 
+        : matchedCategory.nome;
+    }
+
+    const responseData = {
+      ...extractedData,
+      categoria: finalCategoryName,
+      conta_origem_id: account?.id ?? null,
+      categoria_id: matchedCategory?.id ?? null,
+      conta_destino_id: destinationAccount?.id ?? null,
+    };
+
+    console.log('[NLP] Response:', responseData);
+
+    return new Response(JSON.stringify(responseData), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+    });
+
+  } catch (error) {
+    console.error('[NLP] Error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return new Response(
+      JSON.stringify({
+        validation_errors: [`Erro ao processar: ${errorMessage}`]
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
+  }
+});
