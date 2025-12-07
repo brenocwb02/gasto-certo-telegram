@@ -31,6 +31,7 @@ export const useSubscription = () => {
         throw functionError;
       }
 
+      console.log('[useSubscription] Response from check-subscription:', data);
       setSubscriptionInfo(data);
     } catch (err) {
       console.error('Error checking subscription:', err);
