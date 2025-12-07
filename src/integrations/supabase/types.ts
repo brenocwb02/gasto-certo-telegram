@@ -107,6 +107,45 @@ export type Database = {
           },
         ]
       }
+      admin_audit_log: {
+        Row: {
+          action: string
+          admin_user_id: string | null
+          affected_user_id: string | null
+          created_at: string | null
+          id: string
+          ip_address: unknown
+          query_details: Json | null
+          record_id: string | null
+          table_name: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          admin_user_id?: string | null
+          affected_user_id?: string | null
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown
+          query_details?: Json | null
+          record_id?: string | null
+          table_name?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          admin_user_id?: string | null
+          affected_user_id?: string | null
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown
+          query_details?: Json | null
+          record_id?: string | null
+          table_name?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       ai_usage_logs: {
         Row: {
           created_at: string
@@ -228,6 +267,96 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      credit_card_settings: {
+        Row: {
+          account_id: string
+          allow_partial_payment: boolean | null
+          auto_payment: boolean | null
+          created_at: string | null
+          default_payment_account_id: string | null
+          id: string
+          min_balance_warning: number | null
+          reminder_days_before: number | null
+          send_reminder: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          allow_partial_payment?: boolean | null
+          auto_payment?: boolean | null
+          created_at?: string | null
+          default_payment_account_id?: string | null
+          id?: string
+          min_balance_warning?: number | null
+          reminder_days_before?: number | null
+          send_reminder?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          allow_partial_payment?: boolean | null
+          auto_payment?: boolean | null
+          created_at?: string | null
+          default_payment_account_id?: string | null
+          id?: string
+          min_balance_warning?: number | null
+          reminder_days_before?: number | null
+          send_reminder?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_card_settings_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_card_settings_default_payment_account_id_fkey"
+            columns: ["default_payment_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      data_deletion_requests: {
+        Row: {
+          deletion_details: Json | null
+          id: string
+          notes: string | null
+          processed_at: string | null
+          processed_by: string | null
+          requested_at: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          deletion_details?: Json | null
+          id?: string
+          notes?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          requested_at?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          deletion_details?: Json | null
+          id?: string
+          notes?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          requested_at?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       family_groups: {
         Row: {
@@ -625,8 +754,11 @@ export type Database = {
           created_at: string
           current_group_id: string | null
           id: string
+          lgpd_consent_date: string | null
+          lgpd_consent_version: string | null
           nome: string
           onboarding_completed: boolean
+          privacy_settings: Json | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           telefone: string | null
@@ -640,8 +772,11 @@ export type Database = {
           created_at?: string
           current_group_id?: string | null
           id?: string
+          lgpd_consent_date?: string | null
+          lgpd_consent_version?: string | null
           nome: string
           onboarding_completed?: boolean
+          privacy_settings?: Json | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           telefone?: string | null
@@ -655,8 +790,11 @@ export type Database = {
           created_at?: string
           current_group_id?: string | null
           id?: string
+          lgpd_consent_date?: string | null
+          lgpd_consent_version?: string | null
           nome?: string
           onboarding_completed?: boolean
+          privacy_settings?: Json | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           telefone?: string | null
@@ -1133,6 +1271,14 @@ export type Database = {
       }
       dissolve_family_group: { Args: { p_group_id: string }; Returns: Json }
       generate_activation_code: { Args: { user_uuid: string }; Returns: string }
+      get_audit_summary: {
+        Args: { p_days_back?: number }
+        Returns: {
+          action: string
+          count: number
+          last_occurrence: string
+        }[]
+      }
       get_budgets_with_spent:
         | {
             Args: { p_group_id?: string; p_month: string }
@@ -1173,6 +1319,19 @@ export type Database = {
           total_balance: number
         }[]
       }
+      get_pending_invoices: {
+        Args: { p_user_id: string }
+        Returns: {
+          account_id: string
+          account_name: string
+          days_until_due: number
+          due_date: number
+          has_auto_payment: boolean
+          has_sufficient_balance: boolean
+          invoice_amount: number
+          payment_account_name: string
+        }[]
+      }
       get_telegram_context: {
         Args: { p_user_id: string }
         Returns: {
@@ -1196,6 +1355,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      import_default_categories: {
+        Args: { target_user_id: string }
+        Returns: undefined
+      }
       invite_family_member: {
         Args: { p_group_id: string; p_name: string; p_role?: string }
         Returns: Json
@@ -1204,10 +1367,30 @@ export type Database = {
       is_family_group_owner: { Args: { group_uuid: string }; Returns: boolean }
       is_family_member: { Args: { target_user_id: string }; Returns: boolean }
       is_in_family_group: { Args: { group_uuid: string }; Returns: boolean }
+      log_admin_access: {
+        Args: {
+          p_action: string
+          p_affected_user_id?: string
+          p_query_details?: Json
+          p_record_id?: string
+          p_table_name?: string
+        }
+        Returns: string
+      }
       migrate_personal_data_to_group: {
         Args: { p_group_id: string }
         Returns: Json
       }
+      process_data_deletion: { Args: { p_request_id: string }; Returns: Json }
+      process_invoice_payment: {
+        Args: {
+          p_amount?: number
+          p_card_account_id: string
+          p_payment_account_id: string
+        }
+        Returns: Json
+      }
+      request_data_deletion: { Args: never; Returns: string }
       set_telegram_context: {
         Args: { p_context: string; p_user_id: string }
         Returns: boolean
