@@ -13,9 +13,7 @@ import {
   toggleReminder
 } from '../_shared/creditCardCommands.ts';
 
-/**
- * Converte valores do quiz em labels legíveis
- */
+// --- Funções Auxiliares de Label (Quiz) ---
 function getEmergencyFundLabel(value: string): string {
   const labels: Record<string, string> = {
     'none': 'Nada',
@@ -104,18 +102,21 @@ function getRetirementPlanningLabel(value: string): string {
   return labels[value] || value;
 }
 
-// --- Funções Auxiliares ---
+// --- Funções Auxiliares Gerais ---
 /**
  * Formata um número para a moeda BRL.
- */ function formatCurrency(value: number): string {
+ */ 
+function formatCurrency(value: number): string {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL'
   }).format(value);
 }
+
 /**
  * Envia uma mensagem para o Telegram.
- */ async function sendTelegramMessage(chatId: number, text: string, options: any = {}): Promise<any> {
+ */ 
+async function sendTelegramMessage(chatId: number, text: string, options: any = {}): Promise<any> {
   const telegramApiUrl = `https://api.telegram.org/bot${Deno.env.get('TELEGRAM_BOT_TOKEN')}/sendMessage`;
   try {
     const body = {
@@ -142,9 +143,11 @@ function getRetirementPlanningLabel(value: string): string {
     return null;
   }
 }
+
 /**
  * Edita uma mensagem existente no Telegram.
- */ async function editTelegramMessage(chatId: number, messageId: number, text: string, options: any = {}): Promise<void> {
+ */ 
+async function editTelegramMessage(chatId: number, messageId: number, text: string, options: any = {}): Promise<void> {
   const telegramApiUrl = `https://api.telegram.org/bot${Deno.env.get('TELEGRAM_BOT_TOKEN')}/editMessageText`;
   try {
     await fetch(telegramApiUrl, {
@@ -164,9 +167,11 @@ function getRetirementPlanningLabel(value: string): string {
     console.error("Falha ao editar mensagem do Telegram:", e);
   }
 }
+
 /**
  * Transcreve um áudio do Telegram usando a API do Gemini.
- */ async function getTranscriptFromAudio(fileId: string): Promise<string> {
+ */ 
+async function getTranscriptFromAudio(fileId: string): Promise<string> {
   const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
   const googleApiKey = Deno.env.get('GOOGLE_AI_API_KEY');
   if (!botToken || !googleApiKey) {
@@ -624,7 +629,7 @@ Apenas digite: "Almoço 25 reais" ou envie áudio!
     }
 
     case '/faturas': {
-      await handleFaturasCommand(supabase, chatId, userId);
+      await handleFaturaCommand(supabase, chatId, userId);
       break;
     }
 
@@ -1732,20 +1737,32 @@ serve(async (req) => {
         } else if (accountId === 'back') {
           await handleConfigCartaoCommand(supabaseAdmin, chatId, userId);
         } else {
-          await handleCardConfigCallback(supabaseAdmin, chatId, userId, accountId);
+          await handleConfigCallback(supabaseAdmin, chatId, userId, accountId);
         }
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
 
       if (data.startsWith('auto_on_')) {
         const accountId = data.replace('auto_on_', '');
-        await handleActivateAutoPayment(supabaseAdmin, chatId, userId, accountId);
+        // FIX: Usando toggleAutoPayment no lugar de handleActivateAutoPayment que não existe
+        try {
+            await toggleAutoPayment(supabaseAdmin, chatId, userId, accountId);
+        } catch (e) {
+            console.error("Erro ao ativar auto pagamento:", e);
+            await editTelegramMessage(chatId, messageId, '⚠️ Funcionalidade indisponível no momento.');
+        }
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
 
       if (data.startsWith('auto_off_')) {
         const accountId = data.replace('auto_off_', '');
-        await handleDeactivateAutoPayment(supabaseAdmin, chatId, userId, accountId);
+        // FIX: Usando toggleAutoPayment no lugar de handleDeactivateAutoPayment que não existe
+        try {
+            await toggleAutoPayment(supabaseAdmin, chatId, userId, accountId);
+        } catch (e) {
+            console.error("Erro ao desativar auto pagamento:", e);
+            await editTelegramMessage(chatId, messageId, '⚠️ Funcionalidade indisponível no momento.');
+        }
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
       // --- Fim Callbacks Cartão ---
@@ -2059,8 +2076,10 @@ serve(async (req) => {
         await editTelegramMessage(chatId, analyzingMessage.message_id, "✅ Análise concluída. A preparar confirmação...");
       }
       if (nlpError || !nlpData || nlpData.validation_errors && nlpData.validation_errors.length > 0) {
+        console.error('Erro NLP:', nlpError, nlpData);
+        const detailedError = nlpError ? JSON.stringify(nlpError) : (nlpData?.validation_errors?.join('\n') || "Dados inválidos recebidos");
         const errorMsg = nlpData?.validation_errors?.join('\n') || "Não consegui entender sua mensagem.";
-        await sendTelegramMessage(chatId, `❌ Problemas encontrados:\n${errorMsg}\n\nTente ser mais específico, como 'gastei 50 reais no almoço no Nubank'.`);
+        await sendTelegramMessage(chatId, `❌ Problemas encontrados:\n${errorMsg}\n\n*Debug Info:* \`${detailedError}\`\n\nTente ser mais específico, como 'gastei 50 reais no almoço no Nubank'.`);
         return new Response('OK', {
           status: 200,
           headers: corsHeaders
