@@ -1,475 +1,547 @@
 /**
- * Módulo de Comandos de Cartão de Crédito para Telegram
- * 
- * Este arquivo contém os handlers para os comandos:
- * - /pagar - Pagar fatura de cartão
- * - /faturas - Listar faturas pendentes
- * - /config_cartao - Configurar automação
- * - /ativar_auto - Ativar pagamento automático
- * - /desativar_auto - Desativar pagamento automático
- * 
- * Para integrar ao telegram-webhook/index.ts:
- * 1. Importar este módulo
- * 2. Adicionar os handlers no switch de comandos
+ * Comandos relacionados a Cartão de Crédito via Telegram
  */
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
-const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN');
-const TELEGRAM_API = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
-
-/**
- * Envia mensagem ao Telegram
- */
-export async function sendTelegramMessage(
-    chatId: number,
-    text: string,
-    options: any = {}
-): Promise<any> {
-    const response = await fetch(`${TELEGRAM_API}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            chat_id: chatId,
-            text,
-            parse_mode: 'Markdown',
-            ...options
-        })
-    });
-    return response.json();
+// Interface para configurações de cartão
+interface CreditCardSettings {
+  id: string;
+  account_id: string;
+  auto_payment: boolean;
+  default_payment_account_id: string | null;
+  send_reminder: boolean;
+  reminder_days_before: number;
+  allow_partial_payment: boolean;
+  min_balance_warning: number;
 }
 
-/**
- * Formata valor monetário
- */
+interface CreditCardAccount {
+  id: string;
+  nome: string;
+  saldo_atual: number;
+  dia_fechamento: number;
+  dia_vencimento: number;
+}
+
+// Função auxiliar para formatar moeda
 function formatCurrency(value: number): string {
-    return `R$ ${value.toFixed(2).replace('.', ',')}`;
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(value);
 }
 
-/**
- * Comando: /faturas
- * Lista todas as faturas pendentes do usuário
- */
-export async function handleFaturasCommand(
-    supabase: any,
-    chatId: number,
-    userId: string
+// Função auxiliar para enviar mensagem ao Telegram
+async function sendTelegramMessage(
+  chatId: number,
+  text: string,
+  options?: { parse_mode?: string; reply_markup?: any }
 ): Promise<void> {
-    try {
-        // Buscar faturas pendentes
-        const { data: invoices, error } = await supabase
-            .rpc('get_pending_invoices', { p_user_id: userId });
+  const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
+  if (!botToken) throw new Error('Token do bot não configurado');
 
-        if (error) throw error;
+  const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text,
+      parse_mode: options?.parse_mode || 'Markdown',
+      reply_markup: options?.reply_markup
+    })
+  });
 
-        if (!invoices || invoices.length === 0) {
-            await sendTelegramMessage(
-                chatId,
-                `✅ *Parabéns!*\n\n` +
-                `Você não tem faturas de cartão pendentes no momento.\n\n` +
-                `💡 Use /config_cartao para automatizar futuros pagamentos.`
-            );
-            return;
-        }
+  if (!response.ok) {
+    const error = await response.text();
+    console.error('Erro ao enviar mensagem:', error);
+    throw new Error('Falha ao enviar mensagem');
+  }
+}
 
-        // Montar mensagem
-        let message = `💳 *Suas Faturas Pendentes*\n\n`;
-
-        for (const invoice of invoices) {
-            const fatura = invoice.invoice_amount;
-            const dias = invoice.days_until_due;
-            const autoIcon = invoice.has_auto_payment ? '🤖' : '📲';
-            const saldoIcon = invoice.has_sufficient_balance ? '✅' : '⚠️';
-
-            message += `${autoIcon} *${invoice.account_name}*\n`;
-            message += `💰 ${formatCurrency(fatura)}\n`;
-            message += `📅 Vence em: ${dias} dia(s) (dia ${invoice.due_date})\n`;
-
-            if (invoice.has_auto_payment) {
-                message += `🏦 Pagar de: ${invoice.payment_account_name}\n`;
-                message += `${saldoIcon} Saldo: ${invoice.has_sufficient_balance ? 'Suficiente' : 'Insuficiente'}\n`;
-            }
-
-            message += `\n`;
-        }
-
-        message += `\n📲 *Comandos Disponíveis:*\n`;
-        message += `• /pagar - Pagar uma fatura\n`;
-        message += `• /config_cartao - Configurar automação\n`;
-
-        await sendTelegramMessage(chatId, message);
-
-    } catch (error) {
-        console.error('Erro em /faturas:', error);
-        await sendTelegramMessage(
-            chatId,
-            `❌ Erro ao buscar faturas.\nTente novamente ou use o aplicativo.`
-        );
-    }
+// Criar cliente Supabase
+function createSupabaseClient(): SupabaseClient {
+  return createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  );
 }
 
 /**
- * Comando: /pagar
- * Permite ao usuário selecionar e pagar uma fatura
+ * Comando /fatura - Mostra faturas dos cartões de crédito
  */
-export async function handlePagarCommand(
-    supabase: any,
-    chatId: number,
-    userId: string
-): Promise<void> {
-    try {
-        // Buscar faturas pendentes
-        const { data: invoices, error } = await supabase
-            .rpc('get_pending_invoices', { p_user_id: userId });
+export async function handleFaturaCommand(userId: string, chatId: number): Promise<void> {
+  const supabase = createSupabaseClient();
+  
+  try {
+    const { data: cards, error } = await supabase
+      .from('accounts')
+      .select('id, nome, saldo_atual, dia_fechamento, dia_vencimento')
+      .eq('user_id', userId)
+      .eq('tipo', 'cartao')
+      .eq('ativo', true);
 
-        if (error) throw error;
+    if (error) throw error;
 
-        if (!invoices || invoices.length === 0) {
-            await sendTelegramMessage(
-                chatId,
-                `✅ Você não tem faturas pendentes para pagar!`
-            );
-            return;
-        }
-
-        // Criar botões inline para cada fatura
-        const buttons = invoices.map((invoice: any) => [{
-            text: `${invoice.account_name} - ${formatCurrency(invoice.invoice_amount)}`,
-            callback_data: `pay_${invoice.account_id}`
-        }]);
-
-        buttons.push([{
-            text: '❌ Cancelar',
-            callback_data: 'pay_cancel'
-        }]);
-
-        await sendTelegramMessage(
-            chatId,
-            `💳 *Selecione qual fatura pagar:*\n\n` +
-            `Suas faturas pendentes estão listadas abaixo.\n` +
-            `Clique em uma para confirmar o pagamento.`,
-            {
-                reply_markup: {
-                    inline_keyboard: buttons
-                }
-            }
-        );
-
-    } catch (error) {
-        console.error('Erro em /pagar:', error);
-        await sendTelegramMessage(
-            chatId,
-            `❌ Erro ao listar faturas.\nTente novamente.`
-        );
+    if (!cards || cards.length === 0) {
+      await sendTelegramMessage(
+        chatId,
+        `💳 *Faturas de Cartão*\n\nVocê não tem cartões de crédito cadastrados.`
+      );
+      return;
     }
+
+    let message = `💳 *Faturas de Cartão de Crédito*\n\n`;
+
+    for (const card of cards) {
+      const fatura = Math.abs(card.saldo_atual);
+      const status = card.saldo_atual < 0 ? '🔴' : '🟢';
+      
+      message += `${status} *${card.nome}*\n`;
+      message += `   Fatura: ${formatCurrency(fatura)}\n`;
+      message += `   Fechamento: dia ${card.dia_fechamento || 'N/A'}\n`;
+      message += `   Vencimento: dia ${card.dia_vencimento || 'N/A'}\n\n`;
+    }
+
+    message += `\n💡 Use /pagar para pagar uma fatura.`;
+
+    await sendTelegramMessage(chatId, message);
+
+  } catch (error) {
+    console.error('Erro em /fatura:', error);
+    const errorMsg = error instanceof Error ? error.message : JSON.stringify(error);
+    await sendTelegramMessage(
+      chatId,
+      `❌ Erro ao buscar faturas: ${errorMsg}`
+    );
+  }
 }
 
 /**
- * Callback: Processar pagamento selecionado
- * Chamado quando usuário clica em um botão de pagamento
+ * Comando /pagar - Inicia o processo de pagamento de fatura
+ */
+export async function handlePagarCommand(userId: string, chatId: number): Promise<void> {
+  const supabase = createSupabaseClient();
+  
+  try {
+    const { data: cards, error } = await supabase
+      .from('accounts')
+      .select('id, nome, saldo_atual, dia_vencimento')
+      .eq('user_id', userId)
+      .eq('tipo', 'cartao')
+      .eq('ativo', true)
+      .lt('saldo_atual', 0);
+
+    if (error) throw error;
+
+    if (!cards || cards.length === 0) {
+      await sendTelegramMessage(
+        chatId,
+        `✅ *Nenhuma fatura pendente!*\n\nTodos os seus cartões estão com saldo em dia.`
+      );
+      return;
+    }
+
+    // Criar botões para cada cartão com fatura
+    const buttons = cards.map((card: CreditCardAccount) => [{
+      text: `💳 ${card.nome} - ${formatCurrency(Math.abs(card.saldo_atual))}`,
+      callback_data: `pay_${card.id}`
+    }]);
+
+    buttons.push([{
+      text: '❌ Cancelar',
+      callback_data: 'pay_cancel'
+    }]);
+
+    await sendTelegramMessage(
+      chatId,
+      `💳 *Pagar Fatura*\n\nSelecione o cartão que deseja pagar:`,
+      {
+        reply_markup: {
+          inline_keyboard: buttons
+        }
+      }
+    );
+
+  } catch (error) {
+    console.error('Erro em /pagar:', error);
+    const errorMsg = error instanceof Error ? error.message : JSON.stringify(error);
+    await sendTelegramMessage(
+      chatId,
+      `❌ Erro ao buscar cartões: ${errorMsg}`
+    );
+  }
+}
+
+/**
+ * Processa callback de seleção de cartão para pagamento
  */
 export async function handlePaymentCallback(
-    supabase: any,
-    chatId: number,
-    userId: string,
-    accountId: string
+  userId: string,
+  chatId: number,
+  cardId: string
 ): Promise<void> {
-    try {
-        // Enviar mensagem de processamento
-        const processingMsg = await sendTelegramMessage(
-            chatId,
-            `⏳ Processando pagamento...`
-        );
+  const supabase = createSupabaseClient();
+  
+  try {
+    // Buscar dados do cartão
+    const { data: card, error: cardError } = await supabase
+      .from('accounts')
+      .select('id, nome, saldo_atual')
+      .eq('id', cardId)
+      .eq('user_id', userId)
+      .single();
 
-        // Buscar informações do cartão
-        const { data: card } = await supabase
-            .from('accounts')
-            .select(`
-        id,
-        nome,
-        saldo_atual,
-        credit_card_settings!credit_card_settings_account_id_fkey!inner(default_payment_account_id)
-      `)
-            .eq('id', accountId)
-            .single();
-
-        const settings = Array.isArray(card.credit_card_settings) ? card.credit_card_settings[0] : card.credit_card_settings;
-
-        if (!card || !settings?.default_payment_account_id) {
-            await sendTelegramMessage(
-                chatId,
-                `❌ *Erro*\n\nConta de pagamento não configurada.\n` +
-                `Use /config_cartao para configurar.`
-            );
-            return;
-        }
-
-        const fatura = Math.abs(card.saldo_atual);
-        const paymentAccountId = settings.default_payment_account_id;
-
-        // Processar pagamento via RPC
-        const { data: result, error } = await supabase
-            .rpc('process_invoice_payment', {
-                p_card_account_id: accountId,
-                p_payment_account_id: paymentAccountId,
-                p_amount: null // Pagar fatura completa
-            });
-
-        if (error) throw error;
-
-        if (result.success) {
-            // Sucesso
-            await sendTelegramMessage(
-                chatId,
-                `✅ *Pagamento Realizado!*\n\n` +
-                `💳 ${card.nome}\n` +
-                `💰 Valor: ${formatCurrency(result.amount_paid)}\n` +
-                `🏦 De: ${result.payment_account_name}\n\n` +
-                `📊 *Novo Saldo*\n` +
-                `• ${result.payment_account_name}: ${formatCurrency(result.new_payment_balance)}\n` +
-                `• ${card.nome}: ${formatCurrency(result.new_card_balance)}\n\n` +
-                `✓ Pagamento concluído com sucesso!`
-            );
-        } else {
-            // Falha - saldo insuficiente
-            await sendTelegramMessage(
-                chatId,
-                `⚠️ *Saldo Insuficiente*\n\n` +
-                `💰 Fatura: ${formatCurrency(result.required)}\n` +
-                `🏦 Disponível: ${formatCurrency(result.available)}\n` +
-                `❌ Faltam: ${formatCurrency(result.missing)}\n\n` +
-                `Por favor, adicione saldo em ${result.payment_account_name} e tente novamente.`
-            );
-        }
-
-    } catch (error) {
-        console.error('Erro ao processar pagamento:', error);
-        const errorMsg = error instanceof Error ? error.message : JSON.stringify(error);
-        await sendTelegramMessage(
-            chatId,
-            `❌ Erro ao processar pagamento.\n\nDetalhe técnico: ${errorMsg}`
-        );
+    if (cardError || !card) {
+      await sendTelegramMessage(chatId, '❌ Cartão não encontrado.');
+      return;
     }
+
+    // Buscar contas para pagamento
+    const { data: accounts, error: accountsError } = await supabase
+      .from('accounts')
+      .select('id, nome, saldo_atual')
+      .eq('user_id', userId)
+      .neq('tipo', 'cartao')
+      .eq('ativo', true)
+      .gt('saldo_atual', 0);
+
+    if (accountsError || !accounts || accounts.length === 0) {
+      await sendTelegramMessage(
+        chatId,
+        `❌ Nenhuma conta com saldo disponível para pagar a fatura.`
+      );
+      return;
+    }
+
+    const fatura = Math.abs(card.saldo_atual);
+
+    // Criar botões para cada conta disponível
+    const buttons = accounts.map((account: { id: string; nome: string; saldo_atual: number }) => [{
+      text: `${account.nome} (${formatCurrency(account.saldo_atual)})`,
+      callback_data: `confirm_pay_${cardId}_${account.id}_${fatura}`
+    }]);
+
+    buttons.push([{
+      text: '❌ Cancelar',
+      callback_data: 'pay_cancel'
+    }]);
+
+    await sendTelegramMessage(
+      chatId,
+      `💳 *Pagar fatura ${card.nome}*\n` +
+      `💰 Valor: ${formatCurrency(fatura)}\n\n` +
+      `Selecione a conta de origem:`,
+      {
+        reply_markup: {
+          inline_keyboard: buttons
+        }
+      }
+    );
+
+  } catch (error) {
+    console.error('Erro no callback de pagamento:', error);
+    const errorMsg = error instanceof Error ? error.message : JSON.stringify(error);
+    await sendTelegramMessage(
+      chatId,
+      `❌ Erro ao processar seleção: ${errorMsg}`
+    );
+  }
 }
 
 /**
- * Comando: /config_cartao
- * Mostra interface de configuração de automação
+ * Confirma e executa o pagamento da fatura
  */
-export async function handleConfigCartaoCommand(
-    supabase: any,
-    chatId: number,
-    userId: string
+export async function confirmPayment(
+  userId: string,
+  chatId: number,
+  cardId: string,
+  accountId: string,
+  amount: number
 ): Promise<void> {
-    try {
-        // Buscar cartões do usuário
-        const { data: cards, error } = await supabase
-            .from('accounts')
-            .select(`
-        id,
-        nome,
-        dia_vencimento,
-        credit_card_settings!credit_card_settings_account_id_fkey(
-          auto_payment,
-          default_payment_account_id,
-          send_reminder,
-          reminder_days_before
-        )
-      `)
-            .eq('user_id', userId)
-            .eq('tipo', 'cartao')
-            .eq('ativo', true);
+  const supabase = createSupabaseClient();
+  
+  try {
+    // Executar pagamento via function do banco
+    const { data: result, error } = await supabase.rpc('process_invoice_payment', {
+      p_card_account_id: cardId,
+      p_payment_account_id: accountId,
+      p_amount: amount
+    });
 
-        if (error) throw error;
+    if (error) throw error;
 
-        if (!cards || cards.length === 0) {
-            await sendTelegramMessage(
-                chatId,
-                `ℹ️ Você não tem cartões de crédito cadastrados.\n\n` +
-                `Cadastre um cartão no aplicativo para gerenciar faturas automaticamente.`
-            );
-            return;
-        }
-
-        // Criar botões para cada cartão
-        const buttons = cards.map(card => [{
-            text: `⚙️ ${card.nome}`,
-            callback_data: `config_${card.id}`
-        }]);
-
-        buttons.push([{
-            text: '❌ Cancelar',
-            callback_data: 'config_cancel'
-        }]);
-
-        await sendTelegramMessage(
-            chatId,
-            `⚙️ *Configurar Automação de Pagamento*\n\n` +
-            `Selecione o cartão que deseja configurar:`,
-            {
-                reply_markup: {
-                    inline_keyboard: buttons
-                }
-            }
-        );
-
-    } catch (error) {
-        console.error('Erro em /config_cartao:', error);
-        const errorMsg = error instanceof Error ? error.message : JSON.stringify(error);
-        await sendTelegramMessage(
-            chatId,
-            `❌ Erro ao carregar configurações.\n\nDetalhe técnico: ${errorMsg}`
-        );
+    if (result?.success) {
+      await sendTelegramMessage(
+        chatId,
+        `✅ *Pagamento realizado com sucesso!*\n\n` +
+        `💳 Cartão: ${result.card_name}\n` +
+        `💰 Valor pago: ${formatCurrency(result.amount_paid)}\n` +
+        `🏦 Conta: ${result.payment_account_name}\n` +
+        `📊 Saldo restante na conta: ${formatCurrency(result.new_payment_balance)}\n` +
+        `📊 Nova fatura: ${formatCurrency(Math.abs(result.new_card_balance))}`
+      );
+    } else {
+      await sendTelegramMessage(
+        chatId,
+        `❌ *Pagamento não realizado*\n\n` +
+        `Motivo: ${result?.error || 'Saldo insuficiente'}\n` +
+        `${result?.missing ? `Faltam: ${formatCurrency(result.missing)}` : ''}`
+      );
     }
+
+  } catch (error) {
+    console.error('Erro ao confirmar pagamento:', error);
+    const errorMsg = error instanceof Error ? error.message : JSON.stringify(error);
+    await sendTelegramMessage(
+      chatId,
+      `❌ Erro ao processar pagamento: ${errorMsg}`
+    );
+  }
 }
 
 /**
- * Callback: Mostrar configurações de um cartão específico
+ * Comando /config_cartao - Configurar automação de pagamentos
  */
-export async function handleCardConfigCallback(
-    supabase: any,
-    chatId: number,
-    userId: string,
-    accountId: string
-): Promise<void> {
-    try {
-        // Buscar informações do cartão
-        const { data: card } = await supabase
-            .from('accounts')
-            .select(`
-        id,
-        nome,
-        dia_vencimento,
-        credit_card_settings!credit_card_settings_account_id_fkey!inner(
-          auto_payment,
-          default_payment_account_id,
-          send_reminder,
-          reminder_days_before,
-          payment_account:accounts!credit_card_settings_default_payment_account_id_fkey(nome)
-        )
-      `)
-            .eq('id', accountId)
-            .eq('user_id', userId)
-            .single();
+export async function handleConfigCartaoCommand(userId: string, chatId: number): Promise<void> {
+  const supabase = createSupabaseClient();
+  
+  try {
+    const { data: cards, error } = await supabase
+      .from('accounts')
+      .select('id, nome')
+      .eq('user_id', userId)
+      .eq('tipo', 'cartao')
+      .eq('ativo', true);
 
-        if (!card) {
-            await sendTelegramMessage(chatId, `❌ Cartão não encontrado.`);
-            return;
-        }
+    if (error) throw error;
 
-        const settings = Array.isArray(card.credit_card_settings) ? card.credit_card_settings[0] : card.credit_card_settings;
-        const autoIcon = settings.auto_payment ? '✅' : '❌';
-        const reminderIcon = settings.send_reminder ? '🔔' : '🔕';
-
-        let message = `⚙️ *Configurações: ${card.nome}*\n\n`;
-        message += `📅 Vencimento: Dia ${card.dia_vencimento}\n\n`;
-        message += `*Status Atual:*\n`;
-        message += `${autoIcon} Pagamento Automático: ${settings.auto_payment ? 'ATIVADO' : 'DESATIVADO'}\n`;
-
-        if (settings.auto_payment) {
-            message += `🏦 Pagar de: ${settings.payment_account?.nome || 'Não configurada'}\n`;
-        }
-
-        message += `${reminderIcon} Lembretes: ${settings.send_reminder ? 'ATIVADOS' : 'DESATIVADOS'}\n`;
-
-        if (settings.send_reminder) {
-            message += `⏰ Avisar: ${settings.reminder_days_before} dias antes\n`;
-        }
-
-        // Botões de ação
-        const buttons = [];
-
-        if (settings.auto_payment) {
-            buttons.push([{
-                text: '🔴 Desativar Automático',
-                callback_data: `auto_off_${accountId}`
-            }]);
-        } else {
-            buttons.push([{
-                text: '🟢 Ativar Automático',
-                callback_data: `auto_on_${accountId}`
-            }]);
-        }
-
-        buttons.push([{
-            text: '🔙 Voltar',
-            callback_data: 'config_back'
-        }]);
-
-        await sendTelegramMessage(chatId, message, {
-            reply_markup: {
-                inline_keyboard: buttons
-            }
-        });
-
-    } catch (error) {
-        console.error('Erro ao mostrar config:', error);
-        const errorMsg = error instanceof Error ? error.message : JSON.stringify(error);
-        await sendTelegramMessage(chatId, `❌ Erro ao carregar configurações.\n\nDetalhe técnico: ${errorMsg}`);
+    if (!cards || cards.length === 0) {
+      await sendTelegramMessage(
+        chatId,
+        `ℹ️ Você não tem cartões de crédito cadastrados.\n\n` +
+        `Cadastre um cartão no aplicativo para gerenciar faturas automaticamente.`
+      );
+      return;
     }
+
+    // Criar botões para cada cartão
+    const buttons = cards.map((card: { id: string; nome: string }) => [{
+      text: `⚙️ ${card.nome}`,
+      callback_data: `config_${card.id}`
+    }]);
+
+    buttons.push([{
+      text: '❌ Cancelar',
+      callback_data: 'config_cancel'
+    }]);
+
+    await sendTelegramMessage(
+      chatId,
+      `⚙️ *Configurar Automação de Pagamento*\n\n` +
+      `Selecione o cartão que deseja configurar:`,
+      {
+        reply_markup: {
+          inline_keyboard: buttons
+        }
+      }
+    );
+
+  } catch (error) {
+    console.error('Erro em /config_cartao:', error);
+    const errorMsg = error instanceof Error ? error.message : JSON.stringify(error);
+    await sendTelegramMessage(
+      chatId,
+      `❌ Erro ao buscar cartões: ${errorMsg}`
+    );
+  }
 }
 
 /**
- * Callback: Ativar pagamento automático
+ * Processa callback de configuração de cartão
  */
-export async function handleActivateAutoPayment(
-    supabase: any,
-    chatId: number,
-    userId: string,
-    accountId: string
+export async function handleConfigCallback(
+  userId: string,
+  chatId: number,
+  cardId: string
 ): Promise<void> {
-    try {
-        // Atualizar configuração
-        const { error } = await supabase
-            .from('credit_card_settings')
-            .update({ auto_payment: true })
-            .eq('account_id', accountId)
-            .eq('user_id', userId);
+  const supabase = createSupabaseClient();
+  
+  try {
+    // Buscar configuração atual
+    const { data: settings, error } = await supabase
+      .from('credit_card_settings')
+      .select('*')
+      .eq('account_id', cardId)
+      .eq('user_id', userId)
+      .single();
 
-        if (error) throw error;
+    // Buscar dados do cartão
+    const { data: card } = await supabase
+      .from('accounts')
+      .select('nome')
+      .eq('id', cardId)
+      .single();
 
-        await sendTelegramMessage(
-            chatId,
-            `✅ *Pagamento Automático Ativado!*\n\n` +
-            `A partir de agora, a fatura deste cartão será paga automaticamente no vencimento.\n\n` +
-            `⚠️ *Importante:* Certifique-se de ter saldo suficiente na conta de pagamento.\n\n` +
-            `Você receberá lembretes 3 dias antes do vencimento.`
-        );
-
-    } catch (error) {
-        console.error('Erro ao ativar auto payment:', error);
-        await sendTelegramMessage(chatId, `❌ Erro ao ativar pagamento automático.`);
+    if (!card) {
+      await sendTelegramMessage(chatId, '❌ Cartão não encontrado.');
+      return;
     }
+
+    const currentSettings: CreditCardSettings = settings || {
+      id: '',
+      account_id: cardId,
+      auto_payment: false,
+      default_payment_account_id: null,
+      send_reminder: true,
+      reminder_days_before: 3,
+      allow_partial_payment: false,
+      min_balance_warning: 0
+    };
+
+    const autoStatus = currentSettings.auto_payment ? '✅ Ativado' : '❌ Desativado';
+    const reminderStatus = currentSettings.send_reminder ? '✅ Ativado' : '❌ Desativado';
+
+    const message = `⚙️ *Configurações: ${card.nome}*\n\n` +
+      `🤖 Pagamento Automático: ${autoStatus}\n` +
+      `🔔 Lembrete: ${reminderStatus}\n` +
+      `📅 Dias antes: ${currentSettings.reminder_days_before}\n\n` +
+      `Selecione o que deseja alterar:`;
+
+    const keyboard = {
+      inline_keyboard: [
+        [{ 
+          text: `${currentSettings.auto_payment ? '🔴 Desativar' : '🟢 Ativar'} Pagamento Auto`, 
+          callback_data: `toggle_auto_${cardId}` 
+        }],
+        [{ 
+          text: `${currentSettings.send_reminder ? '🔴 Desativar' : '🟢 Ativar'} Lembrete`, 
+          callback_data: `toggle_reminder_${cardId}` 
+        }],
+        [{ text: '🏦 Definir Conta Padrão', callback_data: `set_account_${cardId}` }],
+        [{ text: '❌ Fechar', callback_data: 'config_cancel' }]
+      ]
+    };
+
+    await sendTelegramMessage(chatId, message, { reply_markup: keyboard });
+
+  } catch (error) {
+    console.error('Erro no callback de config:', error);
+    const errorMsg = error instanceof Error ? error.message : JSON.stringify(error);
+    await sendTelegramMessage(
+      chatId,
+      `❌ Erro ao carregar configurações: ${errorMsg}`
+    );
+  }
 }
 
 /**
- * Callback: Desativar pagamento automático
+ * Toggle pagamento automático
  */
-export async function handleDeactivateAutoPayment(
-    supabase: any,
-    chatId: number,
-    userId: string,
-    accountId: string
+export async function toggleAutoPayment(
+  userId: string,
+  chatId: number,
+  cardId: string
 ): Promise<void> {
-    try {
-        // Atualizar configuração
-        const { error } = await supabase
-            .from('credit_card_settings')
-            .update({ auto_payment: false })
-            .eq('account_id', accountId)
-            .eq('user_id', userId);
+  const supabase = createSupabaseClient();
+  
+  try {
+    // Buscar configuração atual
+    const { data: settings } = await supabase
+      .from('credit_card_settings')
+      .select('auto_payment')
+      .eq('account_id', cardId)
+      .eq('user_id', userId)
+      .single();
 
-        if (error) throw error;
+    const newValue = !(settings?.auto_payment);
 
-        await sendTelegramMessage(
-            chatId,
-            `🔴 *Pagamento Automático Desativado*\n\n` +
-            `Você voltará a receber apenas lembretes de vencimento.\n\n` +
-            `Use /pagar para pagar manualmente quando quiser.`
-        );
+    // Upsert configuração
+    const { error } = await supabase
+      .from('credit_card_settings')
+      .upsert({
+        account_id: cardId,
+        user_id: userId,
+        auto_payment: newValue,
+        updated_at: new Date().toISOString()
+      }, { 
+        onConflict: 'account_id' 
+      });
 
-    } catch (error) {
-        console.error('Erro ao desativar auto payment:', error);
-        await sendTelegramMessage(chatId, `❌ Erro ao desativar pagamento automático.`);
-    }
+    if (error) throw error;
+
+    const status = newValue ? '✅ ativado' : '❌ desativado';
+    await sendTelegramMessage(
+      chatId,
+      `🤖 Pagamento automático ${status}!\n\n` +
+      `${newValue ? 
+        '⚠️ Certifique-se de ter saldo suficiente na conta padrão no dia do vencimento.' : 
+        'Você receberá lembretes para pagar manualmente.'}`
+    );
+
+    // Recarregar menu de configuração
+    await handleConfigCallback(userId, chatId, cardId);
+
+  } catch (error) {
+    console.error('Erro ao toggle auto payment:', error);
+    const errorMsg = error instanceof Error ? error.message : JSON.stringify(error);
+    await sendTelegramMessage(
+      chatId,
+      `❌ Erro ao alterar configuração: ${errorMsg}`
+    );
+  }
+}
+
+/**
+ * Toggle lembrete
+ */
+export async function toggleReminder(
+  userId: string,
+  chatId: number,
+  cardId: string
+): Promise<void> {
+  const supabase = createSupabaseClient();
+  
+  try {
+    // Buscar configuração atual
+    const { data: settings } = await supabase
+      .from('credit_card_settings')
+      .select('send_reminder')
+      .eq('account_id', cardId)
+      .eq('user_id', userId)
+      .single();
+
+    const newValue = !(settings?.send_reminder ?? true);
+
+    // Upsert configuração
+    const { error } = await supabase
+      .from('credit_card_settings')
+      .upsert({
+        account_id: cardId,
+        user_id: userId,
+        send_reminder: newValue,
+        updated_at: new Date().toISOString()
+      }, { 
+        onConflict: 'account_id' 
+      });
+
+    if (error) throw error;
+
+    const status = newValue ? '✅ ativado' : '❌ desativado';
+    await sendTelegramMessage(
+      chatId,
+      `🔔 Lembrete de fatura ${status}!`
+    );
+
+    // Recarregar menu de configuração
+    await handleConfigCallback(userId, chatId, cardId);
+
+  } catch (error) {
+    console.error('Erro ao toggle reminder:', error);
+    const errorMsg = error instanceof Error ? error.message : JSON.stringify(error);
+    await sendTelegramMessage(
+      chatId,
+      `❌ Erro ao alterar configuração: ${errorMsg}`
+    );
+  }
 }

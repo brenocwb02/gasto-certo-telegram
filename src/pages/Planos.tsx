@@ -32,6 +32,9 @@ interface Plan {
     stripePriceId: string; // We'll need to add Stripe Price IDs
 }
 
+// Stripe Price ID for Premium plan
+const STRIPE_PREMIUM_PRICE_ID = "price_1SBpdyA3xmI9jS0uyz1HGGBW";
+
 const plans: Plan[] = [
     {
         id: "gratuito",
@@ -49,63 +52,28 @@ const plans: Plan[] = [
         ],
         popular: false,
         highlight: false,
-        stripePriceId: "" // Free plan, no Stripe needed
+        stripePriceId: ""
     },
     {
-        id: "individual",
-        name: "Individual",
-        price: 14.90,
-        priceDisplay: "R$ 14,90",
-        description: "Para quem quer controle total sem limites",
-        icon: User,
+        id: "premium",
+        name: "Premium",
+        price: 29.90,
+        priceDisplay: "R$ 29,90",
+        description: "Controle total sem limites para você e sua família",
+        icon: Crown,
         features: [
-            "Tudo ilimitado",
+            "Transações ilimitadas",
+            "Contas ilimitadas",
+            "Categorias ilimitadas",
             "IA ilimitada",
             "Relatórios avançados",
-            "Exportação de dados",
+            "Metas e orçamentos",
+            "Integração Telegram com IA",
             "Suporte prioritário"
-        ],
-        popular: false,
-        highlight: false,
-        stripePriceId: import.meta.env.VITE_STRIPE_PRICE_INDIVIDUAL || ""
-    },
-    {
-        id: "familia",
-        name: "Família",
-        price: 24.90,
-        priceDisplay: "R$ 24,90",
-        description: "A melhor opção para casais e famílias",
-        icon: Users,
-        features: [
-            "Tudo do Individual, mais:",
-            "Até 5 usuários",
-            "Gestão de permissões (Roles)",
-            "Contas compartilhadas",
-            "Orçamento familiar",
-            "Notificações em grupo"
         ],
         popular: true,
         highlight: true,
-        stripePriceId: import.meta.env.VITE_STRIPE_PRICE_FAMILIA || ""
-    },
-    {
-        id: "familia_plus",
-        name: "Família Plus",
-        price: 39.90,
-        priceDisplay: "R$ 39,90",
-        description: "Para grandes famílias e power users",
-        icon: Crown,
-        features: [
-            "Tudo do Família, mais:",
-            "Até 10 usuários",
-            "Suporte VIP (WhatsApp)",
-            "Consultoria mensal (30min)",
-            "API de integração",
-            "Onboarding personalizado"
-        ],
-        popular: false,
-        highlight: false,
-        stripePriceId: import.meta.env.VITE_STRIPE_PRICE_FAMILIA_PLUS || ""
+        stripePriceId: STRIPE_PREMIUM_PRICE_ID
     }
 ];
 
