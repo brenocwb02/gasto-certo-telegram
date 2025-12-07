@@ -65,6 +65,7 @@ serve(async (req) => {
     });
     const hasActiveSub = subscriptions.data.length > 0;
     let productId = null;
+    let productName = null;
     let subscriptionEnd = null;
 
     if (hasActiveSub) {
@@ -73,7 +74,11 @@ serve(async (req) => {
       logStep("Active subscription found", { subscriptionId: subscription.id, endDate: subscriptionEnd });
       // Subscription tier is the product ID
       productId = subscription.items.data[0].price.product;
-      logStep("Determined subscription tier", { productId });
+
+      // Fetch product name from Stripe
+      const product = await stripe.products.retrieve(productId as string);
+      productName = product.name;
+      logStep("Determined subscription tier", { productId, productName });
     } else {
       logStep("No active subscription found");
     }
@@ -81,6 +86,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       subscribed: hasActiveSub,
       product_id: productId,
+      product_name: productName,
       subscription_end: subscriptionEnd
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

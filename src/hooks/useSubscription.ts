@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 interface SubscriptionInfo {
   subscribed: boolean;
   product_id?: string;
+  product_name?: string;
   subscription_end?: string;
 }
 

@@ -75,8 +75,9 @@ export function useLimits() {
                 // Determine Plan based on subscription
                 let plan: LimitsState['plan'] = 'gratuito';
                 if (isPremium) {
-                    // Check specific plan from subscription info
-                    if (subscriptionInfo?.product_id?.toLowerCase().includes('familia')) {
+                    // Check specific plan from subscription info using product name
+                    const productName = subscriptionInfo?.product_name?.toLowerCase() || '';
+                    if (productName.includes('família') || productName.includes('familia')) {
                         plan = 'familia';
                     } else {
                         plan = 'pessoal';
