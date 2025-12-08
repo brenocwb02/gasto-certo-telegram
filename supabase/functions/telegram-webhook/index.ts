@@ -1144,24 +1144,40 @@ Apenas digite: "Almoço 25 reais" ou envie áudio!
           // Transporte
           'car': '🚗', 'bus': '🚌', 'train': '🚆', 'plane': '✈️', 'bike': '🚴', 'fuel': '⛽',
           // Alimentação
-          'shopping-bag': '🛍️', 'shopping-cart': '🛒', 'utensils': '🍴', 'coffee': '☕', 'pizza': '🍕',
-          // Lazer
-          'gamepad': '🎮', 'gamepad-2': '🎮', 'tv': '📺', 'film': '🎬', 'music': '🎵', 'headphones': '🎧',
-          // Finanças
-          'trending-up': '📈', 'trending-down': '📉', 'banknote': '💵', 'wallet': '👛', 'credit-card': '💳', 'piggy-bank': '🐷',
+          'shopping-bag': '🛍️', 'shopping-cart': '🛒', 'utensils': '🍴', 'coffee': '☕', 'pizza': '🍕', 'apple': '🍎',
+          // Lazer e Entretenimento
+          'gamepad': '🎮', 'gamepad-2': '🎮', 'tv': '📺', 'film': '🎬', 'music': '🎵', 'headphones': '🎧', 'party-popper': '🎉', 'sparkles': '✨',
+          // Finanças e Investimentos
+          'trending-up': '📈', 'trending-down': '📉', 'banknote': '💵', 'wallet': '👛', 'credit-card': '💳', 'piggy-bank': '🐷', 'coins': '🪙', 'dollar-sign': '💲',
           // Saúde
-          'heart': '❤️', 'heart-pulse': '💓', 'stethoscope': '🩺', 'pill': '💊', 'activity': '🏃',
+          'heart': '❤️', 'heart-pulse': '💓', 'stethoscope': '🩺', 'pill': '💊', 'activity': '🏃', 'apple': '🍎', 'dumbbell': '🏋️',
           // Trabalho
-          'laptop': '💻', 'briefcase': '💼', 'building': '🏢', 'calculator': '🧮',
-          // Casa
-          'home': '🏠', 'house': '🏠', 'bed': '🛏️', 'sofa': '🛋️', 'lamp': '💡', 'wrench': '🔧',
+          'laptop': '💻', 'briefcase': '💼', 'building': '🏢', 'calculator': '🧮', 'tie': '👔',
+          // Casa / Moradia
+          'home': '🏠', 'house': '🏠', 'bed': '🛏️', 'sofa': '🛋️', 'lamp': '💡', 'wrench': '🔧', 'hammer': '🔨', 'armchair': '🪑',
           // Educação
-          'book': '📚', 'graduation-cap': '🎓', 'pencil': '✏️', 'school': '🏫',
-          // Outros
-          'gift': '🎁', 'star': '⭐', 'zap': '⚡', 'smile': '😊', 'users': '👥', 'user': '👤',
-          'shirt': '👕', 'scissors': '✂️', 'package': '📦', 'phone': '📱', 'mail': '📧',
-          'calendar': '📅', 'clock': '⏰', 'map-pin': '📍', 'globe': '🌍', 'sun': '☀️', 'moon': '🌙',
-          'cloud': '☁️', 'umbrella': '☂️', 'tree': '🌳', 'flower': '🌸', 'dog': '🐕', 'cat': '🐱',
+          'book': '📚', 'graduation-cap': '🎓', 'pencil': '✏️', 'school': '🏫', 'brain': '🧠',
+          // Família
+          'users': '👥', 'user': '👤', 'baby': '👶', 'users-round': '👨‍👩‍👧‍👦',
+          // Vida Espiritual / Religião
+          'church': '⛪', 'cross': '✝️', 'pray': '🙏', 'hands': '🛐',
+          // Despesas Fixas / Contas
+          'receipt': '🧾', 'file-text': '📄', 'clipboard': '📋', 'scroll': '📜',
+          // Impostos e Taxas
+          'landmark': '🏛️', 'scale': '⚖️', 'percent': '💹',
+          // Relacionamentos
+          'gift': '🎁', 'heart-handshake': '🤝', 'cake': '🎂', 'ring': '💍',
+          // Reserva / Prevenção
+          'shield': '🛡️', 'lock': '🔒', 'umbrella': '☂️', 'tool': '🛠️', 'archive': '📦',
+          // Metas e Projetos
+          'target': '🎯', 'flag': '🚩', 'check-circle': '✅', 'rocket': '🚀',
+          // Artigos Residenciais
+          'couch': '🛋️', 'refrigerator': '🧊', 'washing-machine': '🧺', 'microwave': '📻',
+          // Outros gerais
+          'star': '⭐', 'zap': '⚡', 'smile': '😊', 'shirt': '👕', 'scissors': '✂️',
+          'package': '📦', 'phone': '📱', 'mail': '📧', 'calendar': '📅', 'clock': '⏰',
+          'map-pin': '📍', 'globe': '🌍', 'sun': '☀️', 'moon': '🌙', 'cloud': '☁️',
+          'tree': '🌳', 'flower': '🌸', 'dog': '🐕', 'cat': '🐱', 'paw-print': '🐾',
         };
 
         const getEmoji = (iconName: string | null): string => {
