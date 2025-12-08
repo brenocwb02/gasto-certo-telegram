@@ -4,19 +4,10 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
 // Imports dos módulos refatorados
-import { corsHeaders, ParsedTransaction, AccountData, CategoryData } from './_shared/types.ts';
+import { corsHeaders } from './_shared/types.ts';
 import { sendTelegramMessage, editTelegramMessage, answerCallbackQuery } from './_shared/telegram-api.ts';
 import { formatCurrency } from './_shared/formatters.ts';
-import {
-  parseTransaction,
-  gerarTecladoContas,
-  encontrarContaSimilar,
-  extrairValor,
-  identificarTipo,
-  sugerirCategoria,
-  encontrarCategoriaPorKeywords,
-  extrairDescricao
-} from './parser/index.ts';
+
 import {
   handleFaturaCommand,
   handlePagarCommand,
@@ -646,71 +637,9 @@ function gerarTecladoContas(contas: AccountData[]): any {
   return keyboard;
 }
 
+
 // --- Funções Auxiliares Gerais ---
-/**
- * Formata um número para a moeda BRL.
- */
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  }).format(value);
-}
-
-/**
- * Envia uma mensagem para o Telegram.
- */
-async function sendTelegramMessage(chatId: number, text: string, options: any = {}): Promise<any> {
-  const telegramApiUrl = `https://api.telegram.org/bot${Deno.env.get('TELEGRAM_BOT_TOKEN')}/sendMessage`;
-  try {
-    const body = {
-      chat_id: chatId,
-      text,
-      parse_mode: 'Markdown',
-      ...options
-    };
-    const response = await fetch(telegramApiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
-    });
-    if (!response.ok) {
-      console.error("Erro na API do Telegram:", await response.json());
-      return null;
-    }
-    const data = await response.json();
-    return data.result;
-  } catch (e) {
-    console.error("Falha ao enviar mensagem para o Telegram:", e);
-    return null;
-  }
-}
-
-/**
- * Edita uma mensagem existente no Telegram.
- */
-async function editTelegramMessage(chatId: number, messageId: number, text: string, options: any = {}): Promise<void> {
-  const telegramApiUrl = `https://api.telegram.org/bot${Deno.env.get('TELEGRAM_BOT_TOKEN')}/editMessageText`;
-  try {
-    await fetch(telegramApiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        chat_id: chatId,
-        message_id: messageId,
-        text,
-        parse_mode: 'Markdown',
-        ...options
-      })
-    });
-  } catch (e) {
-    console.error("Falha ao editar mensagem do Telegram:", e);
-  }
-}
+// formatCurrency, sendTelegramMessage e editTelegramMessage foram movidas para módulos separados
 
 /**
  * Transcreve um áudio do Telegram usando a API do Gemini.
@@ -1185,60 +1114,101 @@ Apenas digite: "Almoço 25 reais" ou envie áudio!
     }
 
     case '/categorias': {
-      // Buscar todas as categorias do usuário
-      const { data: categorias, error: catError } = await supabase
-        .from('categories')
-        .select('id, name, icon, parent_id')
-        .eq('user_id', userId)
-        .order('name');
+      try {
+        console.log('Buscando categorias para userId:', userId);
+        // Buscar todas as categorias do usuário
+        const { data: categorias, error: catError } = await supabase
+          .from('categories')
+          .select('*')
+          .eq('user_id', userId);
 
-      if (catError) {
-        await sendTelegramMessage(chatId, '❌ Erro ao buscar categorias.');
-        break;
-      }
+        console.log('Categorias encontradas:', categorias?.length, 'Erro:', catError);
 
-      if (!categorias || categorias.length === 0) {
-        await sendTelegramMessage(chatId, '📂 Você ainda não tem categorias cadastradas.\n\nUse o app web para criar suas categorias.');
-        break;
-      }
+        if (catError) {
+          console.error('Erro ao buscar categorias:', catError);
+          await sendTelegramMessage(chatId, '❌ Erro ao buscar categorias: ' + catError.message);
+          break;
+        }
 
-      // Separar categorias pai e subcategorias
-      const parentCategories = categorias.filter(c => !c.parent_id);
-      const subCategories = categorias.filter(c => c.parent_id);
+        if (!categorias || categorias.length === 0) {
+          await sendTelegramMessage(chatId, '📂 Você ainda não tem categorias cadastradas.\n\nUse o app web para criar suas categorias.');
+          break;
+        }
 
-      let message = '📂 *Suas Categorias*\n\n';
+        // Separar categorias pai e subcategorias
+        const parentCategories = categorias.filter((c: any) => !c.parent_id);
+        const subCategories = categorias.filter((c: any) => c.parent_id);
 
-      for (const parent of parentCategories) {
-        const icon = parent.icon || '📁';
-        message += `${icon} *${parent.name}*\n`;
+        // Mapeamento de nomes de ícones para emojis
+        const iconMap: Record<string, string> = {
+          // Transporte
+          'car': '🚗', 'bus': '🚌', 'train': '🚆', 'plane': '✈️', 'bike': '🚴', 'fuel': '⛽',
+          // Alimentação
+          'shopping-bag': '🛍️', 'shopping-cart': '🛒', 'utensils': '🍴', 'coffee': '☕', 'pizza': '🍕',
+          // Lazer
+          'gamepad': '🎮', 'gamepad-2': '🎮', 'tv': '📺', 'film': '🎬', 'music': '🎵', 'headphones': '🎧',
+          // Finanças
+          'trending-up': '📈', 'trending-down': '📉', 'banknote': '💵', 'wallet': '👛', 'credit-card': '💳', 'piggy-bank': '🐷',
+          // Saúde
+          'heart': '❤️', 'heart-pulse': '💓', 'stethoscope': '🩺', 'pill': '💊', 'activity': '🏃',
+          // Trabalho
+          'laptop': '💻', 'briefcase': '💼', 'building': '🏢', 'calculator': '🧮',
+          // Casa
+          'home': '🏠', 'house': '🏠', 'bed': '🛏️', 'sofa': '🛋️', 'lamp': '💡', 'wrench': '🔧',
+          // Educação
+          'book': '📚', 'graduation-cap': '🎓', 'pencil': '✏️', 'school': '🏫',
+          // Outros
+          'gift': '🎁', 'star': '⭐', 'zap': '⚡', 'smile': '😊', 'users': '👥', 'user': '👤',
+          'shirt': '👕', 'scissors': '✂️', 'package': '📦', 'phone': '📱', 'mail': '📧',
+          'calendar': '📅', 'clock': '⏰', 'map-pin': '📍', 'globe': '🌍', 'sun': '☀️', 'moon': '🌙',
+          'cloud': '☁️', 'umbrella': '☂️', 'tree': '🌳', 'flower': '🌸', 'dog': '🐕', 'cat': '🐱',
+        };
 
-        // Encontrar subcategorias deste pai
-        const children = subCategories.filter(sub => sub.parent_id === parent.id);
-        if (children.length > 0) {
-          for (const child of children) {
-            const childIcon = child.icon || '•';
-            message += `   └ ${childIcon} ${child.name}\n`;
+        const getEmoji = (iconName: string | null): string => {
+          if (!iconName) return '📁';
+          // Se já é um emoji, retorna diretamente
+          if (/\p{Emoji}/u.test(iconName)) return iconName;
+          // Busca no mapa
+          return iconMap[iconName.toLowerCase()] || '📁';
+        };
+
+        let message = '📂 *Suas Categorias*\n\n';
+
+        for (const parent of parentCategories) {
+          const icon = getEmoji(parent.icone);
+          message += `${icon} *${parent.nome}*\n`;
+
+          // Encontrar subcategorias deste pai
+          const children = subCategories.filter((sub: any) => sub.parent_id === parent.id);
+          if (children.length > 0) {
+            for (const child of children) {
+              const childIcon = getEmoji(child.icone);
+              message += `   └ ${childIcon} ${child.nome}\n`;
+            }
+          }
+          message += '\n';
+        }
+
+        // Categorias órfãs (sem pai, mas que são subcategorias - caso de inconsistência)
+        const orphanSubs = subCategories.filter((sub: any) =>
+          !parentCategories.some((p: any) => p.id === sub.parent_id)
+        );
+        if (orphanSubs.length > 0) {
+          message += `📋 *Outras*\n`;
+          for (const orphan of orphanSubs) {
+            const icon = getEmoji(orphan.icone);
+            message += `   └ ${icon} ${orphan.nome}\n`;
           }
         }
-        message += '\n';
+
+        message += `\n📊 Total: ${categorias.length} categorias`;
+        message += `\n\n💡 _Gerencie suas categorias pelo app web_`;
+
+        await sendTelegramMessage(chatId, message);
+      } catch (error: any) {
+        console.error('Erro no comando /categorias:', error);
+        await sendTelegramMessage(chatId, '❌ Erro ao processar categorias: ' + (error?.message || 'erro desconhecido'));
       }
-
-      // Categorias órfãs (sem pai, mas que são subcategorias - caso de inconsistência)
-      const orphanSubs = subCategories.filter(sub =>
-        !parentCategories.some(p => p.id === sub.parent_id)
-      );
-      if (orphanSubs.length > 0) {
-        message += `📋 *Outras*\n`;
-        for (const orphan of orphanSubs) {
-          const icon = orphan.icon || '•';
-          message += `   └ ${icon} ${orphan.name}\n`;
-        }
-      }
-
-      message += `\n📊 Total: ${categorias.length} categorias`;
-      message += `\n\n💡 _Gerencie suas categorias pelo app web_`;
-
-      await sendTelegramMessage(chatId, message);
       break;
     }
 
