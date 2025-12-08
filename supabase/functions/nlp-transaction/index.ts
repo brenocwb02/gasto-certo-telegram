@@ -43,8 +43,8 @@ async function callGoogleAi(prompt: string): Promise<any> {
 
   if (!response.ok) {
     const error = await response.text();
-    console.error('Google AI error:', error);
-    throw new Error('Failed to call Google AI');
+    console.error('Google AI error response:', error);
+    throw new Error(`Failed to call Google AI: ${response.status} - ${error.substring(0, 200)}`);
   }
 
   const data = await response.json();

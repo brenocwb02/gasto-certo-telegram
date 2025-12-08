@@ -9,9 +9,514 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// TODO: Funções de cartão de crédito temporariamente desabilitadas
-// As funções handleFaturaCommand, handlePagarCommand, etc. foram removidas
-// para resolver o erro de deploy. Implementar inline ou via outro método.
+// ============================================================================
+// FUNÇÕES DE CARTÃO DE CRÉDITO (implementadas inline)
+// ============================================================================
+
+/**
+ * Comando /faturas - Mostra faturas dos cartões de crédito
+ */
+async function handleFaturaCommand(supabase: any, chatId: number, userId: string): Promise<void> {
+  try {
+    const { data: cards, error } = await supabase
+      .from('accounts')
+      .select('id, nome, saldo_atual, dia_fechamento, dia_vencimento')
+      .eq('user_id', userId)
+      .eq('tipo', 'cartao')
+      .eq('ativo', true);
+
+    if (error) throw error;
+
+    if (!cards || cards.length === 0) {
+      await sendTelegramMessage(
+        chatId,
+        `💳 *Faturas de Cartão*\n\nVocê não tem cartões de crédito cadastrados.`
+      );
+      return;
+    }
+
+    let message = `💳 *Faturas de Cartão de Crédito*\n\n`;
+
+    for (const card of cards) {
+      const fatura = Math.abs(card.saldo_atual || 0);
+      const status = (card.saldo_atual || 0) < 0 ? '🔴' : '🟢';
+
+      message += `${status} *${card.nome}*\n`;
+      message += `   Fatura: ${formatCurrency(fatura)}\n`;
+      message += `   Fechamento: dia ${card.dia_fechamento || 'N/A'}\n`;
+      message += `   Vencimento: dia ${card.dia_vencimento || 'N/A'}\n\n`;
+    }
+
+    message += `\n💡 Use /pagar para pagar uma fatura.`;
+
+    await sendTelegramMessage(chatId, message);
+
+  } catch (error) {
+    console.error('Erro em /faturas:', error);
+    await sendTelegramMessage(
+      chatId,
+      `❌ Erro ao buscar faturas. Tente novamente.`
+    );
+  }
+}
+
+/**
+ * Comando /pagar - Inicia o processo de pagamento de fatura
+ */
+async function handlePagarCommand(supabase: any, chatId: number, userId: string): Promise<void> {
+  try {
+    const { data: cards, error } = await supabase
+      .from('accounts')
+      .select('id, nome, saldo_atual, dia_vencimento')
+      .eq('user_id', userId)
+      .eq('tipo', 'cartao')
+      .eq('ativo', true)
+      .lt('saldo_atual', 0);
+
+    if (error) throw error;
+
+    if (!cards || cards.length === 0) {
+      await sendTelegramMessage(
+        chatId,
+        `✅ *Nenhuma fatura pendente!*\n\nTodos os seus cartões estão com saldo em dia.`
+      );
+      return;
+    }
+
+    // Criar botões para cada cartão com fatura
+    const buttons = cards.map((card: any) => [{
+      text: `💳 ${card.nome} - ${formatCurrency(Math.abs(card.saldo_atual))}`,
+      callback_data: `pay_${card.id}`
+    }]);
+
+    buttons.push([{
+      text: '❌ Cancelar',
+      callback_data: 'pay_cancel'
+    }]);
+
+    await sendTelegramMessage(
+      chatId,
+      `💳 *Pagar Fatura*\n\nSelecione o cartão que deseja pagar:`,
+      {
+        reply_markup: {
+          inline_keyboard: buttons
+        }
+      }
+    );
+
+  } catch (error) {
+    console.error('Erro em /pagar:', error);
+    await sendTelegramMessage(
+      chatId,
+      `❌ Erro ao buscar cartões. Tente novamente.`
+    );
+  }
+}
+
+/**
+ * Comando /config_cartao - Configurar automação de pagamentos
+ */
+async function handleConfigCartaoCommand(supabase: any, chatId: number, userId: string): Promise<void> {
+  try {
+    const { data: cards, error } = await supabase
+      .from('accounts')
+      .select('id, nome')
+      .eq('user_id', userId)
+      .eq('tipo', 'cartao')
+      .eq('ativo', true);
+
+    if (error) throw error;
+
+    if (!cards || cards.length === 0) {
+      await sendTelegramMessage(
+        chatId,
+        `ℹ️ Você não tem cartões de crédito cadastrados.\n\n` +
+        `Cadastre um cartão no aplicativo para gerenciar faturas automaticamente.`
+      );
+      return;
+    }
+
+    // Criar botões para cada cartão
+    const buttons = cards.map((card: any) => [{
+      text: `⚙️ ${card.nome}`,
+      callback_data: `config_card_${card.id}`
+    }]);
+
+    buttons.push([{
+      text: '❌ Cancelar',
+      callback_data: 'config_cancel'
+    }]);
+
+    await sendTelegramMessage(
+      chatId,
+      `⚙️ *Configurar Automação de Pagamento*\n\n` +
+      `Selecione o cartão que deseja configurar:`,
+      {
+        reply_markup: {
+          inline_keyboard: buttons
+        }
+      }
+    );
+
+  } catch (error) {
+    console.error('Erro em /config_cartao:', error);
+    await sendTelegramMessage(
+      chatId,
+      `❌ Erro ao buscar cartões. Tente novamente.`
+    );
+  }
+}
+
+/**
+ * Processa callback de seleção de cartão para pagamento
+ */
+async function handlePaymentCardSelection(
+  supabase: any,
+  chatId: number,
+  userId: string,
+  cardId: string
+): Promise<void> {
+  try {
+    // Buscar dados do cartão
+    const { data: card, error: cardError } = await supabase
+      .from('accounts')
+      .select('id, nome, saldo_atual')
+      .eq('id', cardId)
+      .eq('user_id', userId)
+      .single();
+
+    if (cardError || !card) {
+      await sendTelegramMessage(chatId, '❌ Cartão não encontrado.');
+      return;
+    }
+
+    // Buscar contas para pagamento (não cartões, com saldo positivo)
+    const { data: accounts, error: accountsError } = await supabase
+      .from('accounts')
+      .select('id, nome, saldo_atual')
+      .eq('user_id', userId)
+      .neq('tipo', 'cartao')
+      .eq('ativo', true)
+      .gt('saldo_atual', 0);
+
+    if (accountsError || !accounts || accounts.length === 0) {
+      await sendTelegramMessage(
+        chatId,
+        `❌ Nenhuma conta com saldo disponível para pagar a fatura.`
+      );
+      return;
+    }
+
+    const fatura = Math.abs(card.saldo_atual);
+
+    // Criar botões para cada conta disponível
+    const buttons = accounts.map((account: any) => [{
+      text: `${account.nome} (${formatCurrency(account.saldo_atual)})`,
+      callback_data: `confirm_pay_${cardId}_${account.id}`
+    }]);
+
+    buttons.push([{
+      text: '❌ Cancelar',
+      callback_data: 'pay_cancel'
+    }]);
+
+    await sendTelegramMessage(
+      chatId,
+      `💳 *Pagar fatura ${card.nome}*\n` +
+      `💰 Valor: ${formatCurrency(fatura)}\n\n` +
+      `Selecione a conta de origem:`,
+      {
+        reply_markup: {
+          inline_keyboard: buttons
+        }
+      }
+    );
+
+  } catch (error) {
+    console.error('Erro no callback de pagamento:', error);
+    await sendTelegramMessage(
+      chatId,
+      `❌ Erro ao processar seleção. Tente novamente.`
+    );
+  }
+}
+
+/**
+ * Confirma e executa o pagamento da fatura
+ */
+async function confirmInvoicePayment(
+  supabase: any,
+  chatId: number,
+  userId: string,
+  cardId: string,
+  accountId: string
+): Promise<void> {
+  try {
+    // Buscar dados do cartão e conta
+    const { data: card } = await supabase
+      .from('accounts')
+      .select('id, nome, saldo_atual')
+      .eq('id', cardId)
+      .eq('user_id', userId)
+      .single();
+
+    const { data: account } = await supabase
+      .from('accounts')
+      .select('id, nome, saldo_atual')
+      .eq('id', accountId)
+      .eq('user_id', userId)
+      .single();
+
+    if (!card || !account) {
+      await sendTelegramMessage(chatId, '❌ Conta ou cartão não encontrado.');
+      return;
+    }
+
+    const fatura = Math.abs(card.saldo_atual);
+
+    // Verificar saldo suficiente
+    if (account.saldo_atual < fatura) {
+      await sendTelegramMessage(
+        chatId,
+        `❌ *Saldo insuficiente*\n\n` +
+        `Fatura: ${formatCurrency(fatura)}\n` +
+        `Saldo disponível: ${formatCurrency(account.saldo_atual)}\n` +
+        `Faltam: ${formatCurrency(fatura - account.saldo_atual)}`
+      );
+      return;
+    }
+
+    // Tentar usar a função RPC do banco
+    const { data: result, error: rpcError } = await supabase.rpc('process_invoice_payment', {
+      p_card_account_id: cardId,
+      p_payment_account_id: accountId,
+      p_amount: fatura
+    });
+
+    if (rpcError) {
+      console.error('Erro RPC:', rpcError);
+      // Fallback: fazer manualmente se RPC falhar
+      // Debitar da conta
+      await supabase.from('accounts').update({
+        saldo_atual: account.saldo_atual - fatura
+      }).eq('id', accountId);
+
+      // Creditar no cartão
+      await supabase.from('accounts').update({
+        saldo_atual: card.saldo_atual + fatura
+      }).eq('id', cardId);
+
+      await sendTelegramMessage(
+        chatId,
+        `✅ *Pagamento realizado!*\n\n` +
+        `💳 Cartão: ${card.nome}\n` +
+        `💰 Valor pago: ${formatCurrency(fatura)}\n` +
+        `🏦 Conta: ${account.nome}\n` +
+        `📊 Novo saldo: ${formatCurrency(account.saldo_atual - fatura)}`
+      );
+      return;
+    }
+
+    if (result?.success) {
+      await sendTelegramMessage(
+        chatId,
+        `✅ *Pagamento realizado com sucesso!*\n\n` +
+        `💳 Cartão: ${result.card_name}\n` +
+        `💰 Valor pago: ${formatCurrency(result.amount_paid)}\n` +
+        `🏦 Conta: ${result.payment_account_name}\n` +
+        `📊 Saldo restante: ${formatCurrency(result.new_payment_balance)}`
+      );
+    } else {
+      await sendTelegramMessage(
+        chatId,
+        `❌ *Pagamento não realizado*\n\n` +
+        `Motivo: ${result?.error || 'Erro desconhecido'}`
+      );
+    }
+
+  } catch (error) {
+    console.error('Erro ao confirmar pagamento:', error);
+    await sendTelegramMessage(
+      chatId,
+      `❌ Erro ao processar pagamento. Tente novamente.`
+    );
+  }
+}
+
+/**
+ * Mostra configurações de um cartão específico
+ */
+async function handleCardConfigCallback(
+  supabase: any,
+  chatId: number,
+  userId: string,
+  cardId: string
+): Promise<void> {
+  try {
+    // Buscar configuração atual
+    const { data: settings } = await supabase
+      .from('credit_card_settings')
+      .select('*')
+      .eq('account_id', cardId)
+      .eq('user_id', userId)
+      .single();
+
+    // Buscar dados do cartão
+    const { data: card } = await supabase
+      .from('accounts')
+      .select('nome')
+      .eq('id', cardId)
+      .single();
+
+    if (!card) {
+      await sendTelegramMessage(chatId, '❌ Cartão não encontrado.');
+      return;
+    }
+
+    const autoPayment = settings?.auto_payment || false;
+    const sendReminder = settings?.send_reminder !== false;
+    const reminderDays = settings?.reminder_days_before || 3;
+
+    const autoStatus = autoPayment ? '✅ Ativado' : '❌ Desativado';
+    const reminderStatus = sendReminder ? '✅ Ativado' : '❌ Desativado';
+
+    const message = `⚙️ *Configurações: ${card.nome}*\n\n` +
+      `🤖 Pagamento Automático: ${autoStatus}\n` +
+      `🔔 Lembrete: ${reminderStatus}\n` +
+      `📅 Dias antes: ${reminderDays}\n\n` +
+      `Selecione o que deseja alterar:`;
+
+    const keyboard = {
+      inline_keyboard: [
+        [{
+          text: `${autoPayment ? '🔴 Desativar' : '🟢 Ativar'} Pagamento Auto`,
+          callback_data: `toggle_auto_${cardId}`
+        }],
+        [{
+          text: `${sendReminder ? '🔴 Desativar' : '🟢 Ativar'} Lembrete`,
+          callback_data: `toggle_reminder_${cardId}`
+        }],
+        [{ text: '❌ Fechar', callback_data: 'config_cancel' }]
+      ]
+    };
+
+    await sendTelegramMessage(chatId, message, { reply_markup: keyboard });
+
+  } catch (error) {
+    console.error('Erro no callback de config:', error);
+    await sendTelegramMessage(
+      chatId,
+      `❌ Erro ao carregar configurações. Tente novamente.`
+    );
+  }
+}
+
+/**
+ * Toggle pagamento automático
+ */
+async function toggleCardAutoPayment(
+  supabase: any,
+  chatId: number,
+  userId: string,
+  cardId: string
+): Promise<void> {
+  try {
+    // Buscar configuração atual
+    const { data: settings } = await supabase
+      .from('credit_card_settings')
+      .select('auto_payment')
+      .eq('account_id', cardId)
+      .eq('user_id', userId)
+      .single();
+
+    const newValue = !(settings?.auto_payment);
+
+    // Upsert configuração
+    const { error } = await supabase
+      .from('credit_card_settings')
+      .upsert({
+        account_id: cardId,
+        user_id: userId,
+        auto_payment: newValue,
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'account_id'
+      });
+
+    if (error) throw error;
+
+    const status = newValue ? '✅ ativado' : '❌ desativado';
+    await sendTelegramMessage(
+      chatId,
+      `🤖 Pagamento automático ${status}!\n\n` +
+      `${newValue ?
+        '⚠️ Certifique-se de ter saldo suficiente na conta padrão no dia do vencimento.' :
+        'Você receberá lembretes para pagar manualmente.'}`
+    );
+
+    // Recarregar menu de configuração
+    await handleCardConfigCallback(supabase, chatId, userId, cardId);
+
+  } catch (error) {
+    console.error('Erro ao toggle auto payment:', error);
+    await sendTelegramMessage(
+      chatId,
+      `❌ Erro ao alterar configuração. Tente novamente.`
+    );
+  }
+}
+
+/**
+ * Toggle lembrete de fatura
+ */
+async function toggleCardReminder(
+  supabase: any,
+  chatId: number,
+  userId: string,
+  cardId: string
+): Promise<void> {
+  try {
+    // Buscar configuração atual
+    const { data: settings } = await supabase
+      .from('credit_card_settings')
+      .select('send_reminder')
+      .eq('account_id', cardId)
+      .eq('user_id', userId)
+      .single();
+
+    const newValue = !(settings?.send_reminder ?? true);
+
+    // Upsert configuração
+    const { error } = await supabase
+      .from('credit_card_settings')
+      .upsert({
+        account_id: cardId,
+        user_id: userId,
+        send_reminder: newValue,
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'account_id'
+      });
+
+    if (error) throw error;
+
+    const status = newValue ? '✅ ativado' : '❌ desativado';
+    await sendTelegramMessage(
+      chatId,
+      `🔔 Lembrete de fatura ${status}!`
+    );
+
+    // Recarregar menu de configuração
+    await handleCardConfigCallback(supabase, chatId, userId, cardId);
+
+  } catch (error) {
+    console.error('Erro ao toggle reminder:', error);
+    await sendTelegramMessage(
+      chatId,
+      `❌ Erro ao alterar configuração. Tente novamente.`
+    );
+  }
+}
 
 // --- Funções Auxiliares de Label (Quiz) ---
 function getEmergencyFundLabel(value: string): string {
@@ -102,10 +607,534 @@ function getRetirementPlanningLabel(value: string): string {
   return labels[value] || value;
 }
 
+// ============================================================================
+// PARSER ROBUSTO DE TRANSAÇÕES (sem dependência de IA)
+// ============================================================================
+
+interface ParsedTransaction {
+  tipo: 'despesa' | 'receita' | 'transferencia' | null;
+  valor: number | null;
+  descricao: string | null;
+  conta_origem: string | null;
+  conta_destino: string | null;
+  categoria_id: string | null;
+  subcategoria_id: string | null;
+  categoria_nome: string | null;
+  subcategoria_nome: string | null;
+  categoria_sugerida: string | null; // fallback para categorias hardcoded
+  confianca: number; // 0-100
+  campos_faltantes: string[];
+}
+
+interface AccountData {
+  id: string;
+  nome: string;
+  tipo: string;
+}
+
+interface CategoryData {
+  id: string;
+  nome: string;
+  tipo: string;
+  parent_id: string | null;
+  keywords: string[] | null;
+}
+
+/**
+ * Calcula similaridade entre duas strings (Levenshtein simplificado)
+ */
+function calcularSimilaridade(str1: string, str2: string): number {
+  const s1 = str1.toLowerCase().trim();
+  const s2 = str2.toLowerCase().trim();
+
+  if (s1 === s2) return 100;
+  if (s1.includes(s2) || s2.includes(s1)) return 85;
+
+  // Comparar palavras em comum
+  const palavras1 = s1.split(/\s+/);
+  const palavras2 = s2.split(/\s+/);
+  let matches = 0;
+
+  for (const p1 of palavras1) {
+    for (const p2 of palavras2) {
+      if (p1.length > 2 && p2.length > 2) {
+        if (p1 === p2) matches += 2;
+        else if (p1.includes(p2) || p2.includes(p1)) matches += 1;
+      }
+    }
+  }
+
+  const maxPalavras = Math.max(palavras1.length, palavras2.length);
+  return Math.min(100, Math.round((matches / maxPalavras) * 50));
+}
+
+/**
+ * Encontra a conta mais similar ao termo digitado
+ */
+function encontrarContaSimilar(termo: string, contas: AccountData[]): { conta: AccountData | null, similaridade: number } {
+  if (!termo || !contas?.length) return { conta: null, similaridade: 0 };
+
+  let melhorMatch: AccountData | null = null;
+  let melhorSimilaridade = 0;
+
+  const termoLower = termo.toLowerCase().trim();
+
+  // Aliases comuns
+  const aliases: Record<string, string[]> = {
+    'nubank': ['nu', 'nub', 'roxinho'],
+    'santander': ['san', 'stdr', 'vermelhinho'],
+    'itau': ['itaú', 'ita'],
+    'bradesco': ['bra', 'brad'],
+    'pix': ['pix'],
+    'dinheiro': ['din', 'cash', 'espécie', 'especie'],
+    'carteira': ['din', 'dinheiro', 'cash'],
+    'credito': ['crédito', 'cred'],
+    'debito': ['débito', 'deb'],
+  };
+
+  for (const conta of contas) {
+    const nomeContaLower = conta.nome.toLowerCase();
+
+    // Match exato
+    if (nomeContaLower === termoLower || nomeContaLower.includes(termoLower)) {
+      return { conta, similaridade: 100 };
+    }
+
+    // Verificar aliases
+    for (const [chave, aliasList] of Object.entries(aliases)) {
+      if (aliasList.includes(termoLower) && nomeContaLower.includes(chave)) {
+        return { conta, similaridade: 95 };
+      }
+    }
+
+    // Similaridade fuzzy
+    const sim = calcularSimilaridade(termoLower, nomeContaLower);
+    if (sim > melhorSimilaridade) {
+      melhorSimilaridade = sim;
+      melhorMatch = conta;
+    }
+  }
+
+  return { conta: melhorMatch, similaridade: melhorSimilaridade };
+}
+
+/**
+ * Extrai valor numérico da mensagem
+ */
+function extrairValor(texto: string): number | null {
+  const patterns = [
+    /R\$\s*(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?)/i,
+    /(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?)\s*reais?/i,
+    /(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?)\s*(?:conto|pila|real)/i,
+    /(\d+(?:,\d{1,2})?)/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = texto.match(pattern);
+    if (match) {
+      // Normalizar: "1.234,56" → 1234.56
+      let valor = match[1]
+        .replace(/\./g, '')  // Remove pontos de milhar
+        .replace(',', '.');   // Troca vírgula por ponto
+
+      const num = parseFloat(valor);
+      if (!isNaN(num) && num > 0 && num < 1000000) {
+        return num;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Identifica o tipo de transação pelos verbos
+ */
+function identificarTipo(texto: string): 'despesa' | 'receita' | 'transferencia' | null {
+  const textoLower = texto.toLowerCase();
+
+  const verbosReceita = ['recebi', 'ganhei', 'entrou', 'depositaram', 'caiu', 'rendeu'];
+  const verbosDespesa = ['gastei', 'paguei', 'comprei', 'pago', 'gasto', 'comprando'];
+  const verbosTransferencia = ['transferi', 'passei', 'mandei', 'movi', 'enviei'];
+
+  for (const verbo of verbosTransferencia) {
+    if (textoLower.includes(verbo)) return 'transferencia';
+  }
+
+  for (const verbo of verbosReceita) {
+    if (textoLower.includes(verbo)) return 'receita';
+  }
+
+  for (const verbo of verbosDespesa) {
+    if (textoLower.includes(verbo)) return 'despesa';
+  }
+
+  // Por padrão, assumir despesa se tem valor
+  return null;
+}
+
+/**
+ * Sugere categoria com base em palavras-chave
+ */
+function sugerirCategoria(texto: string): string | null {
+  const textoLower = texto.toLowerCase();
+
+  const regras: Array<{ keywords: string[], categoria: string }> = [
+    { keywords: ['mercado', 'supermercado', 'feira', 'muffato', 'condor', 'carrefour'], categoria: 'Alimentação > Supermercado' },
+    { keywords: ['uber', '99', 'cabify', 'taxi', 'táxi'], categoria: 'Transporte > Aplicativo' },
+    { keywords: ['gasolina', 'combustível', 'combustivel', 'posto', 'alcool', 'álcool'], categoria: 'Transporte > Combustível' },
+    { keywords: ['netflix', 'spotify', 'disney', 'hbo', 'prime', 'streaming'], categoria: 'Lazer > Streaming' },
+    { keywords: ['farmácia', 'farmacia', 'drogaria', 'remédio', 'remedio'], categoria: 'Saúde > Farmácia' },
+    { keywords: ['restaurante', 'almoço', 'almoco', 'jantar', 'lanche', 'café', 'cafe'], categoria: 'Alimentação > Restaurante' },
+    { keywords: ['ifood', 'rappi', 'delivery', 'uber eats', 'entrega'], categoria: 'Alimentação > Delivery' },
+    { keywords: ['luz', 'energia', 'enel', 'copel', 'eletricidade'], categoria: 'Casa > Energia' },
+    { keywords: ['água', 'agua', 'sanepar', 'sabesp'], categoria: 'Casa > Água' },
+    { keywords: ['internet', 'wifi', 'vivo', 'claro', 'tim', 'oi'], categoria: 'Casa > Internet/Telefone' },
+    { keywords: ['salário', 'salario', 'pagamento', 'holerite'], categoria: 'Renda > Salário' },
+    { keywords: ['freelance', 'freela', 'job', 'projeto'], categoria: 'Renda > Freelance' },
+    { keywords: ['aluguel', 'condomínio', 'condominio', 'iptu'], categoria: 'Casa > Moradia' },
+  ];
+
+  for (const regra of regras) {
+    for (const keyword of regra.keywords) {
+      if (textoLower.includes(keyword)) {
+        return regra.categoria;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Encontra categoria do usuário baseado nas keywords cadastradas
+ * Retorna a categoria/subcategoria com seus nomes
+ */
+function encontrarCategoriaPorKeywords(
+  texto: string,
+  categorias: CategoryData[]
+): {
+  categoria_id: string | null;
+  subcategoria_id: string | null;
+  categoria_nome: string | null;
+  subcategoria_nome: string | null;
+} {
+  const textoLower = texto.toLowerCase();
+  console.log('[CatMatch] Buscando categoria para texto:', textoLower);
+
+  // Helper: Verifica se keyword é palavra completa no texto (não substring de outra palavra)
+  const matchPalavraCompleta = (texto: string, keyword: string): boolean => {
+    // Escape special regex characters in keyword
+    const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Use word boundary (\b) to match complete words only
+    const regex = new RegExp(`\\b${escaped}\\b`, 'i');
+    return regex.test(texto);
+  };
+
+  // Primeiro, buscar nas subcategorias (que têm parent_id)
+  for (const cat of categorias) {
+    if (cat.parent_id && cat.keywords && cat.keywords.length > 0) {
+      for (const keyword of cat.keywords) {
+        const keywordLower = keyword.toLowerCase();
+        if (matchPalavraCompleta(textoLower, keywordLower)) {
+          console.log(`[CatMatch] MATCH! Keyword "${keywordLower}" em categoria "${cat.nome}" (sub de ${cat.parent_id})`);
+          // Encontrou subcategoria, buscar pai
+          const pai = categorias.find(c => c.id === cat.parent_id);
+          return {
+            categoria_id: pai?.id || null,
+            subcategoria_id: cat.id,
+            categoria_nome: pai?.nome || null,
+            subcategoria_nome: cat.nome
+          };
+        }
+      }
+    }
+  }
+
+  // Se não encontrou subcategoria, buscar nas categorias principais
+  for (const cat of categorias) {
+    if (!cat.parent_id && cat.keywords && cat.keywords.length > 0) {
+      for (const keyword of cat.keywords) {
+        if (matchPalavraCompleta(textoLower, keyword.toLowerCase())) {
+          return {
+            categoria_id: cat.id,
+            subcategoria_id: null,
+            categoria_nome: cat.nome,
+            subcategoria_nome: null
+          };
+        }
+      }
+    }
+  }
+
+  // Tentar match pelo nome da categoria/subcategoria (também com palavra completa)
+  for (const cat of categorias) {
+    if (matchPalavraCompleta(textoLower, cat.nome.toLowerCase())) {
+      if (cat.parent_id) {
+        const pai = categorias.find(c => c.id === cat.parent_id);
+        return {
+          categoria_id: pai?.id || null,
+          subcategoria_id: cat.id,
+          categoria_nome: pai?.nome || null,
+          subcategoria_nome: cat.nome
+        };
+      } else {
+        return {
+          categoria_id: cat.id,
+          subcategoria_id: null,
+          categoria_nome: cat.nome,
+          subcategoria_nome: null
+        };
+      }
+    }
+  }
+
+  return {
+    categoria_id: null,
+    subcategoria_id: null,
+    categoria_nome: null,
+    subcategoria_nome: null
+  };
+}
+
+/**
+ * Extrai descrição da mensagem (remove valor, verbos, conta)
+ */
+function extrairDescricao(texto: string, contaEncontrada: string | null): string {
+  let descricao = texto;
+
+  // Remover verbos comuns
+  const verbos = ['gastei', 'paguei', 'comprei', 'recebi', 'ganhei', 'transferi', 'passei'];
+  for (const verbo of verbos) {
+    descricao = descricao.replace(new RegExp(verbo, 'gi'), '');
+  }
+
+  // Remover valores
+  descricao = descricao.replace(/R\$\s*[\d.,]+/gi, '');
+  descricao = descricao.replace(/[\d.,]+\s*reais?/gi, '');
+  descricao = descricao.replace(/\b\d+(?:[.,]\d+)?\b/g, '');
+
+  // Remover preposições e conectores no início
+  descricao = descricao.replace(/^[\s,.]*(no|na|em|de|do|da|com|pelo|pela|para|pro|pra)\s+/gi, '');
+
+  // Remover padrão "com/no cartão X" ou "pelo/na conta X" antes de processar palavras
+  descricao = descricao.replace(/\s+(com|no|na|pelo|pela)\s+(cart[aã]o|conta|pix)\s+\S+(\s+\S+)?$/gi, '');
+
+  // Remover nome da conta se encontrada
+  if (contaEncontrada) {
+    const palavrasConta = contaEncontrada.toLowerCase().split(/\s+/);
+    for (const palavra of palavrasConta) {
+      if (palavra.length > 2) {
+        descricao = descricao.replace(new RegExp(`\\b${palavra}\\b`, 'gi'), '');
+      }
+    }
+  }
+
+  // Remover "cartão", "pix", etc
+  descricao = descricao.replace(/\b(cartão|cartao|pix|débito|debito|crédito|credito|conta)\b/gi, '');
+
+  // Limpar preposições restantes no final
+  descricao = descricao.replace(/\s+(com|no|na|em|de|do|da|pelo|pela)\s*$/gi, '');
+
+  // Limpar espaços extras
+  descricao = descricao.replace(/\s+/g, ' ').trim();
+
+  // Capitalizar primeira letra
+  if (descricao.length > 0) {
+    descricao = descricao.charAt(0).toUpperCase() + descricao.slice(1);
+  }
+
+  return descricao || 'Transação';
+}
+
+/**
+ * Parser principal de transações
+ */
+function parseTransaction(texto: string, contasUsuario: AccountData[], categoriasUsuario: CategoryData[] = []): ParsedTransaction {
+  const resultado: ParsedTransaction = {
+    tipo: null,
+    valor: null,
+    descricao: null,
+    conta_origem: null,
+    conta_destino: null,
+    categoria_id: null,
+    subcategoria_id: null,
+    categoria_nome: null,
+    subcategoria_nome: null,
+    categoria_sugerida: null,
+    confianca: 0,
+    campos_faltantes: []
+  };
+
+  // 1. Extrair valor
+  resultado.valor = extrairValor(texto);
+  if (!resultado.valor) {
+    resultado.campos_faltantes.push('valor');
+  }
+
+  // 2. Identificar tipo
+  resultado.tipo = identificarTipo(texto);
+  if (!resultado.tipo && resultado.valor) {
+    resultado.tipo = 'despesa'; // Padrão se não identificou
+  }
+
+  // 3. Buscar conta mencionada
+  const textoLower = texto.toLowerCase();
+  let contaEncontrada: AccountData | null = null;
+
+  // Primeiro, tentar encontrar padrões explícitos como "cartão X" ou "conta X"
+  // Captura o que vem DEPOIS de cartão/conta e junta com "Cartão" para buscar
+  const matchCartao = texto.match(/cart[aã]o\s+([\w\s]+?)(?:\s*$|\s+(?:de|do|da|para|pra|no|na|em))/i);
+  if (matchCartao) {
+    const nomeAposCartao = matchCartao[1].trim();
+    // Buscar conta com nome completo "Cartão + resto"
+    const termoBusca = `cartão ${nomeAposCartao}`;
+    const { conta, similaridade } = encontrarContaSimilar(termoBusca, contasUsuario);
+    if (conta && similaridade >= 70) {
+      contaEncontrada = conta;
+      resultado.conta_origem = conta.id;
+    }
+  }
+
+  // Tentar padrão "pix X" ou "pelo pix X" - usa conta corrente (NÃO cartão)  
+  if (!contaEncontrada) {
+    const matchPix = texto.match(/(?:pix|pelo\s+pix|via\s+pix)\s+([\w]+)/i);
+    if (matchPix) {
+      const nomeConta = matchPix[1].trim();
+      // Filtrar apenas contas que NÃO são cartão para PIX
+      const contasNaoCartao = contasUsuario.filter(c =>
+        !c.nome.toLowerCase().startsWith('cartão') &&
+        !c.nome.toLowerCase().startsWith('cartao')
+      );
+      const { conta, similaridade } = encontrarContaSimilar(nomeConta, contasNaoCartao);
+      if (conta && similaridade >= 70) {
+        contaEncontrada = conta;
+        resultado.conta_origem = conta.id;
+      }
+    }
+  }
+
+  // Tentar padrão "com/no/na X" (mas não cartão)
+  if (!contaEncontrada) {
+    const matchCom = texto.match(/(?:com|no|na|pelo|pela)\s+([\w]+(?:\s+[\w]+)?)/gi);
+    if (matchCom) {
+      for (const match of matchCom) {
+        const possibleAccount = match.replace(/^(com|no|na|pelo|pela)\s+/i, '').trim();
+        // Ignorar palavras comuns
+        const ignorar = ['cartão', 'cartao', 'pix', 'credito', 'crédito', 'debito', 'débito', 'reais', 'real'];
+        if (ignorar.includes(possibleAccount.toLowerCase())) continue;
+
+        const { conta, similaridade } = encontrarContaSimilar(possibleAccount, contasUsuario);
+        if (conta && similaridade >= 80) {
+          contaEncontrada = conta;
+          resultado.conta_origem = conta.id;
+          break;
+        }
+      }
+    }
+  }
+
+  // Palavras que NÃO são contas (evitar falsos positivos)
+  const palavrasIgnorar = [
+    'no', 'na', 'em', 'de', 'do', 'da', 'com', 'para', 'pelo', 'pela',
+    'gastei', 'paguei', 'comprei', 'recebi', 'ganhei', 'transferi',
+    'reais', 'real', 'mercado', 'restaurante', 'uber', 'ifood', 'almoço',
+    'jantar', 'lanche', 'café', 'farmácia', 'gasolina', 'luz', 'água',
+    'internet', 'netflix', 'spotify', 'salário', 'freelance', 'pizzaria'
+  ];
+
+  // Se não encontrou por padrão explícito, tentar por palavras
+  if (!contaEncontrada) {
+    const palavras = texto.split(/\s+/);
+    for (let i = palavras.length - 1; i >= 0; i--) {
+      // Tentar combinações de palavras (ex: "santander breno")
+      for (let j = i; j < palavras.length && j <= i + 2; j++) {
+        const termo = palavras.slice(i, j + 1).join(' ').toLowerCase();
+
+        // Ignorar palavras comuns que não são contas
+        if (palavrasIgnorar.some(p => termo === p)) {
+          continue;
+        }
+
+        const { conta, similaridade } = encontrarContaSimilar(termo, contasUsuario);
+
+        // Threshold mais alto para evitar falsos positivos
+        if (conta && similaridade >= 85) {
+          contaEncontrada = conta;
+          resultado.conta_origem = conta.id;
+          break;
+        }
+      }
+      if (contaEncontrada) break;
+    }
+  }
+
+  if (!resultado.conta_origem) {
+    resultado.campos_faltantes.push('conta');
+  }
+
+  // 4. Extrair descrição
+  resultado.descricao = extrairDescricao(texto, contaEncontrada?.nome || null);
+
+  // 5. Buscar categoria por keywords do usuário
+  if (categoriasUsuario.length > 0) {
+    const categoriaEncontrada = encontrarCategoriaPorKeywords(texto, categoriasUsuario);
+    resultado.categoria_id = categoriaEncontrada.categoria_id;
+    resultado.subcategoria_id = categoriaEncontrada.subcategoria_id;
+    resultado.categoria_nome = categoriaEncontrada.categoria_nome;
+    resultado.subcategoria_nome = categoriaEncontrada.subcategoria_nome;
+  }
+
+  // Fallback para sugestão hardcoded se não encontrou nas do usuário
+  if (!resultado.categoria_id && !resultado.subcategoria_id) {
+    resultado.categoria_sugerida = sugerirCategoria(texto);
+  }
+
+  // 6. Calcular confiança
+  let confianca = 0;
+  if (resultado.valor) confianca += 30;
+  if (resultado.tipo) confianca += 20;
+  if (resultado.conta_origem) confianca += 30;
+  if (resultado.descricao && resultado.descricao !== 'Transação') confianca += 10;
+  if (resultado.categoria_sugerida) confianca += 10;
+  resultado.confianca = confianca;
+
+  return resultado;
+}
+
+/**
+ * Gera teclado inline para seleção de conta
+ */
+function gerarTecladoContas(contas: AccountData[]): any {
+  const keyboard: any = { inline_keyboard: [] };
+
+  // Agrupar em linhas de 2
+  for (let i = 0; i < contas.length; i += 2) {
+    const row: any[] = [];
+    row.push({
+      text: contas[i].nome,
+      callback_data: `select_account_${contas[i].id}`
+    });
+
+    if (contas[i + 1]) {
+      row.push({
+        text: contas[i + 1].nome,
+        callback_data: `select_account_${contas[i + 1].id}`
+      });
+    }
+
+    keyboard.inline_keyboard.push(row);
+  }
+
+  keyboard.inline_keyboard.push([{ text: '❌ Cancelar', callback_data: 'cancel_transaction_parse' }]);
+
+  return keyboard;
+}
+
 // --- Funções Auxiliares Gerais ---
 /**
  * Formata um número para a moeda BRL.
- */ 
+ */
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -115,7 +1144,7 @@ function formatCurrency(value: number): string {
 
 /**
  * Envia uma mensagem para o Telegram.
- */ 
+ */
 async function sendTelegramMessage(chatId: number, text: string, options: any = {}): Promise<any> {
   const telegramApiUrl = `https://api.telegram.org/bot${Deno.env.get('TELEGRAM_BOT_TOKEN')}/sendMessage`;
   try {
@@ -146,7 +1175,7 @@ async function sendTelegramMessage(chatId: number, text: string, options: any = 
 
 /**
  * Edita uma mensagem existente no Telegram.
- */ 
+ */
 async function editTelegramMessage(chatId: number, messageId: number, text: string, options: any = {}): Promise<void> {
   const telegramApiUrl = `https://api.telegram.org/bot${Deno.env.get('TELEGRAM_BOT_TOKEN')}/editMessageText`;
   try {
@@ -170,7 +1199,7 @@ async function editTelegramMessage(chatId: number, messageId: number, text: stri
 
 /**
  * Transcreve um áudio do Telegram usando a API do Gemini.
- */ 
+ */
 async function getTranscriptFromAudio(fileId: string): Promise<string> {
   const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
   const googleApiKey = Deno.env.get('GOOGLE_AI_API_KEY');
@@ -541,7 +1570,9 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
   const argument = args.join(' ');
 
   switch (cmd.toLowerCase()) {
-    case '/start': {
+    case '/start':
+    case '/ajuda':
+    case '/help': {
       const message = `🤖 *Menu Zaq - Boas Contas*
 
 📝 *Registro Rápido*
@@ -550,7 +1581,7 @@ Apenas digite: "Almoço 25 reais" ou envie áudio!
 💳 *Cartões de Crédito*
 /faturas - Faturas pendentes
 /pagar - Pagar fatura agora
-/config_cartao - Automatizar pagamentos
+/config\\_cartao - Automatizar pagamentos
 
 👤 *Contexto & Família*
 /contexto - Escolher (Pessoal vs Grupo)
@@ -561,8 +1592,8 @@ Apenas digite: "Almoço 25 reais" ou envie áudio!
 /saldo - Saldos atuais
 /extrato - Últimas transações
 /resumo - Balanço do mês
-/top_gastos - Onde você gastou mais
-/comparar_meses - Evolução de gastos
+/top\\_gastos - Onde você gastou mais
+/comparar\\_meses - Evolução de gastos
 
 🎯 *Planejamento*
 /metas - Suas metas
@@ -571,7 +1602,7 @@ Apenas digite: "Almoço 25 reais" ou envie áudio!
 
 ⚙️ *Outros*
 /ajuda - Este menu
-/editar_ultima - Corrigir erro`;
+/editar\\_ultima - Corrigir erro`;
 
       await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
       break;
@@ -640,6 +1671,65 @@ Apenas digite: "Almoço 25 reais" ou envie áudio!
 
     case '/config_cartao': {
       await handleConfigCartaoCommand(supabase, chatId, userId);
+      break;
+    }
+
+    case '/previsao': {
+      try {
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        const daysInMonth = lastDay.getDate();
+        const currentDay = now.getDate();
+        const daysRemaining = daysInMonth - currentDay;
+
+        // Buscar gastos do mês atual
+        const { data: transactions } = await supabase
+          .from('transactions')
+          .select('tipo, valor')
+          .eq('user_id', userId)
+          .eq('tipo', 'despesa')
+          .gte('data_transacao', firstDay.toISOString().split('T')[0])
+          .lte('data_transacao', now.toISOString().split('T')[0]);
+
+        const totalGasto = transactions?.reduce((sum: number, t: any) => sum + parseFloat(t.valor), 0) || 0;
+        const mediaDiaria = currentDay > 0 ? totalGasto / currentDay : 0;
+        const previsaoTotal = mediaDiaria * daysInMonth;
+        const previsaoRestante = mediaDiaria * daysRemaining;
+
+        // Buscar receitas do mês
+        const { data: receitas } = await supabase
+          .from('transactions')
+          .select('valor')
+          .eq('user_id', userId)
+          .eq('tipo', 'receita')
+          .gte('data_transacao', firstDay.toISOString().split('T')[0])
+          .lte('data_transacao', lastDay.toISOString().split('T')[0]);
+
+        const totalReceita = receitas?.reduce((sum: number, t: any) => sum + parseFloat(t.valor), 0) || 0;
+        const saldoProjetado = totalReceita - previsaoTotal;
+
+        let statusEmoji = saldoProjetado >= 0 ? '✅' : '⚠️';
+        let statusMessage = saldoProjetado >= 0
+          ? `Você deve terminar o mês com ${formatCurrency(saldoProjetado)} positivo!`
+          : `Atenção! Você pode terminar o mês com ${formatCurrency(Math.abs(saldoProjetado))} negativo.`;
+
+        const message = `📈 *Previsão de Gastos*\n\n` +
+          `📅 Dia ${currentDay} de ${daysInMonth} (${daysRemaining} dias restantes)\n\n` +
+          `💸 *Gastos até agora:* ${formatCurrency(totalGasto)}\n` +
+          `📊 *Média diária:* ${formatCurrency(mediaDiaria)}\n\n` +
+          `🔮 *Projeção para o mês:*\n` +
+          `   Total previsto: ${formatCurrency(previsaoTotal)}\n` +
+          `   Ainda vai gastar: ~${formatCurrency(previsaoRestante)}\n\n` +
+          `💰 *Receitas do mês:* ${formatCurrency(totalReceita)}\n` +
+          `${statusEmoji} *Saldo projetado:* ${formatCurrency(saldoProjetado)}\n\n` +
+          `${statusMessage}`;
+
+        await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
+      } catch (error) {
+        console.error('Erro em /previsao:', error);
+        await sendTelegramMessage(chatId, '❌ Erro ao calcular previsão. Tente novamente.');
+      }
       break;
     }
 
@@ -1723,7 +2813,7 @@ serve(async (req) => {
       if (data.startsWith('pay_')) {
         const accountId = data.replace('pay_', '');
         if (accountId !== 'cancel') {
-          await handlePaymentCallback(supabaseAdmin, chatId, userId, accountId);
+          await handlePaymentCardSelection(supabaseAdmin, chatId, userId, accountId);
         } else {
           await editTelegramMessage(chatId, messageId, '❌ Pagamento cancelado.');
         }
@@ -1737,7 +2827,7 @@ serve(async (req) => {
         } else if (accountId === 'back') {
           await handleConfigCartaoCommand(supabaseAdmin, chatId, userId);
         } else {
-          await handleConfigCallback(supabaseAdmin, chatId, userId, accountId);
+          await handleCardConfigCallback(supabaseAdmin, chatId, userId, accountId);
         }
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
@@ -1746,10 +2836,10 @@ serve(async (req) => {
         const accountId = data.replace('auto_on_', '');
         // FIX: Usando toggleAutoPayment no lugar de handleActivateAutoPayment que não existe
         try {
-            await toggleAutoPayment(supabaseAdmin, chatId, userId, accountId);
+          await toggleCardAutoPayment(supabaseAdmin, chatId, userId, accountId);
         } catch (e) {
-            console.error("Erro ao ativar auto pagamento:", e);
-            await editTelegramMessage(chatId, messageId, '⚠️ Funcionalidade indisponível no momento.');
+          console.error("Erro ao ativar auto pagamento:", e);
+          await editTelegramMessage(chatId, messageId, '⚠️ Funcionalidade indisponível no momento.');
         }
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
@@ -1758,14 +2848,213 @@ serve(async (req) => {
         const accountId = data.replace('auto_off_', '');
         // FIX: Usando toggleAutoPayment no lugar de handleDeactivateAutoPayment que não existe
         try {
-            await toggleAutoPayment(supabaseAdmin, chatId, userId, accountId);
+          await toggleCardAutoPayment(supabaseAdmin, chatId, userId, accountId);
         } catch (e) {
-            console.error("Erro ao desativar auto pagamento:", e);
-            await editTelegramMessage(chatId, messageId, '⚠️ Funcionalidade indisponível no momento.');
+          console.error("Erro ao desativar auto pagamento:", e);
+          await editTelegramMessage(chatId, messageId, '⚠️ Funcionalidade indisponível no momento.');
         }
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
       // --- Fim Callbacks Cartão ---
+
+      // --- Callbacks do Parser de Transações ---
+      if (data.startsWith('select_account_')) {
+        const accountId = data.replace('select_account_', '');
+        const telegramId = callbackQuery.from.id.toString();
+
+        try {
+          // Buscar sessão com transação pendente pelo telegram_id
+          const { data: session, error: sessionErr } = await supabaseAdmin
+            .from('telegram_sessions')
+            .select('contexto')
+            .eq('telegram_id', telegramId)
+            .single();
+
+          console.log('[select_account] telegramId:', telegramId, 'session:', session, 'error:', sessionErr);
+
+          // Verificar se há transação pendente aguardando conta
+          if (!session?.contexto?.waiting_for || session.contexto.waiting_for !== 'account' || !session.contexto.pending_transaction) {
+            await editTelegramMessage(chatId, messageId, '❌ Sessão expirada. Envie a transação novamente.');
+            return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+          }
+
+          const pending = session.contexto.pending_transaction;
+
+          // Buscar nome da conta
+          const { data: conta } = await supabaseAdmin
+            .from('accounts')
+            .select('nome')
+            .eq('id', accountId)
+            .single();
+
+          // Usar categoria encontrada pelo parser ou buscar por sugestão hardcoded
+          let categoriaId: string | null = pending.subcategoria_id || pending.categoria_id || null;
+          let categoriaNome = pending.categoria_nome || 'Outros';
+          let subcategoriaNome = pending.subcategoria_nome || null;
+
+          // Se o parser não encontrou, tentar pela sugestão hardcoded
+          if (!categoriaId && pending.categoria_sugerida) {
+            const categoriaParts = pending.categoria_sugerida.split('>').map((s: string) => s.trim());
+            const categoriaFilho = categoriaParts[categoriaParts.length - 1];
+
+            // Buscar categoria com parent para montar hierarquia
+            const { data: categorias } = await supabaseAdmin
+              .from('categories')
+              .select('id, nome, parent:categories!parent_id(nome)')
+              .eq('user_id', userId)
+              .ilike('nome', `%${categoriaFilho}%`)
+              .limit(1);
+
+            if (categorias && categorias.length > 0) {
+              categoriaId = categorias[0].id;
+              // Montar nome hierárquico se tiver parent
+              const parentData = categorias[0].parent as unknown;
+              if (parentData && Array.isArray(parentData) && parentData.length > 0) {
+                categoriaNome = (parentData[0] as { nome: string }).nome;
+                subcategoriaNome = categorias[0].nome;
+              } else if (parentData && typeof parentData === 'object' && 'nome' in (parentData as object)) {
+                categoriaNome = (parentData as { nome: string }).nome;
+                subcategoriaNome = categorias[0].nome;
+              } else {
+                categoriaNome = categorias[0].nome;
+                subcategoriaNome = null;
+              }
+            }
+          }
+
+          // Buscar contexto
+          const context = await getUserTelegramContext(supabaseAdmin, userId);
+
+          // Preparar transação completa
+          const transactionData = {
+            user_id: userId,
+            group_id: context.groupId || null,
+            valor: pending.valor,
+            descricao: pending.descricao,
+            tipo: pending.tipo,
+            categoria_id: categoriaId,
+            conta_origem_id: accountId,
+            conta_destino_id: null,
+            origem: 'telegram'
+          };
+
+          // Atualizar sessão com dados completos
+          const { data: sessionData, error: sessionError } = await supabaseAdmin
+            .from('telegram_sessions')
+            .update({
+              contexto: transactionData,
+              status: 'ativo'
+            })
+            .eq('telegram_id', telegramId)
+            .select('id')
+            .single();
+
+          if (sessionError) throw sessionError;
+
+          // Montar confirmação no novo formato
+          const tipoEmoji = pending.tipo === 'receita' ? '💚' : pending.tipo === 'despesa' ? '💸' : '🔄';
+          const tipoLabel = pending.tipo === 'receita' ? 'Receita' : pending.tipo === 'despesa' ? 'Despesa' : 'Transferência';
+
+          let confirmMsg = `✅ *Confirmar registro?*\n\n`;
+          confirmMsg += `*Tipo:* ${tipoLabel}\n`;
+          confirmMsg += `*Descrição:* ${pending.descricao}\n`;
+          confirmMsg += `*Valor:* ${formatCurrency(pending.valor)}\n`;
+          confirmMsg += `*Conta:* ${conta?.nome || 'Conta'}\n`;
+
+          // Exibir Categoria e Subcategoria separadamente
+          if (subcategoriaNome) {
+            confirmMsg += `*Categoria:* 🍴 ${categoriaNome}\n`;
+            confirmMsg += `*Subcategoria:* ${subcategoriaNome}\n`;
+          } else {
+            confirmMsg += `*Categoria:* ${categoriaNome}\n`;
+          }
+
+          if (context.defaultContext === 'group' && context.groupName) {
+            confirmMsg += `\n🏠 *Grupo:* ${context.groupName}`;
+          } else {
+            confirmMsg += `\n👤 *Pessoal*`;
+          }
+
+          const keyboard = {
+            inline_keyboard: [
+              [
+                { text: "✅ Confirmar", callback_data: `confirm_transaction:${sessionData.id}` },
+                { text: "❌ Cancelar", callback_data: `cancel_transaction:${sessionData.id}` }
+              ]
+            ]
+          };
+
+          await editTelegramMessage(chatId, messageId, confirmMsg, { reply_markup: keyboard });
+
+        } catch (e) {
+          console.error('Erro ao selecionar conta:', e);
+          await editTelegramMessage(chatId, messageId, '❌ Erro ao processar. Tente novamente.');
+        }
+
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      if (data === 'cancel_transaction_parse') {
+        // Limpar sessão pendente
+        await supabaseAdmin
+          .from('telegram_sessions')
+          .update({ contexto: {}, status: 'cancelado' })
+          .eq('user_id', userId);
+
+        await editTelegramMessage(chatId, messageId, '❌ Transação cancelada.');
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+      // --- Fim Callbacks Parser ---
+
+      // Callback para confirmar pagamento (confirm_pay_cardId_accountId)
+      if (data.startsWith('confirm_pay_')) {
+        const parts = data.replace('confirm_pay_', '').split('_');
+        const cardId = parts[0];
+        const accountId = parts[1];
+        try {
+          await confirmInvoicePayment(supabaseAdmin, chatId, userId, cardId, accountId);
+        } catch (e) {
+          console.error("Erro ao confirmar pagamento:", e);
+          await editTelegramMessage(chatId, messageId, '❌ Erro ao processar pagamento.');
+        }
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      // Callback para abrir configurações de cartão específico
+      if (data.startsWith('config_card_')) {
+        const cardId = data.replace('config_card_', '');
+        try {
+          await handleCardConfigCallback(supabaseAdmin, chatId, userId, cardId);
+        } catch (e) {
+          console.error("Erro ao abrir config de cartão:", e);
+          await editTelegramMessage(chatId, messageId, '❌ Erro ao carregar configurações.');
+        }
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      // Callback para toggle pagamento automático
+      if (data.startsWith('toggle_auto_')) {
+        const cardId = data.replace('toggle_auto_', '');
+        try {
+          await toggleCardAutoPayment(supabaseAdmin, chatId, userId, cardId);
+        } catch (e) {
+          console.error("Erro ao toggle auto payment:", e);
+          await editTelegramMessage(chatId, messageId, '❌ Erro ao alterar configuração.');
+        }
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      // Callback para toggle lembrete
+      if (data.startsWith('toggle_reminder_')) {
+        const cardId = data.replace('toggle_reminder_', '');
+        try {
+          await toggleCardReminder(supabaseAdmin, chatId, userId, cardId);
+        } catch (e) {
+          console.error("Erro ao toggle reminder:", e);
+          await editTelegramMessage(chatId, messageId, '❌ Erro ao alterar configuração.');
+        }
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
 
       // Ações de confirmação de transações (sistema antigo)
       const [action, sessionId] = data.split(':');
@@ -2066,41 +3355,149 @@ serve(async (req) => {
           headers: corsHeaders
         });
       }
-      const { data: nlpData, error: nlpError } = await supabaseAdmin.functions.invoke('nlp-transaction', {
-        body: {
-          text,
-          userId
+
+      // ========================================================================
+      // USAR PARSER ROBUSTO (sem dependência de IA)
+      // ========================================================================
+
+      // Buscar contas do usuário para o parser
+      const { data: userAccounts } = await supabaseAdmin
+        .from('accounts')
+        .select('id, nome, tipo')
+        .eq('user_id', userId)
+        .eq('ativo', true);
+
+      const accounts: AccountData[] = userAccounts || [];
+
+      // Buscar categorias do usuário com keywords para o parser
+      const { data: userCategories } = await supabaseAdmin
+        .from('categories')
+        .select('id, nome, tipo, parent_id, keywords')
+        .eq('user_id', userId);
+
+      const categories: CategoryData[] = userCategories || [];
+      console.log('[Parser] Categorias carregadas:', JSON.stringify(categories.map(c => ({ id: c.id, nome: c.nome, keywords: c.keywords, parent_id: c.parent_id }))));
+
+      // Executar parser com contas e categorias
+      const parsed = parseTransaction(text!, accounts, categories);
+      console.log('[Parser] Resultado:', JSON.stringify(parsed));
+
+      // Se não conseguiu extrair valor, mensagem não é transação válida
+      if (!parsed.valor) {
+        await sendTelegramMessage(chatId,
+          `❓ Não entendi o valor da transação.\n\n` +
+          `💡 *Exemplos válidos:*\n` +
+          `• "gastei 50 no mercado com nubank"\n` +
+          `• "200 uber santander"\n` +
+          `• "recebi 1000 salário itau"`
+        );
+        return new Response('OK', { status: 200, headers: corsHeaders });
+      }
+
+      // Se falta a conta, PERGUNTAR (não adivinhar!)
+      if (parsed.campos_faltantes.includes('conta')) {
+        if (accounts.length === 0) {
+          await sendTelegramMessage(chatId,
+            `❌ Você não tem contas cadastradas.\n\n` +
+            `Para registrar transações, primeiro cadastre suas contas no app:\n` +
+            `🔗 [Cadastrar Contas](https://app.boascontas.com/accounts)`
+          );
+          return new Response('OK', { status: 200, headers: corsHeaders });
         }
-      });
-      if (analyzingMessage?.message_id && !voice) {
-        await editTelegramMessage(chatId, analyzingMessage.message_id, "✅ Análise concluída. A preparar confirmação...");
+
+        // Salvar dados parciais na sessão para completar depois
+        const telegramIdSave = message.from.id.toString();
+        console.log('[Parser] Salvando sessão:', { userId, telegramIdSave, valor: parsed.valor });
+
+        const { data: upsertResult, error: upsertError } = await supabaseAdmin
+          .from('telegram_sessions')
+          .upsert({
+            user_id: userId,
+            telegram_id: telegramIdSave,
+            chat_id: chatId.toString(),
+            contexto: {
+              waiting_for: 'account',
+              pending_transaction: {
+                valor: parsed.valor,
+                tipo: parsed.tipo,
+                descricao: parsed.descricao,
+                categoria_id: parsed.categoria_id,
+                subcategoria_id: parsed.subcategoria_id,
+                categoria_nome: parsed.categoria_nome,
+                subcategoria_nome: parsed.subcategoria_nome,
+                categoria_sugerida: parsed.categoria_sugerida
+              }
+            },
+            status: 'ativo'  // Usando valor válido da constraint
+          }, { onConflict: 'telegram_id' })
+          .select();
+
+        console.log('[Parser] Resultado upsert:', { upsertResult, upsertError });
+
+        const keyboard = gerarTecladoContas(accounts);
+
+        await sendTelegramMessage(chatId,
+          `💳 *Em qual conta foi esse gasto de ${formatCurrency(parsed.valor)}?*\n\n` +
+          `📝 ${parsed.descricao}`,
+          { reply_markup: keyboard }
+        );
+        return new Response('OK', { status: 200, headers: corsHeaders });
       }
-      if (nlpError || !nlpData || nlpData.validation_errors && nlpData.validation_errors.length > 0) {
-        console.error('Erro NLP:', nlpError, nlpData);
-        const detailedError = nlpError ? JSON.stringify(nlpError) : (nlpData?.validation_errors?.join('\n') || "Dados inválidos recebidos");
-        const errorMsg = nlpData?.validation_errors?.join('\n') || "Não consegui entender sua mensagem.";
-        await sendTelegramMessage(chatId, `❌ Problemas encontrados:\n${errorMsg}\n\n*Debug Info:* \`${detailedError}\`\n\nTente ser mais específico, como 'gastei 50 reais no almoço no Nubank'.`);
-        return new Response('OK', {
-          status: 200,
-          headers: corsHeaders
-        });
+
+      // Usar categoria encontrada pelo parser ou buscar por sugestão hardcoded
+      let categoriaId: string | null = parsed.subcategoria_id || parsed.categoria_id || null;
+      let categoriaNome = parsed.categoria_nome || 'Outros';
+      let subcategoriaNome = parsed.subcategoria_nome || null;
+
+      // Se o parser não encontrou nas keywords do usuário, tentar pela sugestão hardcoded
+      if (!categoriaId && parsed.categoria_sugerida) {
+        const categoriaParts = parsed.categoria_sugerida.split('>').map(s => s.trim());
+        const categoriaFilho = categoriaParts[categoriaParts.length - 1];
+
+        // Buscar categoria com parent para montar hierarquia
+        const { data: categorias } = await supabaseAdmin
+          .from('categories')
+          .select('id, nome, parent:categories!parent_id(nome)')
+          .eq('user_id', userId)
+          .ilike('nome', `%${categoriaFilho}%`)
+          .limit(1);
+
+        if (categorias && categorias.length > 0) {
+          categoriaId = categorias[0].id;
+          // Montar nome hierárquico se tiver parent
+          const parentData = categorias[0].parent as unknown;
+          if (parentData && Array.isArray(parentData) && parentData.length > 0) {
+            categoriaNome = (parentData[0] as { nome: string }).nome;
+            subcategoriaNome = categorias[0].nome;
+          } else if (parentData && typeof parentData === 'object' && 'nome' in (parentData as object)) {
+            categoriaNome = (parentData as { nome: string }).nome;
+            subcategoriaNome = categorias[0].nome;
+          } else {
+            categoriaNome = categorias[0].nome;
+            subcategoriaNome = null;
+          }
+        }
       }
-      const { valor, descricao, tipo, categoria, conta, ...rest } = nlpData;
+
+      // Buscar nome da conta
+      const contaSelecionada = accounts.find(a => a.id === parsed.conta_origem);
+      const contaNome = contaSelecionada?.nome || 'Conta';
 
       // Buscar contexto atual para saber se é grupo ou pessoal
       const context = await getUserTelegramContext(supabaseAdmin, userId);
 
       const transactionData = {
         user_id: userId,
-        group_id: context.groupId || null, // Usa o ID do grupo se estiver no contexto de grupo
-        valor,
-        descricao,
-        tipo,
-        categoria_id: rest.categoria_id,
-        conta_origem_id: rest.conta_origem_id,
-        conta_destino_id: rest.conta_destino_id,
+        group_id: context.groupId || null,
+        valor: parsed.valor,
+        descricao: parsed.descricao,
+        tipo: parsed.tipo,
+        categoria_id: categoriaId,
+        conta_origem_id: parsed.conta_origem,
+        conta_destino_id: null,
         origem: 'telegram'
       };
+
       const { data: sessionData, error: sessionError } = await supabaseAdmin.from('telegram_sessions').upsert({
         user_id: userId,
         telegram_id: message.from.id.toString(),
@@ -2110,27 +3507,33 @@ serve(async (req) => {
       }, {
         onConflict: 'telegram_id'
       }).select('id').single();
+
       if (sessionError) throw sessionError;
-      let confirmationMessage = `✅ *Entendido! Registrado.*\nPor favor, confirme se está tudo certo:\n\n`;
-      confirmationMessage += `*Tipo:* ${tipo.charAt(0).toUpperCase() + tipo.slice(1)}\n`;
-      confirmationMessage += `*Descrição:* ${descricao}\n`;
-      confirmationMessage += `*Valor:* ${formatCurrency(valor)}\n`;
-      confirmationMessage += `*Conta:* ${conta}\n`;
 
-      if (categoria) {
-        if (categoria.includes('>')) {
-          const parts = categoria.split('>').map((s: string) => s.trim());
-          const cat = parts[0] || 'Geral';
-          const sub = parts[1] || '';
+      // Montar mensagem de confirmação no novo formato
+      const tipoEmoji = parsed.tipo === 'receita' ? '💚' : parsed.tipo === 'despesa' ? '💸' : '🔄';
+      const tipoLabel = parsed.tipo === 'receita' ? 'Receita' : parsed.tipo === 'despesa' ? 'Despesa' : 'Transferência';
 
-          confirmationMessage += `*Categoria:* ${cat}\n`;
-          if (sub) {
-            confirmationMessage += `*Subcategoria:* ${sub}\n`;
-          }
-        } else {
-          confirmationMessage += `*Categoria:* ${categoria}\n`;
-        }
+      let confirmationMessage = `✅ *Confirmar registro?*\n\n`;
+      confirmationMessage += `*Tipo:* ${tipoLabel}\n`;
+      confirmationMessage += `*Descrição:* ${parsed.descricao}\n`;
+      confirmationMessage += `*Valor:* ${formatCurrency(parsed.valor!)}\n`;
+      confirmationMessage += `*Conta:* ${contaNome}\n`;
+
+      // Exibir Categoria e Subcategoria separadamente
+      if (subcategoriaNome) {
+        confirmationMessage += `*Categoria:* 🍴 ${categoriaNome}\n`;
+        confirmationMessage += `*Subcategoria:* ${subcategoriaNome}\n`;
+      } else {
+        confirmationMessage += `*Categoria:* ${categoriaNome}\n`;
       }
+
+      if (context.defaultContext === 'group' && context.groupName) {
+        confirmationMessage += `\n🏠 *Grupo:* ${context.groupName}`;
+      } else {
+        confirmationMessage += `\n👤 *Pessoal*`;
+      }
+
       const inline_keyboard = [
         [
           {

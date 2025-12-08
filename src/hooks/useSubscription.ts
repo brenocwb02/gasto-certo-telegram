@@ -15,7 +15,7 @@ export const useSubscription = () => {
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
 
-  const checkSubscription = async () => {
+  const checkSubscription = async (silent = false) => {
     if (!user) {
       setSubscriptionInfo(null);
       setLoading(false);
@@ -23,7 +23,10 @@ export const useSubscription = () => {
     }
 
     try {
-      setLoading(true);
+      // Apenas mostra loading na primeira verificação, não nos refreshes silenciosos
+      if (!silent) {
+        setLoading(true);
+      }
       setError(null);
 
       const { data, error: functionError } = await supabase.functions.invoke('check-subscription');
@@ -39,7 +42,9 @@ export const useSubscription = () => {
       setError(err instanceof Error ? err.message : 'Failed to check subscription');
       setSubscriptionInfo({ subscribed: false });
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
 
@@ -89,13 +94,13 @@ export const useSubscription = () => {
     checkSubscription();
   }, [user]);
 
-  // Auto-refresh subscription status every minute
+  // Auto-refresh subscription status every 5 minutes (silently, without showing loading)
   useEffect(() => {
     const interval = setInterval(() => {
       if (user) {
-        checkSubscription();
+        checkSubscription(true);  // silent=true para não mostrar loading
       }
-    }, 60000);
+    }, 300000);  // 5 minutos ao invés de 1 minuto
 
     return () => clearInterval(interval);
   }, [user]);
