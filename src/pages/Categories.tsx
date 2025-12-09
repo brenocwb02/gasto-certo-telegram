@@ -26,7 +26,7 @@ interface Category {
 
 export default function Categories() {
   const { currentGroup } = useFamily();
-  const { categories: flatCategories, loading } = useCategories(currentGroup?.id);
+  const { categories: flatCategories, loading, refetchCategories } = useCategories(currentGroup?.id);
   const { user } = useAuth();
   const { toast } = useToast();
   const { plan } = useLimits();
@@ -240,6 +240,7 @@ export default function Categories() {
                 onSuccess={() => {
                   setFormOpen(false);
                   setEditingCategory(null);
+                  refetchCategories(); // Atualiza a lista após salvar
                 }}
               />
             )}
