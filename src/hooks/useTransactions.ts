@@ -48,7 +48,7 @@ export function useTransactions(groupId?: string) {
         fetchTransactions();
 
         const channel = supabase
-            .channel('transactions-changes')
+            .channel(`transactions-changes-${groupId || 'personal'}-${user.id}`)
             .on(
                 'postgres_changes',
                 {

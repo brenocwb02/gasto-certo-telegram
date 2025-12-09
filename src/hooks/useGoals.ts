@@ -46,7 +46,7 @@ export function useGoals(groupId?: string) {
         fetchGoals();
 
         const channel = supabase
-            .channel('goals-changes')
+            .channel(`goals-changes-${groupId || 'personal'}-${user.id}`)
             .on(
                 'postgres_changes',
                 {

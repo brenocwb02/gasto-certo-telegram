@@ -88,7 +88,7 @@ export function useFinancialStats(groupId?: string) {
         fetchStats();
 
         const channel = supabase
-            .channel('financial-stats-changes')
+            .channel(`financial-stats-changes-${groupId || 'personal'}-${user.id}`)
             .on(
                 'postgres_changes',
                 {

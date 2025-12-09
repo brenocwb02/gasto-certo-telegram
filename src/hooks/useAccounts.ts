@@ -49,7 +49,7 @@ export function useAccounts(groupId?: string) {
         fetchAccounts();
 
         const channel = supabase
-            .channel('accounts-changes')
+            .channel(`accounts-changes-${groupId || 'personal'}-${user.id}`)
             .on(
                 'postgres_changes',
                 {
