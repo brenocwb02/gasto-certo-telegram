@@ -2093,6 +2093,7 @@ serve(async (req) => {
       // Ações diretas (executar comandos via botões)
       if (data.startsWith('action_')) {
         const action = data.replace('action_', '');
+        console.log(`[Action Handler] Recebido action: ${action}`);
 
         // Mapa de ações para comandos
         const commandMap: Record<string, string> = {
@@ -2113,13 +2114,19 @@ serve(async (req) => {
         };
 
         const command = commandMap[action];
+        console.log(`[Action Handler] Mapeado para comando: ${command}`);
+
         if (command) {
           // Responder callback primeiro
+          console.log(`[Action Handler] Executando comando: ${command}`);
           await answerCallbackQuery(callbackQuery.id, { text: `Executando ${command}...` });
 
           // Executar comando
           await handleCommand(supabaseAdmin, command, userId, chatId);
+          console.log(`[Action Handler] Comando ${command} executado com sucesso`);
           return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+        } else {
+          console.log(`[Action Handler] ⚠️ Ação '${action}' não encontrada no commandMap`);
         }
       }
 
