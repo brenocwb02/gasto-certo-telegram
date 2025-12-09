@@ -2066,6 +2066,8 @@ serve(async (req) => {
       const messageId = callbackQuery.message.message_id;
       const data = callbackQuery.data;
 
+      console.log(`[Callback] Recebido callback_data: "${data}"`);
+
       // Buscar perfil do usuário pelo telegram_chat_id
       const { data: profile } = await supabaseAdmin
         .from('profiles')
