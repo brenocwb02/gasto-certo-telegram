@@ -2070,6 +2070,62 @@ serve(async (req) => {
   try {
     const body = await req.json();
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
+
+    // ============================================================================
+    // RATE LIMITING - Proteção contra abuso (60 req/min por usuário)
+    // ============================================================================
+
+    // Extrair telegram_id do update (mensagem ou callback)
+    const telegramId = body.message?.from?.id || body.callback_query?.from?.id;
+
+    if (!telegramId) {
+      console.log('[Rate Limit] Telegram ID não encontrado no update, permitindo...');
+    } else {
+      // Verificar rate limit
+      const { data: rateLimitCheck, error: rateLimitError } = await supabaseAdmin.rpc('check_rate_limit', {
+        p_telegram_id: telegramId,
+        p_limit: 60,
+        p_window_seconds: 60
+      });
+
+      if (rateLimitError) {
+        console.error('[Rate Limit] Erro ao verificar:', rateLimitError);
+        // Em caso de erro na verificação, permitir acesso (fail-open)
+      } else if (rateLimitCheck && rateLimitCheck[0] && !rateLimitCheck[0].allowed) {
+        // Limite excedido - bloquear
+        const resetAt = new Date(rateLimitCheck[0].reset_at);
+        const secondsRemaining = Math.ceil((resetAt.getTime() - Date.now()) / 1000);
+
+        console.log(`[Rate Limit] Bloqueado telegram_id ${telegramId}. Reset em ${secondsRemaining}s`);
+
+        const chatId = body.message?.chat?.id || body.callback_query?.message?.chat?.id;
+        if (chatId) {
+          await sendTelegramMessage(chatId,
+            `⏱️ *Muitas requisições!*\n\n` +
+            `Por favor, aguarde *${secondsRemaining}s* antes de enviar novos comandos.\n\n` +
+            `_Limite: 60 mensagens por minuto_`
+          );
+        }
+
+        return new Response(JSON.stringify({
+          ok: false,
+          error: 'Rate limit exceeded',
+          retry_after: secondsRemaining
+        }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } else {
+        // Permitido - log informativo
+        const remaining = rateLimitCheck?.[0]?.remaining ?? '?';
+        console.log(`[Rate Limit] ✅ Permitido telegram_id ${telegramId}. Remaining: ${remaining}/60`);
+      }
+    }
+
+    // ============================================================================
+    // FIM RATE LIMITING
+    // ============================================================================
+
     // Trata cliques em botões de confirmação e edição
     if (body.callback_query) {
       const callbackQuery = body.callback_query;
