@@ -32,7 +32,7 @@ import {
 } from './commands/financial.ts';
 
 import { handleMetasCommand } from './commands/goals.ts';
-import { handleAjudaCommand, handleStartUnlinkedCommand, sendUnlinkedMessage } from './commands/admin.ts';
+import { handleAjudaCommand, handleStartUnlinkedCommand, sendUnlinkedMessage, handleMenuCallback } from './commands/admin.ts';
 import { getTranscriptFromAudio } from './services/transcription.ts';
 import {
   getEmergencyFundLabel,
@@ -2144,6 +2144,55 @@ serve(async (req) => {
         return new Response('OK', { status: 200, headers: corsHeaders });
       }
       const userId = profile.user_id;
+
+      // ============================================================================
+      // HANDLERS DE MENU INTERATIVO
+      // ============================================================================
+
+      // Navegação entre menus
+      if (data.startsWith('menu_')) {
+        const menuType = data.replace('menu_', '');
+        await handleMenuCallback(chatId, messageId, menuType);
+        await answerCallbackQuery(callbackQuery.id);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      // Ações diretas (executar comandos via botões)
+      if (data.startsWith('action_')) {
+        const action = data.replace('action_', '');
+
+        // Mapa de ações para comandos
+        const commandMap: Record<string, string> = {
+          'faturas': '/faturas',
+          'pagar': '/pagar',
+          'config_cartao': '/config_cartao',
+          'saldo': '/saldo',
+          'resumo': '/resumo',
+          'extrato': '/extrato',
+          'top_gastos': '/top_gastos',
+          'metas': '/metas',
+          'recorrentes': '/recorrentes',
+          'orcamento': '/orcamento',
+          'dividas': '/dividas',
+          'contexto': '/contexto',
+          'editar_ultima': '/editar_ultima',
+          'categorias': '/categorias'
+        };
+
+        const command = commandMap[action];
+        if (command) {
+          // Responder callback primeiro
+          await answerCallbackQuery(callbackQuery.id, { text: `Executando ${command}...` });
+
+          // Executar comando
+          await handleCommand(supabaseAdmin, command, userId, chatId);
+          return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+        }
+      }
+
+      // ============================================================================
+      // FIM HANDLERS DE MENU
+      // ============================================================================
 
       // Ações de edição de transação
       if (data.startsWith('edit_')) {
