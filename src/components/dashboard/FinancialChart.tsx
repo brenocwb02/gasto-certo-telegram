@@ -31,17 +31,18 @@ export function FinancialChart({ groupId }: { groupId?: string }) {
         const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
         const lastDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
 
-        // Buscar despesas por categoria principal
+        // Buscar TODAS as despesas que têm categoria (incluindo subcategorias)
         let query = supabase
           .from('transactions')
           .select(`
             valor,
-            categories!inner(id, nome, cor, parent_id)
+            categoria_id,
+            categories(id, nome, cor, parent_id)
           `)
           .eq('tipo', 'despesa')
+          .not('categoria_id', 'is', null)
           .gte('data_transacao', firstDayOfMonth.toISOString().split('T')[0])
-          .lte('data_transacao', lastDayOfMonth.toISOString().split('T')[0])
-          .is('categories.parent_id', null);
+          .lte('data_transacao', lastDayOfMonth.toISOString().split('T')[0]);
 
         if (groupId) {
           query = query.eq('group_id', groupId);
@@ -53,19 +54,38 @@ export function FinancialChart({ groupId }: { groupId?: string }) {
 
         if (error) throw error;
 
-        // Agrupar por categoria
+        // Buscar todas as categorias para fazer lookup da categoria pai
+        const { data: allCategories } = await supabase
+          .from('categories')
+          .select('id, nome, cor, parent_id')
+          .eq('user_id', user.id);
+
+        const categoryLookup = new Map(allCategories?.map(c => [c.id, c]) || []);
+
+        // Agrupar por categoria PRINCIPAL (pai)
         const categoryMap = new Map<string, { total: number; color: string; id: string }>();
 
         expenses?.forEach((expense: any) => {
-          const categoryId = expense.categories.id;
-          const categoryName = expense.categories.nome;
-          const color = expense.categories.cor;
-          const valor = Number(expense.valor);
+          if (!expense.categories) return;
+
+          let category = expense.categories;
+          const valor = Math.abs(Number(expense.valor));
+
+          // Se é uma subcategoria, buscar a categoria pai
+          if (category.parent_id) {
+            const parentCategory = categoryLookup.get(category.parent_id);
+            if (parentCategory) {
+              category = parentCategory;
+            }
+          }
+
+          const categoryName = category.nome;
+          const color = category.cor || '#6366f1';
 
           if (categoryMap.has(categoryName)) {
             categoryMap.get(categoryName)!.total += valor;
           } else {
-            categoryMap.set(categoryName, { total: valor, color, id: categoryId });
+            categoryMap.set(categoryName, { total: valor, color, id: category.id });
           }
         });
 
