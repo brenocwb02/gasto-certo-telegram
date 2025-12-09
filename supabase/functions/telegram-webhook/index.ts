@@ -1202,25 +1202,7 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
     }
 
     case '/resumo': {
-      const firstDay = new Date();
-      firstDay.setDate(1);
-      const lastDay = new Date(firstDay.getFullYear(), firstDay.getMonth() + 1, 0);
-
-      const { data: transactions } = await supabase
-        .from('transactions')
-        .select('tipo, valor')
-        .eq('user_id', userId)
-        .gte('data_transacao', firstDay.toISOString().split('T')[0])
-        .lte('data_transacao', lastDay.toISOString().split('T')[0]);
-
-      const receitas = transactions?.filter((t: any) => t.tipo === 'receita')
-        .reduce((sum: number, t: any) => sum + parseFloat(t.valor), 0) || 0;
-      const despesas = transactions?.filter((t: any) => t.tipo === 'despesa')
-        .reduce((sum: number, t: any) => sum + parseFloat(t.valor), 0) || 0;
-      const saldo = receitas - despesas;
-
-      const message = `📊 *Resumo do Mês*\n\n💚 Receitas: ${formatCurrency(receitas)}\n💸 Despesas: ${formatCurrency(despesas)}\n━━━━━━━━━━━━━━━━\n${saldo >= 0 ? '✅' : '⚠️'} Saldo: ${formatCurrency(saldo)}`;
-      await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
+      await handleResumoCommand(supabase, chatId, userId);
       break;
     }
 
