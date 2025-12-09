@@ -35,6 +35,7 @@ export default function Categories() {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [formOpen, setFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [seeding, setSeeding] = useState(false);
 
   const isCategoryLimitReached = plan === 'gratuito' && flatCategories.length >= 10;
 
@@ -79,6 +80,34 @@ export default function Categories() {
         description: "Erro ao excluir categoria",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleSeedCategories = async () => {
+    if (!user) return;
+
+    setSeeding(true);
+    try {
+      const { data, error } = await (supabase as any)
+        .rpc('seed_default_categories', { p_user_id: user.id });
+
+      if (error) throw error;
+
+      toast({
+        title: "🎉 Categorias criadas!",
+        description: `${data?.categories_count || 'Várias'} categorias padrão foram criadas com sucesso.`,
+      });
+
+      refetchCategories();
+    } catch (error) {
+      console.error('Erro ao criar categorias:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível criar as categorias. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setSeeding(false);
     }
   };
 
@@ -252,6 +281,38 @@ export default function Categories() {
         <div className="text-center py-8">
           <p className="text-muted-foreground">Carregando categorias...</p>
         </div>
+      ) : flatCategories.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <div className="text-6xl mb-4">📋</div>
+            <h3 className="text-xl font-semibold mb-2">Nenhuma categoria cadastrada</h3>
+            <p className="text-muted-foreground text-center mb-6 max-w-md">
+              Categorias ajudam a organizar suas transações. Crie categorias padrão com um clique ou adicione manualmente.
+            </p>
+            <div className="flex gap-3">
+              <Button
+                onClick={handleSeedCategories}
+                disabled={seeding}
+                size="lg"
+              >
+                {seeding ? "Criando..." : "🚀 Criar Categorias Padrão"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setEditingCategory(null);
+                  setFormOpen(true);
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Criar Manualmente
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-4">
+              As categorias padrão incluem: Alimentação, Transporte, Casa, Saúde, Lazer, Educação e mais.
+            </p>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid gap-6">
           {['despesa', 'receita'].map((tipo) => (

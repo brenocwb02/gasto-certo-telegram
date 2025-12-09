@@ -42,12 +42,27 @@ export function useProfile() {
         if (!user || !profile) return;
 
         try {
+            // Atualizar status do onboarding
             const { error } = await supabase
                 .from('profiles')
                 .update({ onboarding_completed: completed })
                 .eq('user_id', user.id);
 
             if (error) throw error;
+
+            // Se completou o onboarding, criar categorias padrão
+            if (completed) {
+                // Chamada à função que será criada na migração
+                const { data: seedResult, error: seedError } = await (supabase as any)
+                    .rpc('seed_default_categories', { p_user_id: user.id });
+
+                if (seedError) {
+                    console.warn('Aviso: Não foi possível criar categorias padrão:', seedError.message);
+                    // Não bloqueia o fluxo - categorias podem ser criadas depois
+                } else if (seedResult) {
+                    console.log('Categorias padrão criadas:', seedResult);
+                }
+            }
 
             setProfile(prev => prev ? { ...prev, onboarding_completed: completed } : null);
         } catch (err) {
