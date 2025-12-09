@@ -1,9 +1,10 @@
 // CORREÇÃO: Harmonizando todas as importações da biblioteca padrão para a mesma versão (0.224.0)
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
 // Imports dos módulos refatorados
-import { corsHeaders } from './_shared/types.ts';
+import { corsHeaders, ParsedTransaction, AccountData, CategoryData } from './_shared/types.ts';
 import { sendTelegramMessage, editTelegramMessage, answerCallbackQuery } from './_shared/telegram-api.ts';
 import { formatCurrency } from './_shared/formatters.ts';
 
@@ -44,70 +45,24 @@ import {
   getRetirementPlanningLabel
 } from './utils/quiz-labels.ts';
 
-// ============================================================================
-// PARSER E CONTEXTO (já modularizados)
-// ============================================================================
+// Import do parser de transações
+import {
+  parseTransaction,
+  gerarTecladoContas,
+  calcularSimilaridade,
+  encontrarContaSimilar,
+  extrairValor,
+  identificarTipo,
+  sugerirCategoria,
+  encontrarCategoriaPorKeywords,
+  extrairDescricao
+} from './parser/index.ts';
 
 // ============================================================================
-// PARSER ROBUSTO DE TRANSAÇÕES (sem dependência de IA)
+// CONTEXTO TELEGRAM - Funções de contexto usadas pelo bot
 // ============================================================================
 
-interface ParsedTransaction {
-  tipo: 'despesa' | 'receita' | 'transferencia' | null;
-  valor: number | null;
-  descricao: string | null;
-  conta_origem: string | null;
-  conta_destino: string | null;
-  categoria_id: string | null;
-  subcategoria_id: string | null;
-  categoria_nome: string | null;
-  subcategoria_nome: string | null;
-  categoria_sugerida: string | null; // fallback para categorias hardcoded
-  confianca: number; // 0-100
-  campos_faltantes: string[];
-}
 
-interface AccountData {
-  id: string;
-  nome: string;
-  tipo: string;
-}
-
-interface CategoryData {
-  id: string;
-  nome: string;
-  tipo: string;
-  parent_id: string | null;
-  keywords: string[] | null;
-}
-
-/**
- * Calcula similaridade entre duas strings (Levenshtein simplificado)
- */
-function calcularSimilaridade(str1: string, str2: string): number {
-  const s1 = str1.toLowerCase().trim();
-  const s2 = str2.toLowerCase().trim();
-
-  if (s1 === s2) return 100;
-  if (s1.includes(s2) || s2.includes(s1)) return 85;
-
-  // Comparar palavras em comum
-  const palavras1 = s1.split(/\s+/);
-  const palavras2 = s2.split(/\s+/);
-  let matches = 0;
-
-  for (const p1 of palavras1) {
-    for (const p2 of palavras2) {
-      if (p1.length > 2 && p2.length > 2) {
-        if (p1 === p2) matches += 2;
-        else if (p1.includes(p2) || p2.includes(p1)) matches += 1;
-      }
-    }
-  }
-
-  const maxPalavras = Math.max(palavras1.length, palavras2.length);
-  return Math.min(100, Math.round((matches / maxPalavras) * 50));
-}
 
 /**
  * Encontra a conta mais similar ao termo digitado
