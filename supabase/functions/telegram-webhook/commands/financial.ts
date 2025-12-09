@@ -60,28 +60,126 @@ export async function handleExtratoCommand(supabase: any, chatId: number, userId
 }
 
 /**
- * Comando /resumo - Mostra balanço do mês
+ * Comando /resumo - Mostra visão 360° completa das finanças
+ * Inspirado no formato: Saldos + Faturas + Dívidas + Saldo Líquido
  */
 export async function handleResumoCommand(supabase: any, chatId: number, userId: string): Promise<void> {
-    const firstDay = new Date();
-    firstDay.setDate(1);
-    const lastDay = new Date(firstDay.getFullYear(), firstDay.getMonth() + 1, 0);
+    try {
+        // ============================================================================
+        // 1. BUSCAR SALDOS DE TODAS AS CONTAS
+        // ============================================================================
+        const { data: accounts } = await supabase
+            .from('accounts')
+            .select('nome, saldo_atual, tipo')
+            .eq('user_id', userId)
+            .eq('ativo', true)
+            .order('nome');
 
-    const { data: transactions } = await supabase
-        .from('transactions')
-        .select('tipo, valor')
-        .eq('user_id', userId)
-        .gte('data_transacao', firstDay.toISOString().split('T')[0])
-        .lte('data_transacao', lastDay.toISOString().split('T')[0]);
+        const totalDisponivel = accounts?.reduce((sum: number, acc: any) =>
+            sum + parseFloat(acc.saldo_atual || 0), 0) || 0;
 
-    const receitas = transactions?.filter((t: any) => t.tipo === 'receita')
-        .reduce((sum: number, t: any) => sum + parseFloat(t.valor), 0) || 0;
-    const despesas = transactions?.filter((t: any) => t.tipo === 'despesa')
-        .reduce((sum: number, t: any) => sum + parseFloat(t.valor), 0) || 0;
-    const saldo = receitas - despesas;
+        // ============================================================================
+        // 2. BUSCAR FATURAS PRÓXIMAS (próximo vencimento)
+        // ============================================================================
+        const hoje = new Date();
+        const proximoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 1);
 
-    const message = `📊 *Resumo do Mês*\n\n💚 Receitas: ${formatCurrency(receitas)}\n💸 Despesas: ${formatCurrency(despesas)}\n━━━━━━━━━━━━━━━━\n${saldo >= 0 ? '✅' : '⚠️'} Saldo: ${formatCurrency(saldo)}`;
-    await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
+        const { data: creditCards } = await supabase
+            .from('accounts')
+            .select('id, nome, dia_vencimento, saldo_atual')
+            .eq('user_id', userId)
+            .eq('tipo', 'cartao_credito')
+            .eq('ativo', true)
+            .order('dia_vencimento');
+
+        // Calcular próximas faturas
+        const faturasProximas: any[] = [];
+        creditCards?.forEach((card: any) => {
+            if (card.dia_vencimento && card.saldo_atual < 0) {
+                const vencimento = new Date(hoje.getFullYear(), hoje.getMonth(), card.dia_vencimento);
+                if (vencimento < hoje) {
+                    vencimento.setMonth(vencimento.getMonth() + 1);
+                }
+
+                const diasAteVenc = Math.ceil((vencimento.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+
+                faturasProximas.push({
+                    nome: card.nome,
+                    valor: Math.abs(card.saldo_atual),
+                    vencimento: vencimento,
+                    diasRestantes: diasAteVenc
+                });
+            }
+        });
+
+        // ============================================================================
+        // 3. CALCULAR DÍVIDA TOTAL DOS CARTÕES
+        // ============================================================================
+        const dividaTotal = creditCards?.reduce((sum: number, card: any) => {
+            const saldo = parseFloat(card.saldo_atual || 0);
+            return saldo < 0 ? sum + Math.abs(saldo) : sum;
+        }, 0) || 0;
+
+        // ============================================================================
+        // 4. CALCULAR SALDO LÍQUIDO
+        // ============================================================================
+        const saldoLiquido = totalDisponivel - dividaTotal;
+
+        // ============================================================================
+        // MONTAR MENSAGEM
+        // ============================================================================
+        let message = `📊 *RESUMO FINANCEIRO*\n\n`;
+
+        // Saldos Atuais
+        message += `🏦 *Saldos Atuais*\n`;
+        if (accounts && accounts.length > 0) {
+            accounts.forEach((acc: any) => {
+                const saldo = parseFloat(acc.saldo_atual || 0);
+                message += `• ${acc.nome}: ${formatCurrency(saldo)}\n`;
+            });
+        } else {
+            message += `_Nenhuma conta cadastrada_\n`;
+        }
+
+        // Faturas Próximas
+        message += `\n💳 *Faturas (Próximo Venc.)*\n`;
+        if (faturasProximas.length > 0) {
+            faturasProximas.slice(0, 3).forEach((fatura: any) => {
+                const dataVenc = fatura.vencimento.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                message += `• ${fatura.nome}: ${formatCurrency(fatura.valor)} (${dataVenc})\n`;
+            });
+        } else {
+            message += `_Nenhuma fatura pendente_\n`;
+        }
+
+        // Dívida Total
+        message += `\n💸 *Dívida Total dos Cartões*\n`;
+        message += `${formatCurrency(dividaTotal)}\n`;
+
+        // Separador visual
+        message += `\n═══════════════\n`;
+
+        // Saldo Final
+        message += `📊 *RESUMO GERAL*\n`;
+        message += `Total Disponível: ${formatCurrency(totalDisponivel)}\n`;
+        message += `(-) Dívidas: ${formatCurrency(dividaTotal)}\n`;
+        message += `═══════════════\n`;
+
+        const emoji = saldoLiquido >= 0 ? '💰' : '⚠️';
+        const status = saldoLiquido >= 0 ? '(no azul)' : '(no vermelho)';
+        message += `${emoji} *Saldo Líquido: ${formatCurrency(saldoLiquido)}* ${status}`;
+
+        // Alerta se negativo
+        if (saldoLiquido < 0) {
+            message += `\n\n⚠️ _Atenção: Suas dívidas superam seu saldo disponível!_`;
+        }
+
+        await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
+
+    } catch (error) {
+        console.error('Erro em /resumo:', error);
+        await sendTelegramMessage(chatId, '❌ Erro ao gerar resumo. Tente novamente.');
+    }
 }
 
 /**
