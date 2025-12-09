@@ -245,6 +245,9 @@ const Reports = () => {
       .sort((a, b) => b.value - a.value);
   };
 
+  const categoryData = getCategoryData();
+  const totalCategoryExpenses = categoryData.reduce((acc, item) => acc + item.value, 0);
+
   // Calculate summary statistics
   const getSummaryStats = () => {
     const filteredTransactions = getFilteredTransactions();
@@ -365,7 +368,7 @@ const Reports = () => {
           ) : (
             <div className="grid gap-6 md:grid-cols-2">
               {/* Monthly Trend Chart */}
-              <Card>
+              <Card className="md:col-span-2">
                 <CardHeader>
                   <CardTitle>Tendência Mensal</CardTitle>
                   <CardDescription>Receitas e despesas ao longo do tempo</CardDescription>
@@ -405,36 +408,67 @@ const Reports = () => {
               </Card>
 
               {/* Category Distribution */}
-              <Card>
+              <Card className="md:col-span-2">
                 <CardHeader>
                   <CardTitle>Despesas por Categoria</CardTitle>
                   <CardDescription>Distribuição dos gastos por categoria</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={categoryData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={90}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {categoryData.map((_entry, index) => (
-                          <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<CustomTooltip />} />
-                      <Legend
-                        layout="vertical"
-                        verticalAlign="middle"
-                        align="right"
-                        wrapperStyle={{ fontSize: '12px' }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                    <div className="h-[300px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={categoryData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={90}
+                            paddingAngle={2}
+                            dataKey="value"
+                          >
+                            {categoryData.map((_entry, index) => (
+                              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} strokeWidth={0} />
+                            ))}
+                          </Pie>
+                          <Tooltip content={<CustomTooltip />} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    <div className="space-y-5">
+                      {categoryData.slice(0, 5).map((category, index) => (
+                        <div key={index} className="space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: colors[index % colors.length] }} />
+                              <span className="font-medium text-foreground">{category.name}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-foreground">{formatCurrency(category.value)}</span>
+                              <span className="text-xs text-muted-foreground w-12 text-right">
+                                {totalCategoryExpenses > 0 ? ((category.value / totalCategoryExpenses) * 100).toFixed(1) : 0}%
+                              </span>
+                            </div>
+                          </div>
+                          <div className="h-2.5 w-full bg-secondary/50 rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-500 ease-out"
+                              style={{
+                                width: `${totalCategoryExpenses > 0 ? (category.value / totalCategoryExpenses * 100) : 0}%`,
+                                backgroundColor: colors[index % colors.length]
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                      {categoryData.length > 5 && (
+                        <p className="text-xs text-center text-muted-foreground pt-2">
+                          E mais {categoryData.length - 5} categorias menores...
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
