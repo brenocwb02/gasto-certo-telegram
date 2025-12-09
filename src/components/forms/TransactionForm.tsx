@@ -130,9 +130,27 @@ export function TransactionForm({ onSuccess, onCancel, onRefetch, mode = 'create
     }
   };
 
+  // Filtrar e organizar categorias hierarquicamente
   const filteredCategories = categories.filter(cat =>
     cat.tipo === watchedType || watchedType === 'transferencia'
   );
+
+  // Separar categorias principais e subcategorias
+  const parentCategories = filteredCategories.filter(cat => !cat.parent_id);
+  const subcategories = filteredCategories.filter(cat => cat.parent_id);
+
+  // Criar estrutura hierárquica para o select
+  const hierarchicalCategories = parentCategories.flatMap(parent => {
+    const children = subcategories.filter(sub => sub.parent_id === parent.id);
+    return [
+      { ...parent, isParent: true, displayName: parent.nome },
+      ...children.map(child => ({
+        ...child,
+        isParent: false,
+        displayName: `    └ ${child.nome}`
+      }))
+    ];
+  });
 
   return (
     <Card className="financial-card">
@@ -224,9 +242,13 @@ export function TransactionForm({ onSuccess, onCancel, onRefetch, mode = 'create
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {filteredCategories.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {category.nome}
+                        {hierarchicalCategories.map((category) => (
+                          <SelectItem
+                            key={category.id}
+                            value={category.id}
+                            className={category.isParent ? 'font-semibold' : 'pl-4 text-muted-foreground'}
+                          >
+                            {category.displayName}
                           </SelectItem>
                         ))}
                       </SelectContent>
