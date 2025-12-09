@@ -112,10 +112,68 @@ export function CategoryForm({ category, parentCategories = [], onSuccess }: Cat
     .filter(pCat => pCat.tipo === watchedType)
     .filter(pCat => !category || pCat.id !== category.id);
 
-  const iconOptions = [
-    "shopping-bag", "home", "car", "utensils", "heart", "gamepad-2",
-    "banknote", "laptop", "trending-up", "coffee", "shirt", "gas-pump",
-    "plane", "book", "music", "camera", "phone", "graduation-cap"
+  // Mapeamento de ícones com emoji e descrição em português
+  const iconOptions: { value: string; emoji: string; label: string }[] = [
+    // Alimentação
+    { value: 'shopping-cart', emoji: '🛒', label: 'Alimentação' },
+    { value: 'utensils', emoji: '🍴', label: 'Restaurante' },
+    { value: 'coffee', emoji: '☕', label: 'Café/Lanche' },
+    { value: 'pizza', emoji: '🍕', label: 'Fast Food' },
+    // Transporte
+    { value: 'car', emoji: '🚗', label: 'Transporte' },
+    { value: 'fuel', emoji: '⛽', label: 'Combustível' },
+    { value: 'bus', emoji: '🚌', label: 'Ônibus' },
+    { value: 'plane', emoji: '✈️', label: 'Viagem' },
+    // Moradia
+    { value: 'home', emoji: '🏠', label: 'Moradia' },
+    { value: 'lamp', emoji: '💡', label: 'Luz/Energia' },
+    { value: 'wrench', emoji: '🔧', label: 'Manutenção' },
+    { value: 'couch', emoji: '🛋️', label: 'Móveis' },
+    // Finanças
+    { value: 'banknote', emoji: '💵', label: 'Salário' },
+    { value: 'trending-up', emoji: '📈', label: 'Investimentos' },
+    { value: 'credit-card', emoji: '💳', label: 'Cartão' },
+    { value: 'piggy-bank', emoji: '🐷', label: 'Poupança' },
+    // Despesas Fixas
+    { value: 'receipt', emoji: '🧾', label: 'Contas/Despesas Fixas' },
+    { value: 'landmark', emoji: '🏛️', label: 'Impostos/Taxas' },
+    // Saúde
+    { value: 'heart', emoji: '❤️', label: 'Saúde' },
+    { value: 'pill', emoji: '💊', label: 'Farmácia' },
+    { value: 'activity', emoji: '🏃', label: 'Academia' },
+    // Educação
+    { value: 'graduation-cap', emoji: '🎓', label: 'Educação' },
+    { value: 'book', emoji: '📚', label: 'Livros/Cursos' },
+    // Trabalho
+    { value: 'laptop', emoji: '💻', label: 'Trabalho/Freelance' },
+    { value: 'briefcase', emoji: '💼', label: 'Negócios' },
+    { value: 'tie', emoji: '👔', label: 'Despesas Pessoais' },
+    // Lazer
+    { value: 'gamepad-2', emoji: '🎮', label: 'Lazer/Jogos' },
+    { value: 'party-popper', emoji: '🎉', label: 'Entretenimento' },
+    { value: 'music', emoji: '🎵', label: 'Música' },
+    { value: 'film', emoji: '🎬', label: 'Cinema/Streaming' },
+    // Família
+    { value: 'users', emoji: '👥', label: 'Família' },
+    { value: 'baby', emoji: '👶', label: 'Filhos' },
+    // Vida Espiritual
+    { value: 'hands', emoji: '🛐', label: 'Vida Espiritual' },
+    { value: 'church', emoji: '⛪', label: 'Igreja/Dízimo' },
+    // Relacionamentos
+    { value: 'gift', emoji: '🎁', label: 'Presentes' },
+    { value: 'cake', emoji: '🎂', label: 'Festas' },
+    // Metas e Projetos
+    { value: 'target', emoji: '🎯', label: 'Metas' },
+    { value: 'rocket', emoji: '🚀', label: 'Projetos' },
+    // Reserva
+    { value: 'shield', emoji: '🛡️', label: 'Reserva/Prevenção' },
+    { value: 'tool', emoji: '🛠️', label: 'Reparos' },
+    // Vestuário
+    { value: 'shirt', emoji: '👕', label: 'Roupas' },
+    // Outros
+    { value: 'phone', emoji: '📱', label: 'Telefone' },
+    { value: 'shopping-bag', emoji: '🛍️', label: 'Compras' },
+    { value: 'star', emoji: '⭐', label: 'Outros' },
   ];
 
   return (
@@ -187,26 +245,34 @@ export function CategoryForm({ category, parentCategories = [], onSuccess }: Cat
         <FormField
           control={form.control}
           name="icone"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Ícone</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um ícone" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {iconOptions.map((icon) => (
-                    <SelectItem key={icon} value={icon}>
-                      {icon}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
+          render={({ field }) => {
+            const selectedIcon = iconOptions.find(i => i.value === field.value);
+            return (
+              <FormItem>
+                <FormLabel>Ícone</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um ícone">
+                        {selectedIcon && `${selectedIcon.emoji} ${selectedIcon.label}`}
+                      </SelectValue>
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent className="max-h-[300px]">
+                    {iconOptions.map((icon) => (
+                      <SelectItem key={icon.value} value={icon.value}>
+                        <span className="flex items-center gap-2">
+                          <span className="text-lg">{icon.emoji}</span>
+                          <span>{icon.label}</span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            );
+          }}
         />
 
         <FormField
