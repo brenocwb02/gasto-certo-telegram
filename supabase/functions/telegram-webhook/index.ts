@@ -1970,6 +1970,21 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
       break;
     }
 
+    case '/faturas': {
+      await handleFaturaCommand(supabase, chatId, userId);
+      break;
+    }
+
+    case '/pagar': {
+      await handlePagarCommand(supabase, chatId, userId);
+      break;
+    }
+
+    case '/config_cartao': {
+      await handleConfigCartaoCommand(supabase, chatId, userId);
+      break;
+    }
+
     case '/ajuda':
     case '/help':
     default: {
