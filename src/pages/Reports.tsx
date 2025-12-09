@@ -9,6 +9,35 @@ import { useTransactions, useCategories } from "@/hooks/useSupabaseData";
 
 import { useFamily } from "@/hooks/useFamily";
 
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div className="bg-popover border text-popover-foreground rounded-lg p-3 shadow-xl max-w-[250px] z-50">
+        <p className="font-bold text-sm mb-1">{data.name}</p>
+        <p className="text-lg font-bold text-primary mb-2">
+          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(data.value)}
+        </p>
+
+        {data.subcategories && data.subcategories.length > 0 && (
+          <div className="space-y-1 border-t pt-2 mt-1">
+            <p className="text-xs text-muted-foreground font-semibold mb-1 uppercase tracking-wider">Detalhamento</p>
+            {data.subcategories.map((sub: any, index: number) => (
+              <div key={index} className="flex justify-between items-center text-xs">
+                <span className="text-muted-foreground truncate mr-2 flex-1">{sub.name}</span>
+                <span className="font-medium whitespace-nowrap">
+                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(sub.value)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+  return null;
+};
+
 const Reports = () => {
   const { currentGroup } = useFamily();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -88,19 +117,81 @@ const Reports = () => {
     return Object.values(monthlyData).sort((a, b) => a.month.localeCompare(b.month));
   };
 
-  // Calculate category data for pie chart
-  const getCategoryData = (): Array<{ name: string; value: number }> => {
-    const categoryData: Record<string, number> = {};
+  // Calculate category data for pie chart with subcategory breakdown
+  const getCategoryData = (): Array<{
+    name: string;
+    value: number;
+    subcategories: Array<{ name: string; value: number }>;
+  }> => {
     const filteredTransactions = getFilteredTransactions();
 
+    // Mapear categorias pai
+    const parentCategoryMap = new Map<string, {
+      parentId: string | null;
+      parentName: string;
+      total: number;
+      subcategories: Map<string, number>;
+    }>();
+
     filteredTransactions.forEach(transaction => {
-      if (transaction.tipo === 'despesa') {
-        const categoryName = categories.find(c => c.id === transaction.categoria_id)?.nome || 'Sem categoria';
-        categoryData[categoryName] = (categoryData[categoryName] || 0) + parseFloat(transaction.valor.toString());
+      if (transaction.tipo !== 'despesa') return;
+
+      const category = categories.find(c => c.id === transaction.categoria_id);
+      if (!category) {
+        // Sem categoria
+        if (!parentCategoryMap.has('sem-categoria')) {
+          parentCategoryMap.set('sem-categoria', {
+            parentId: null,
+            parentName: 'Sem categoria',
+            total: 0,
+            subcategories: new Map()
+          });
+        }
+        const entry = parentCategoryMap.get('sem-categoria')!;
+        entry.total += parseFloat(transaction.valor.toString());
+        return;
+      }
+
+      // Se é subcategoria, buscar categoria pai
+      const parentCategory = category.parent_id
+        ? categories.find(c => c.id === category.parent_id)
+        : category;
+
+      const parentId = parentCategory?.id || category.id;
+      const parentName = parentCategory?.nome || category.nome;
+      const subcatName = category.parent_id ? category.nome : null;
+
+      if (!parentCategoryMap.has(parentId)) {
+        parentCategoryMap.set(parentId, {
+          parentId,
+          parentName,
+          total: 0,
+          subcategories: new Map()
+        });
+      }
+
+      const entry = parentCategoryMap.get(parentId)!;
+      const valor = parseFloat(transaction.valor.toString());
+      entry.total += valor;
+
+      if (subcatName) {
+        entry.subcategories.set(
+          subcatName,
+          (entry.subcategories.get(subcatName) || 0) + valor
+        );
       }
     });
 
-    return Object.entries(categoryData).map(([name, value]) => ({ name, value }));
+    // Converter para array e ordenar por valor
+    return Array.from(parentCategoryMap.values())
+      .map(entry => ({
+        name: entry.parentName,
+        value: entry.total,
+        subcategories: Array.from(entry.subcategories.entries())
+          .map(([name, value]) => ({ name, value }))
+          .sort((a, b) => b.value - a.value)
+      }))
+      .sort((a, b) => b.value - a.value);
   };
 
   // Calculate summary statistics
@@ -278,7 +369,7 @@ const Reports = () => {
                           <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value: number | string) => formatCurrency(Number(value))} />
+                      <Tooltip content={<CustomTooltip />} />
                     </PieChart>
                   </ResponsiveContainer>
                 </CardContent>
