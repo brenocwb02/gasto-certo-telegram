@@ -107,6 +107,31 @@ export function FinancialChart({ groupId }: { groupId?: string }) {
     };
 
     fetchCategoryExpenses();
+
+    // Configurar realtime subscription para atualizar automaticamente
+    const channel = supabase
+      .channel(`category-expenses-${groupId || 'personal'}-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'transactions',
+        },
+        (payload) => {
+          // Verificar se a mudança é relevante para este usuário/grupo
+          const record = payload.new as any || payload.old as any;
+          if (record && record.user_id === user.id) {
+            // Refetch quando houver mudanças
+            fetchCategoryExpenses();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user, groupId]);
 
   const totalCategoryExpenses = categoryExpenses.reduce((sum, cat) => sum + cat.total, 0);
