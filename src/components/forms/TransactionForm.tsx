@@ -32,6 +32,7 @@ type TransactionFormData = z.infer<typeof transactionSchema>;
 interface TransactionFormProps {
   onSuccess?: () => void;
   onCancel?: () => void;
+  onRefetch?: () => void; // Função para forçar refresh da lista após salvar
   mode?: 'create' | 'edit';
   // When editing, pass the current transaction values
   initialData?: {
@@ -48,7 +49,7 @@ interface TransactionFormProps {
   groupId?: string;
 }
 
-export function TransactionForm({ onSuccess, onCancel, mode = 'create', initialData, groupId }: TransactionFormProps) {
+export function TransactionForm({ onSuccess, onCancel, onRefetch, mode = 'create', initialData, groupId }: TransactionFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { addTransaction, updateTransaction } = useTransactions(groupId);
   const { accounts } = useAccounts(groupId);
@@ -115,6 +116,8 @@ export function TransactionForm({ onSuccess, onCancel, mode = 'create', initialD
         form.reset();
       }
 
+      // Forçar refresh da lista na página pai
+      onRefetch?.();
       onSuccess?.();
     } catch (error) {
       toast({

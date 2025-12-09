@@ -61,7 +61,7 @@ import { startOfMonth, endOfMonth } from "date-fns";
 
 const Transactions = () => {
   const { currentGroup } = useFamily();
-  const { transactions: allTransactions, loading, deleteTransaction } = useTransactions(currentGroup?.id);
+  const { transactions: allTransactions, loading, deleteTransaction, refetchTransactions } = useTransactions(currentGroup?.id);
   const { accounts } = useAccounts(currentGroup?.id);
   const { categories } = useCategories(currentGroup?.id);
 
@@ -264,6 +264,7 @@ const Transactions = () => {
               <TransactionForm
                 onSuccess={() => setCreateOpen(false)}
                 onCancel={() => setCreateOpen(false)}
+                onRefetch={refetchTransactions}
                 groupId={currentGroup?.id}
               />
             </DialogContent>
@@ -583,6 +584,7 @@ const Transactions = () => {
               mode="edit"
               initialData={selected}
               groupId={currentGroup?.id}
+              onRefetch={refetchTransactions}
               onSuccess={() => {
                 setEditOpen(false);
                 setSelected(null);
