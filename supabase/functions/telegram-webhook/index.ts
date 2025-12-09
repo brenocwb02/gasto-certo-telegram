@@ -907,38 +907,7 @@ async function handleCommand(supabase: any, command: string, userId: string, cha
     case '/start':
     case '/ajuda':
     case '/help': {
-      const message = `🤖 *Menu Zaq - Boas Contas*
-
-📝 *Registro Rápido*
-Apenas digite: "Almoço 25 reais" ou envie áudio!
-
-💳 *Cartões de Crédito*
-/faturas - Faturas pendentes
-/pagar - Pagar fatura agora
-/config\\_cartao - Automatizar pagamentos
-
-👤 *Contexto & Família*
-/contexto - Escolher (Pessoal vs Grupo)
-/p - Mudar para Pessoal
-/g - Mudar para Grupo
-
-📊 *Relatórios*
-/saldo - Saldos atuais
-/extrato - Últimas transações
-/resumo - Balanço do mês
-/top\\_gastos - Onde você gastou mais
-/comparar\\_meses - Evolução de gastos
-
-🎯 *Planejamento*
-/metas - Suas metas
-/previsao - Projeção de gastos
-/recorrentes - Contas fixas
-
-⚙️ *Outros*
-/ajuda - Este menu
-/editar\\_ultima - Corrigir erro`;
-
-      await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
+      await handleAjudaCommand(chatId);
       break;
     }
 
