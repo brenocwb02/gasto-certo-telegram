@@ -94,27 +94,78 @@ const Reports = () => {
     return transactions.filter(t => new Date(t.data_transacao) >= startDate);
   };
 
-  // Calculate monthly data for trends
-  const getMonthlyData = (): Array<{ receitas: number; despesas: number; month: string }> => {
-    const monthlyData: Record<string, { receitas: number; despesas: number; month: string }> = {};
+  // Calculate data for trends (monthly or daily)
+  const getMonthlyData = () => {
     const filteredTransactions = getFilteredTransactions();
+    const dataMap = new Map<string, { receitas: number; despesas: number; date: string }>();
 
-    filteredTransactions.forEach(transaction => {
-      const date = new Date(transaction.data_transacao);
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    // Determine start and end dates based on selection
+    const now = new Date();
+    let startDate = new Date();
+    let endDate = new Date();
+    let granularity: 'day' | 'month' = 'month';
 
-      if (!monthlyData[monthKey]) {
-        monthlyData[monthKey] = { receitas: 0, despesas: 0, month: monthKey };
+    if (selectedPeriod === 'week') {
+      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      granularity = 'day';
+    } else if (selectedPeriod === 'month') {
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      granularity = 'day';
+    } else if (selectedPeriod === 'quarter') {
+      startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1); // Last 3 months including current
+      granularity = 'month';
+    } else {
+      startDate = new Date(now.getFullYear(), 0, 1);
+      granularity = 'month';
+    }
+
+    // Initialize map with all intervals filled with 0
+    const current = new Date(startDate);
+    while (current <= endDate && current <= now) { // Don't project into future beyond today unless needed
+      // Actually showing full month/year context is better even if empty
+    }
+
+    // Simplified: Just fill from startDate to now (or end of period)
+    const loopDate = new Date(startDate);
+    const finalDate = selectedPeriod === 'year' ? new Date(now.getFullYear(), 11, 31) : now;
+
+    while (loopDate <= finalDate) {
+      let key = '';
+      if (granularity === 'day') {
+        key = loopDate.toISOString().split('T')[0]; // YYYY-MM-DD
+      } else {
+        key = `${loopDate.getFullYear()}-${String(loopDate.getMonth() + 1).padStart(2, '0')}`; // YYYY-MM
       }
 
-      if (transaction.tipo === 'receita') {
-        monthlyData[monthKey].receitas += parseFloat(transaction.valor.toString());
-      } else if (transaction.tipo === 'despesa') {
-        monthlyData[monthKey].despesas += parseFloat(transaction.valor.toString());
+      dataMap.set(key, { receitas: 0, despesas: 0, date: key });
+
+      if (granularity === 'day') loopDate.setDate(loopDate.getDate() + 1);
+      else loopDate.setMonth(loopDate.getMonth() + 1);
+    }
+
+    // Fill with actual data
+    filteredTransactions.forEach(transaction => {
+      const date = new Date(transaction.data_transacao);
+      let key = '';
+
+      if (granularity === 'day') {
+        key = date.toISOString().split('T')[0];
+      } else {
+        key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      }
+
+      if (dataMap.has(key)) {
+        const entry = dataMap.get(key)!;
+        if (transaction.tipo === 'receita') {
+          entry.receitas += parseFloat(transaction.valor.toString());
+        } else if (transaction.tipo === 'despesa') {
+          entry.despesas += parseFloat(transaction.valor.toString());
+        }
       }
     });
 
-    return Object.values(monthlyData).sort((a, b) => a.month.localeCompare(b.month));
+    return Array.from(dataMap.values());
   };
 
   // Calculate category data for pie chart with subcategory breakdown
@@ -323,7 +374,14 @@ const Reports = () => {
                   <ResponsiveContainer width="100%" height={300}>
                     <LineChart data={monthlyData}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
+                      <XAxis
+                        dataKey="date"
+                        tickFormatter={(value) => {
+                          const date = new Date(value + 'T00:00:00');
+                          if (value.length > 7) return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                          return date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+                        }}
+                      />
                       <YAxis />
                       <Tooltip formatter={(value: number | string) => formatCurrency(Number(value))} />
                       <Legend />
@@ -359,9 +417,8 @@ const Reports = () => {
                         data={categoryData}
                         cx="50%"
                         cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={80}
+                        innerRadius={60}
+                        outerRadius={90}
                         fill="#8884d8"
                         dataKey="value"
                       >
@@ -370,6 +427,12 @@ const Reports = () => {
                         ))}
                       </Pie>
                       <Tooltip content={<CustomTooltip />} />
+                      <Legend
+                        layout="vertical"
+                        verticalAlign="middle"
+                        align="right"
+                        wrapperStyle={{ fontSize: '12px' }}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -385,7 +448,14 @@ const Reports = () => {
                   <ResponsiveContainer width="100%" height={350}>
                     <BarChart data={monthlyData}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
+                      <XAxis
+                        dataKey="date"
+                        tickFormatter={(value) => {
+                          const date = new Date(value + 'T00:00:00');
+                          if (value.length > 7) return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                          return date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+                        }}
+                      />
                       <YAxis />
                       <Tooltip formatter={(value: number | string) => formatCurrency(Number(value))} />
                       <Legend />
