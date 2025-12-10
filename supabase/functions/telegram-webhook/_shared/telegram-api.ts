@@ -39,7 +39,7 @@ export async function sendTelegramMessage(chatId: number, text: string, options:
 export async function editTelegramMessage(chatId: number, messageId: number, text: string, options: any = {}): Promise<void> {
     const telegramApiUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`;
     try {
-        await fetch(telegramApiUrl, {
+        const response = await fetch(telegramApiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -52,8 +52,15 @@ export async function editTelegramMessage(chatId: number, messageId: number, tex
                 ...options
             })
         });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error("[editTelegramMessage] ❌ Erro da API do Telegram:", JSON.stringify(errorData));
+        } else {
+            console.log(`[editTelegramMessage] ✅ Mensagem ${messageId} editada com sucesso`);
+        }
     } catch (e) {
-        console.error("Falha ao editar mensagem do Telegram:", e);
+        console.error("[editTelegramMessage] ❌ Falha ao editar mensagem:", e);
     }
 }
 
