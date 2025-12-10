@@ -27,9 +27,11 @@ export function useAccounts(groupId?: string) {
                 .order('created_at');
 
             if (groupId) {
+                // Buscar contas do grupo familiar
                 query = query.eq('group_id', groupId);
             } else {
-                query = query.eq('user_id', user.id);
+                // Buscar contas pessoais (sem group_id) do usuário
+                query = query.eq('user_id', user.id).is('group_id', null);
             }
 
             const { data, error } = await query;
