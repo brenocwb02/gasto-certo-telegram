@@ -267,7 +267,6 @@ const Reports = () => {
   };
 
   const monthlyData = getMonthlyData();
-  const categoryData = getCategoryData();
   const summaryStats = getSummaryStats();
 
   const colors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#8dd1e1', '#d084d0'];
