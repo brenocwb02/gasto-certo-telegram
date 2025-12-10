@@ -2140,14 +2140,19 @@ serve(async (req) => {
         console.log(`[Config Card] Configurando cartão: ${cardId}`);
 
         // Buscar informações do cartão
-        const { data: card } = await supabaseAdmin
+        const { data: card, error: cardError } = await supabaseAdmin
           .from('accounts')
           .select('nome, auto_pagamento_ativo, dia_lembrete')
           .eq('id', cardId)
           .eq('user_id', userId)
           .single();
 
+        if (cardError) {
+          console.error(`[Config Card] ❌ Erro ao buscar cartão:`, cardError);
+        }
+
         if (!card) {
+          console.log(`[Config Card] ⚠️ Cartão não encontrado. cardId=${cardId}, userId=${userId}`);
           await answerCallbackQuery(callbackQuery.id, { text: 'Cartão não encontrado' });
           return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
         }
