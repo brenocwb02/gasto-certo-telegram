@@ -17,6 +17,7 @@ export type Database = {
       accounts: {
         Row: {
           ativo: boolean
+          auto_pagamento_ativo: boolean
           banco: string | null
           closing_day: number | null
           cor: string | null
@@ -42,6 +43,7 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean
+          auto_pagamento_ativo?: boolean
           banco?: string | null
           closing_day?: number | null
           cor?: string | null
@@ -67,6 +69,7 @@ export type Database = {
         }
         Update: {
           ativo?: boolean
+          auto_pagamento_ativo?: boolean
           banco?: string | null
           closing_day?: number | null
           cor?: string | null
@@ -813,6 +816,30 @@ export type Database = {
           },
         ]
       }
+      rate_limits: {
+        Row: {
+          created_at: string
+          request_count: number | null
+          telegram_id: number
+          updated_at: string
+          window_start: string
+        }
+        Insert: {
+          created_at?: string
+          request_count?: number | null
+          telegram_id: number
+          updated_at?: string
+          window_start?: string
+        }
+        Update: {
+          created_at?: string
+          request_count?: number | null
+          telegram_id?: number
+          updated_at?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       recurring_generation_log: {
         Row: {
           created_at: string
@@ -1216,9 +1243,9 @@ export type Database = {
     }
     Functions: {
       accept_family_invite:
-        | { Args: { p_invite_code: string }; Returns: string }
-        | { Args: { invite_token: string; p_user_id: string }; Returns: Json }
         | { Args: { invite_token: string }; Returns: Json }
+        | { Args: { invite_token: string; p_user_id: string }; Returns: Json }
+        | { Args: { p_invite_code: string }; Returns: string }
       auto_learn_category: {
         Args: {
           p_category_id: string
@@ -1235,15 +1262,29 @@ export type Database = {
         }
         Returns: string
       }
+      check_rate_limit: {
+        Args: {
+          p_limit?: number
+          p_telegram_id: number
+          p_window_seconds?: number
+        }
+        Returns: {
+          allowed: boolean
+          current_count: number
+          remaining: number
+          reset_at: string
+        }[]
+      }
       check_transaction_limit: { Args: { user_id: string }; Returns: Json }
+      cleanup_old_rate_limits: { Args: never; Returns: undefined }
       count_personal_data: { Args: never; Returns: Json }
       create_family_group:
-        | { Args: { p_group_name: string }; Returns: string }
-        | { Args: { p_group_name: string; p_user_id: string }; Returns: string }
         | {
             Args: { group_description?: string; group_name: string }
             Returns: Json
           }
+        | { Args: { p_group_name: string }; Returns: string }
+        | { Args: { p_group_name: string; p_user_id: string }; Returns: string }
       create_onboarding_column_if_not_exists: {
         Args: never
         Returns: undefined
@@ -1281,7 +1322,7 @@ export type Database = {
       }
       get_budgets_with_spent:
         | {
-            Args: { p_group_id?: string; p_month: string }
+            Args: { p_month: string }
             Returns: {
               amount: number
               category_color: string
@@ -1296,7 +1337,7 @@ export type Database = {
             }[]
           }
         | {
-            Args: { p_month: string }
+            Args: { p_group_id?: string; p_month: string }
             Returns: {
               amount: number
               category_color: string
@@ -1391,6 +1432,7 @@ export type Database = {
         Returns: Json
       }
       request_data_deletion: { Args: never; Returns: string }
+      seed_default_categories: { Args: { p_user_id: string }; Returns: Json }
       set_telegram_context: {
         Args: { p_context: string; p_user_id: string }
         Returns: boolean
