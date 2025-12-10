@@ -2087,8 +2087,10 @@ serve(async (req) => {
       // Navegação entre menus
       if (data.startsWith('menu_')) {
         const menuType = data.replace('menu_', '');
+        console.log(`[Menu Handler] Navegando para menu: ${menuType}`);
         await handleMenuCallback(chatId, messageId, menuType);
         await answerCallbackQuery(callbackQuery.id);
+        console.log(`[Menu Handler] Menu ${menuType} exibido com sucesso`);
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
 
