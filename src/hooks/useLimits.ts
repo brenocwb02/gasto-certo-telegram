@@ -138,19 +138,16 @@ export function useLimits() {
 
                 const transactionUsage = transactionCount || 0;
 
-                // Fetch AI Usage for Current Month (from usage_tracking table if exists)
+                // AI Usage - using ai_usage_logs table
                 let aiUsage = 0;
                 try {
-                    const { data: usageData } = await supabase
-                        .from('usage_tracking')
-                        .select('ai_credits_used')
+                    const { count: aiCount } = await supabase
+                        .from('ai_usage_logs')
+                        .select('*', { count: 'exact', head: true })
                         .eq('user_id', user.id)
-                        .gte('created_at', startOfMonthDate)
-                        .order('created_at', { ascending: false })
-                        .limit(1)
-                        .maybeSingle();
+                        .gte('created_at', startOfMonthDate);
 
-                    aiUsage = usageData?.ai_credits_used || 0;
+                    aiUsage = aiCount || 0;
                 } catch {
                     // Table might not exist yet, ignore
                     aiUsage = 0;
