@@ -2236,12 +2236,12 @@ serve(async (req) => {
         // Simular callback de volta à tela de config
         const updatedCard = await supabaseAdmin
           .from('accounts')
-          .select('nome, auto_pagamento_ativo, dia_lembrete')
+          .select('nome, auto_pagamento_ativo, dia_vencimento')
           .eq('id', cardId)
           .single();
 
         const autoPagAtivo = updatedCard.data?.auto_pagamento_ativo || false;
-        const diaLembrete = updatedCard.data?.dia_lembrete || 'não configurado';
+        const diaVencimento = updatedCard.data?.dia_vencimento || 'não configurado';
 
         const keyboard = {
           inline_keyboard: [
@@ -2251,12 +2251,7 @@ serve(async (req) => {
                 callback_data: `toggle_autopay_${cardId}`
               }
             ],
-            [
-              {
-                text: `🔔 Lembrete: dia ${diaLembrete}`,
-                callback_data: `set_reminder_${cardId}`
-              }
-            ],
+
             [
               { text: '◀️ Voltar', callback_data: 'menu_invoices' }
             ]
@@ -2270,9 +2265,9 @@ serve(async (req) => {
           `Gerencie as automações deste cartão:\n\n` +
           `💳 *Pagamento Automático:*\n` +
           `   ${autoPagAtivo ? '✅ Ativado' : '❌ Desativado'}\n\n` +
-          `🔔 *Lembrete de Vencimento:*\n` +
-          `   ${diaLembrete !== 'não configurado' ? `Dia ${diaLembrete}` : 'Não configurado'}\n\n` +
-          `⚡ Clique nos botões para alterar`,
+          `🔔 *Dia de Vencimento:*\n` +
+          ` Dia ${diaVencimento}\n\n` +
+          `⚡ Clique no botão para ativar/desativar`,
           {
             parse_mode: 'Markdown',
             reply_markup: keyboard
