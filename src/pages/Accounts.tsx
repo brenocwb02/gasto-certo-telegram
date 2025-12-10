@@ -2,21 +2,40 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Wallet, CreditCard, PiggyBank, Edit, Lock } from "lucide-react";
+import { Plus, Wallet, CreditCard, PiggyBank, Edit, Lock, Trash2 } from "lucide-react";
 import { useAccounts } from "@/hooks/useSupabaseData";
 import { useFamily } from "@/hooks/useFamily";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { AccountForm } from "@/components/forms/AccountForm";
 import { useLimits } from "@/hooks/useLimits";
+import { useToast } from "@/hooks/use-toast";
 
 const Accounts = () => {
   const { currentGroup } = useFamily();
-  const { accounts, loading, error, getTotalBalance } = useAccounts(currentGroup?.id);
+  const { accounts, loading, error, getTotalBalance, deleteAccount } = useAccounts(currentGroup?.id);
   const { plan } = useLimits();
+  const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<any>(null);
 
   const isAccountLimitReached = plan === 'gratuito' && accounts.length >= 2;
+
+  const handleDeleteAccount = async (accountId: string) => {
+    try {
+      await deleteAccount(accountId);
+      toast({
+        title: "Conta excluída",
+        description: "A conta foi desativada com sucesso.",
+      });
+    } catch (err) {
+      toast({
+        title: "Erro ao excluir",
+        description: err instanceof Error ? err.message : "Erro ao excluir conta",
+        variant: "destructive",
+      });
+    }
+  };
 
   useEffect(() => {
     document.title = "Contas | Boas Contas";
@@ -172,6 +191,35 @@ const Accounts = () => {
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Excluir conta</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Tem certeza que deseja excluir a conta "{account.nome}"? 
+                          Esta ação irá desativar a conta, mas suas transações serão mantidas.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleDeleteAccount(account.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Excluir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </CardHeader>
               <CardContent>
