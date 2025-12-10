@@ -2134,6 +2134,74 @@ serve(async (req) => {
         }
       }
 
+      // Configuração de cartão de crédito
+      if (data.startsWith('config_card_')) {
+        const cardId = data.replace('config_card_', '');
+        console.log(`[Config Card] Configurando cartão: ${cardId}`);
+
+        // Buscar informações do cartão
+        const { data: card } = await supabaseAdmin
+          .from('accounts')
+          .select('nome, auto_pagamento_ativo, dia_lembrete')
+          .eq('id', cardId)
+          .eq('user_id', userId)
+          .single();
+
+        if (!card) {
+          await answerCallbackQuery(callbackQuery.id, { text: 'Cartão não encontrado' });
+          return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+        }
+
+        const autoPagAtivo = card.auto_pagamento_ativo || false;
+        const diaLembrete = card.dia_lembrete || 'não configurado';
+
+        const keyboard = {
+          inline_keyboard: [
+            [
+              {
+                text: autoPagAtivo ? '✅ Pagamento Automático: ATIVO' : '❌ Pagamento Automático: INATIVO',
+                callback_data: `toggle_autopay_${cardId}`
+              }
+            ],
+            [
+              {
+                text: `🔔 Lembrete: dia ${diaLembrete}`,
+                callback_data: `set_reminder_${cardId}`
+              }
+            ],
+            [
+              { text: '◀️ Voltar', callback_data: 'menu_invoices' }
+            ]
+          ]
+        };
+
+        await editTelegramMessage(
+          chatId,
+          messageId,
+          `⚙️ *Configurações - ${card.nome}*\n\n` +
+          `Gerencie as automações deste cartão:\n\n` +
+          `💳 *Pagamento Automático:*\n` +
+          `   ${autoPagAtivo ? '✅ Ativado' : '❌ Desativado'}\n\n` +
+          `🔔 *Lembrete de Vencimento:*\n` +
+          `   ${diaLembrete !== 'não configurado' ? `Dia ${diaLembrete}` : 'Não configurado'}\n\n` +
+          `⚡ Clique nos botões para alterar`,
+          {
+            parse_mode: 'Markdown',
+            reply_markup: keyboard
+          }
+        );
+
+        await answerCallbackQuery(callbackQuery.id);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      // Cancelar configuração
+      if (data === 'config_cancel') {
+        await editTelegramMessage(chatId, messageId, '❌ Configuração cancelada.');
+        await answerCallbackQuery(callbackQuery.id);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
       // ============================================================================
       // FIM HANDLERS DE MENU
       // ============================================================================
