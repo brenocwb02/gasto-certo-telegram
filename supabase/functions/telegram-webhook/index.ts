@@ -2207,6 +2207,116 @@ serve(async (req) => {
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
 
+      // Toggle pagamento automático
+      if (data.startsWith('toggle_autopay_')) {
+        const cardId = data.replace('toggle_autopay_', '');
+        console.log(`[Toggle AutoPay] Toggling autopay para cartão: ${cardId}`);
+
+        const { data: card } = await supabaseAdmin
+          .from('accounts')
+          .select('nome, auto_pagamento_ativo')
+          .eq('id', cardId)
+          .eq('user_id', userId)
+          .single();
+
+        if (!card) {
+          await answerCallbackQuery(callbackQuery.id, { text: 'Cartão não encontrado' });
+          return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+        }
+
+        const novoStatus = !card.auto_pagamento_ativo;
+
+        await supabaseAdmin
+          .from('accounts')
+          .update({ auto_pagamento_ativo: novoStatus })
+          .eq('id', cardId);
+
+        await answerCallbackQuery(callbackQuery.id, {
+          text: novoStatus ? '✅ Pagamento automático ativado!' : '❌ Pagamento automático desativado!'
+        });
+
+        // Retornar à tela de configuração atualizada
+        await answerCallbackQuery(callbackQuery.id);
+
+        // Simular callback de volta à tela de config
+        const updatedCard = await supabaseAdmin
+          .from('accounts')
+          .select('nome, auto_pagamento_ativo, dia_lembrete')
+          .eq('id', cardId)
+          .single();
+
+        const autoPagAtivo = updatedCard.data?.auto_pagamento_ativo || false;
+        const diaLembrete = updatedCard.data?.dia_lembrete || 'não configurado';
+
+        const keyboard = {
+          inline_keyboard: [
+            [
+              {
+                text: autoPagAtivo ? '✅ Pagamento Automático: ATIVO' : '❌ Pagamento Automático: INATIVO',
+                callback_data: `toggle_autopay_${cardId}`
+              }
+            ],
+            [
+              {
+                text: `🔔 Lembrete: dia ${diaLembrete}`,
+                callback_data: `set_reminder_${cardId}`
+              }
+            ],
+            [
+              { text: '◀️ Voltar', callback_data: 'menu_invoices' }
+            ]
+          ]
+        };
+
+        await editTelegramMessage(
+          chatId,
+          messageId,
+          `⚙️ *Configurações - ${updatedCard.data?.nome}*\n\n` +
+          `Gerencie as automações deste cartão:\n\n` +
+          `💳 *Pagamento Automático:*\n` +
+          `   ${autoPagAtivo ? '✅ Ativado' : '❌ Desativado'}\n\n` +
+          `🔔 *Lembrete de Vencimento:*\n` +
+          `   ${diaLembrete !== 'não configurado' ? `Dia ${diaLembrete}` : 'Não configurado'}\n\n` +
+          `⚡ Clique nos botões para alterar`,
+          {
+            parse_mode: 'Markdown',
+            reply_markup: keyboard
+          }
+        );
+
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      // Configurar lembrete
+      if (data.startsWith('set_reminder_')) {
+        const cardId = data.replace('set_reminder_', '');
+        console.log(`[Set Reminder] Configurando lembrete para cartão: ${cardId}`);
+
+        await editTelegramMessage(
+          chatId,
+          messageId,
+          `🔔 *Configurar Lembrete*\n\n` +
+          `Digite o dia do mês (1-31) em que deseja receber o lembrete de vencimento:\n\n` +
+          `Exemplo: \`5\` (para ser lembrado dia 5 de cada mês)\n\n` +
+          `Ou envie \`cancelar\` para voltar.`
+        );
+
+        // Salvar contexto na sessão
+        await supabaseAdmin
+          .from('telegram_sessions')
+          .upsert({
+            user_id: userId,
+            telegram_id: callbackQuery.from.id.toString(),
+            contexto: {
+              awaiting_reminder_day: true,
+              card_id: cardId
+            }
+          });
+
+        await answerCallbackQuery(callbackQuery.id);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
       // ============================================================================
       // FIM HANDLERS DE MENU
       // ============================================================================
