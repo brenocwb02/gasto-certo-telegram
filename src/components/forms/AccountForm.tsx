@@ -24,9 +24,10 @@ const accountSchema = z.object({
 interface AccountFormProps {
   account?: any;
   onSuccess?: () => void;
+  groupId?: string;
 }
 
-export function AccountForm({ account, onSuccess }: AccountFormProps) {
+export function AccountForm({ account, onSuccess, groupId }: AccountFormProps) {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -53,7 +54,7 @@ export function AccountForm({ account, onSuccess }: AccountFormProps) {
     setLoading(true);
     try {
       const saldoInicial = parseFloat(values.saldo_inicial);
-      
+
       const accountData = {
         nome: values.nome,
         tipo: values.tipo,
@@ -65,6 +66,8 @@ export function AccountForm({ account, onSuccess }: AccountFormProps) {
         dia_vencimento: values.dia_vencimento ? parseInt(values.dia_vencimento) : null,
         cor: values.cor,
         user_id: user.id,
+        group_id: groupId || null,
+        ativo: true,
       };
 
       if (account) {
@@ -172,11 +175,11 @@ export function AccountForm({ account, onSuccess }: AccountFormProps) {
                 {accountType === "cartao" ? "Saldo Inicial (Fatura)" : "Saldo Inicial"}
               </FormLabel>
               <FormControl>
-                <Input 
-                  type="number" 
-                  step="0.01" 
-                  placeholder="0.00" 
-                  {...field} 
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  {...field}
                 />
               </FormControl>
               <FormMessage />
@@ -193,11 +196,11 @@ export function AccountForm({ account, onSuccess }: AccountFormProps) {
                 <FormItem>
                   <FormLabel>Limite do Cartão</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="number" 
-                      step="0.01" 
-                      placeholder="0.00" 
-                      {...field} 
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -213,12 +216,12 @@ export function AccountForm({ account, onSuccess }: AccountFormProps) {
                   <FormItem>
                     <FormLabel>Dia Fechamento</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        min="1" 
+                      <Input
+                        type="number"
+                        min="1"
                         max="31"
-                        placeholder="Ex: 5" 
-                        {...field} 
+                        placeholder="Ex: 5"
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
@@ -233,12 +236,12 @@ export function AccountForm({ account, onSuccess }: AccountFormProps) {
                   <FormItem>
                     <FormLabel>Dia Vencimento</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        min="1" 
+                      <Input
+                        type="number"
+                        min="1"
                         max="31"
-                        placeholder="Ex: 15" 
-                        {...field} 
+                        placeholder="Ex: 15"
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
@@ -258,9 +261,9 @@ export function AccountForm({ account, onSuccess }: AccountFormProps) {
               <FormControl>
                 <div className="flex items-center space-x-2">
                   <Input type="color" className="w-16 h-10" {...field} />
-                  <Input 
-                    placeholder="#10b981" 
-                    {...field} 
+                  <Input
+                    placeholder="#10b981"
+                    {...field}
                     className="flex-1"
                   />
                 </div>

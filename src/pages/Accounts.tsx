@@ -102,6 +102,7 @@ const Accounts = () => {
               <AccountForm
                 account={editingAccount}
                 onSuccess={handleCloseDialog}
+                groupId={currentGroup?.id}
               />
             )}
           </DialogContent>
