@@ -2142,7 +2142,7 @@ serve(async (req) => {
         // Buscar informações do cartão
         const { data: card, error: cardError } = await supabaseAdmin
           .from('accounts')
-          .select('nome, auto_pagamento_ativo, dia_lembrete')
+          .select('nome, auto_pagamento_ativo, dia_vencimento')
           .eq('id', cardId)
           .eq('user_id', userId)
           .single();
@@ -2158,7 +2158,7 @@ serve(async (req) => {
         }
 
         const autoPagAtivo = card.auto_pagamento_ativo || false;
-        const diaLembrete = card.dia_lembrete || 'não configurado';
+        const diaVencimento = card.dia_vencimento || 'não configurado';
 
         const keyboard = {
           inline_keyboard: [
@@ -2168,12 +2168,7 @@ serve(async (req) => {
                 callback_data: `toggle_autopay_${cardId}`
               }
             ],
-            [
-              {
-                text: `🔔 Lembrete: dia ${diaLembrete}`,
-                callback_data: `set_reminder_${cardId}`
-              }
-            ],
+
             [
               { text: '◀️ Voltar', callback_data: 'menu_invoices' }
             ]
