@@ -37,6 +37,7 @@ export async function sendTelegramMessage(chatId: number, text: string, options:
  * Edita uma mensagem existente no Telegram.
  */
 export async function editTelegramMessage(chatId: number, messageId: number, text: string, options: any = {}): Promise<void> {
+    console.log(`[editTelegramMessage] 📝 Iniciando edição msg ${messageId} chat ${chatId}`);
     const telegramApiUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`;
     try {
         const response = await fetch(telegramApiUrl, {

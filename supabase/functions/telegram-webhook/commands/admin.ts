@@ -89,7 +89,7 @@ function getInvoicesMenu() {
             `   Ver todas faturas pendentes\n\n` +
             `💰 /pagar\n` +
             `   Pagar fatura de um cartão\n\n` +
-            `⚙️ /config_cartao\n` +
+            `⚙️ /config\\_cartao\n` +
             `   Configurar pagamento automático\n` +
             `   e lembretes de vencimento\n\n` +
             `💡 *Dica:* Configure pagamento automático\n` +
