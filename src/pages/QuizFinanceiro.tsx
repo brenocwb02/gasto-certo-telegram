@@ -4,17 +4,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { 
-  ArrowLeft, 
-  ArrowRight, 
-  CheckCircle, 
-  Heart, 
-  Shield, 
-  PiggyBank, 
-  TrendingUp, 
-  Target, 
-  Calculator, 
-  Umbrella, 
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle,
+  Heart,
+  Shield,
+  PiggyBank,
+  TrendingUp,
+  Target,
+  Calculator,
+  Umbrella,
   Clock,
   Award,
   Lightbulb
@@ -22,6 +22,7 @@ import {
 import { useFinancialProfile } from '@/hooks/useSupabaseData';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { BackButton } from '@/components/ui/back-button';
 
 interface QuizQuestion {
   id: string;
@@ -195,6 +196,9 @@ const QuizFinanceiro = () => {
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5 p-4">
+        <div className="max-w-4xl mx-auto mb-4">
+          <BackButton to="/dashboard" label="Voltar ao dashboard" />
+        </div>
         <div className="max-w-4xl mx-auto space-y-6">
           <Card className="shadow-lg">
             <CardHeader className="text-center">
@@ -274,7 +278,7 @@ const QuizFinanceiro = () => {
                 </CardDescription>
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <div className="flex justify-between text-sm text-muted-foreground">
                 <span>Pergunta {currentStep + 1} de {questions.length}</span>
@@ -283,7 +287,7 @@ const QuizFinanceiro = () => {
               <Progress value={progress} className="h-2" />
             </div>
           </CardHeader>
-          
+
           <CardContent className="space-y-6">
             <RadioGroup
               value={answers[currentQuestion.id] || ''}
@@ -304,16 +308,16 @@ const QuizFinanceiro = () => {
             </RadioGroup>
 
             <div className="flex justify-between pt-6">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={handlePrevious}
                 disabled={currentStep === 0}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Anterior
               </Button>
-              
-              <Button 
+
+              <Button
                 onClick={handleNext}
                 disabled={!answers[currentQuestion.id] || loading}
               >

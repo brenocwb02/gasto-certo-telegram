@@ -8,6 +8,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 
 import Dashboard from "@/pages/Dashboard";
+import DashboardNew from "@/pages/DashboardNew";
 import Landing from "@/pages/Landing";
 import Auth from "@/pages/Auth";
 import Onboarding from "@/pages/Onboarding";
@@ -81,7 +82,7 @@ const AppRoutes = () => {
           needsOnboarding ? <Navigate to="/onboarding" replace /> :
             <ProtectedRoute>
               <AppLayout>
-                <Dashboard />
+                <DashboardNew />
               </AppLayout>
             </ProtectedRoute>
         }

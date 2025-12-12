@@ -8,17 +8,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, DollarSign } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { BackButton } from '@/components/ui/back-button';
 
 export default function Auth() {
   const { signIn, signUp, user, loading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Login form
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
-  
+
   // Register form
   const [registerName, setRegisterName] = useState('');
   const [registerEmail, setRegisterEmail] = useState('');
@@ -35,10 +36,10 @@ export default function Auth() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     try {
       const { error } = await signIn(loginEmail, loginPassword);
-      
+
       if (error) {
         if (error.message.includes('Invalid login credentials')) {
           toast({
@@ -78,7 +79,7 @@ export default function Auth() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (registerPassword !== confirmPassword) {
       toast({
         title: "Senhas não coincidem",
@@ -87,7 +88,7 @@ export default function Auth() {
       });
       return;
     }
-    
+
     if (registerPassword.length < 6) {
       toast({
         title: "Senha muito curta",
@@ -96,12 +97,12 @@ export default function Auth() {
       });
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
       const { error } = await signUp(registerEmail, registerPassword, registerName);
-      
+
       if (error) {
         if (error.message.includes('User already registered')) {
           toast({
@@ -148,6 +149,9 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background/95 to-primary/5 px-4">
+      <div className="absolute top-4 left-4">
+        <BackButton to="/" label="Voltar para início" />
+      </div>
       <div className="w-full max-w-md space-y-6">
         {/* Logo */}
         <div className="text-center">
@@ -155,7 +159,7 @@ export default function Auth() {
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
               <DollarSign className="w-6 h-6 text-primary-foreground" />
             </div>
-             <h1 className="text-2xl font-bold text-foreground">Boas Contas</h1>
+            <h1 className="text-2xl font-bold text-foreground">Boas Contas</h1>
           </div>
           <p className="text-muted-foreground">Seu controle financeiro pessoal</p>
         </div>
@@ -165,7 +169,7 @@ export default function Auth() {
             <TabsTrigger value="login">Entrar</TabsTrigger>
             <TabsTrigger value="register">Cadastrar</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="login">
             <Card>
               <CardHeader>
@@ -200,9 +204,9 @@ export default function Auth() {
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button 
-                    type="submit" 
-                    className="w-full" 
+                  <Button
+                    type="submit"
+                    className="w-full"
                     disabled={isLoading}
                   >
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -212,7 +216,7 @@ export default function Auth() {
               </form>
             </Card>
           </TabsContent>
-          
+
           <TabsContent value="register">
             <Card>
               <CardHeader>
@@ -269,9 +273,9 @@ export default function Auth() {
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button 
-                    type="submit" 
-                    className="w-full" 
+                  <Button
+                    type="submit"
+                    className="w-full"
                     disabled={isLoading}
                   >
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

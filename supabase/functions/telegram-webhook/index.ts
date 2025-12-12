@@ -735,6 +735,15 @@ function parseContextFromMessage(message: string): {
   };
 }
 
+import {
+  getRandomSuccessMessage,
+  getCategoryComment,
+  generateProgressBar,
+  getEmojiForCategory
+} from './_shared/ux-helpers.ts';
+
+// ... existing code ...
+
 function formatTransactionConfirmation(params: {
   tipo: string;
   valor: number;
@@ -748,35 +757,59 @@ function formatTransactionConfirmation(params: {
 }): string {
   const { tipo, valor, descricao, categoria, context, groupName, usage, limit, showUsage } = params;
 
-  const tipoEmoji = tipo === 'receita' ? '💚' : tipo === 'despesa' ? '💸' : '🔄';
-  const tipoLabel = tipo === 'receita' ? 'Receita' : tipo === 'despesa' ? 'Despesa' : 'Transferência';
+  // 1. Cabeçalho Variável (UX Delight)
+  let message = "";
 
+  // Se for receita, mantém comemoração padrão, se for despesa usa variedade
+  if (tipo === 'receita') {
+    message += `💰 *Receita Recebida!* 🚀\n`;
+  } else if (tipo === 'transferencia') {
+    message += `🔄 *Transferência Realizada* ✅\n`;
+  } else {
+    // Despesa: Usa mensagem aleatória
+    message += `*${getRandomSuccessMessage()}*\n`;
+  }
+
+  // 2. Detalhes da Transação com Visual Clean
+  // Formato: R$ 50,00 em Categoria (com emoji)
+  const catEmoji = getEmojiForCategory(categoria);
+  message += `\n💎 *${formatCurrency(valor)}* em ${catEmoji} *${categoria}*`;
+  message += `\n📍 _${descricao}_`; // Descrição em itálico
+
+  // 3. Contexto (Pessoal/Grupo)
   const contextEmoji = context === 'group' ? '🏠' : '👤';
   const contextLabel = context === 'group'
     ? (groupName || 'Grupo Familiar')
     : 'Pessoal';
-  const visibilityInfo = context === 'group'
-    ? '\nOutras pessoas do grupo verão esta transação.'
-    : '\n(só você vê)';
 
-  let message = `✅ ${tipoLabel} registrada!\n\n`;
-  message += `💰 Valor: ${formatCurrency(valor)}\n`;
-  message += `📁 Categoria: ${categoria}\n`;
-  message += `${contextEmoji} ${contextLabel}${visibilityInfo}`;
+  // Mostrar contexto de forma sutil
+  message += `\n\n${contextEmoji} Conta: ${contextLabel}`;
+  if (context === 'group') {
+    message += ` (Compartilhado)`;
+  }
 
-  if (context === 'personal' && showUsage && usage !== undefined && limit !== undefined) {
-    const percentage = Math.round((usage / limit) * 100);
-    message += `\n\n📊 Uso: ${usage}/${limit} transações (${percentage}%)`;
+  // 4. Barra de Progresso / Limites (UX Visual)
+  if (context === 'personal' && showUsage && usage !== undefined && limit !== undefined && limit > 0) {
+    message += `\n\n📉 *Seu Limite Mensal:*`;
+    message += `\n\`${generateProgressBar(usage, limit)}\``; // Monospace para alinhar barra
 
-    if (limit - usage <= 10 && limit - usage > 0) {
-      message += `\n⚠️ ${limit - usage} transações restantes este mês`;
+    const restantes = limit - usage;
+    if (restantes <= 10 && restantes > 0) {
+      message += `\n⚠️ *Atenção:* Só restam ${restantes} transações!`;
     }
   }
 
-  if (Math.random() < 0.2) {
+  // 5. Comentário Inteligente "Pós-créditos" (Delight)
+  const smartComment = getCategoryComment(categoria);
+  if (smartComment && tipo === 'despesa') {
+    message += `\n\n_${smartComment}_`;
+  }
+
+  // 6. Dicas (Randomicas e raras - 10%)
+  if (Math.random() < 0.1) {
     message += context === 'group'
-      ? '\n\n💡 Dica: Use #p para registrar uma despesa pessoal'
-      : '\n\n💡 Dica: Use #g para registrar no grupo familiar';
+      ? '\n\n💡 *Dica:* Use #p para despesa pessoal.'
+      : '\n\n💡 *Dica:* Use #g para despesa do grupo.';
   }
 
   return message;
@@ -2743,10 +2776,52 @@ serve(async (req) => {
       }
       if (action === 'confirm_transaction') {
         const transactionData = session.contexto;
-        const { error: transactionError } = await supabaseAdmin.from('transactions').insert(transactionData);
+
+        // Limpar campos que não existem na tabela transactions (caso existam metadados)
+        const dbData = { ...transactionData };
+        delete dbData.categoria_nome; // Garantia
+        delete dbData.conta_nome; // Garantia
+
+        const { error: transactionError } = await supabaseAdmin.from('transactions').insert(dbData);
         if (transactionError) throw transactionError;
-        const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
-        await editTelegramMessage(chatId, messageId, `✅ Lançamento de ${formatCurrency(transactionData.valor)} registrado com sucesso!\n${time}`);
+
+        // Buscar nomes para montar mensagem bonita
+        const { data: catData } = await supabaseAdmin.from('categories').select('nome').eq('id', transactionData.categoria_id).single();
+        const { data: accData } = await supabaseAdmin.from('accounts').select('nome').eq('id', transactionData.conta_origem_id).single();
+
+        const catNome = catData?.nome || 'Outros';
+        const accNome = accData?.nome || 'Conta';
+        const valorFmt = formatCurrency(transactionData.valor);
+
+        // Montar mensagem de Sucesso com UX Delight
+        let successMsg = "";
+
+        // 1. Título Variável
+        if (transactionData.tipo === 'receita') {
+          successMsg += `💰 *Receita Recebida!* 🚀\n`;
+        } else if (transactionData.tipo === 'transferencia') {
+          successMsg += `🔄 *Transferência Realizada* ✅\n`;
+        } else {
+          successMsg += `*${getRandomSuccessMessage()}*\n`;
+        }
+
+        // 2. Resumo da Transação
+        const catEmoji = getEmojiForCategory(catNome);
+        successMsg += `\n💎 *${valorFmt}* em ${catEmoji} *${catNome}*`;
+        if (transactionData.descricao) {
+          successMsg += `\n📍 _${transactionData.descricao}_`;
+        }
+
+        // 3. Informação da Conta
+        successMsg += `\n💳 ${accNome}`;
+
+        // 4. Comentário Inteligente
+        const comment = getCategoryComment(catNome);
+        if (comment && transactionData.tipo === 'despesa') {
+          successMsg += `\n\n_${comment}_`;
+        }
+
+        await editTelegramMessage(chatId, messageId, successMsg);
       } else if (action === 'cancel_transaction') {
         await editTelegramMessage(chatId, messageId, "❌ Registo cancelado.");
       }

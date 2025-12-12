@@ -4,13 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { 
-  ArrowRight, 
-  ArrowLeft, 
-  CheckCircle, 
-  Users, 
-  Wallet, 
-  Target, 
+import {
+  ArrowRight,
+  ArrowLeft,
+  CheckCircle,
+  Users,
+  Wallet,
+  Target,
   BarChart3,
   Smartphone,
   Heart,
@@ -18,7 +18,8 @@ import {
   Crown,
   TrendingUp,
   TrendingDown,
-  Bot
+  Bot,
+  X
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
@@ -52,7 +53,7 @@ export default function Onboarding() {
           <div>
             <h3 className="text-2xl font-bold mb-2">Olá, {profile?.nome || 'Usuário'}! 👋</h3>
             <p className="text-muted-foreground">
-              O Zaq é mais que um app de finanças - é uma ferramenta baseada em princípios cristãos 
+              O Zaq é mais que um app de finanças - é uma ferramenta baseada em princípios cristãos
               para ajudar sua família a ter boas contas e uma vida financeira saudável.
             </p>
           </div>
@@ -120,7 +121,7 @@ export default function Onboarding() {
               Convide membros da família para participar do controle financeiro
             </p>
           </div>
-          
+
           <div className="space-y-3">
             <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
               <Crown className="h-5 w-5 text-yellow-500" />
@@ -163,7 +164,7 @@ export default function Onboarding() {
               Transforme seus sonhos em metas mensuráveis
             </p>
           </div>
-          
+
           <div className="space-y-4">
             <Card className="p-4">
               <div className="flex items-center justify-between mb-2">
@@ -175,7 +176,7 @@ export default function Onboarding() {
               </div>
               <p className="text-sm text-muted-foreground mt-2">25% concluído</p>
             </Card>
-            
+
             <Card className="p-4">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="font-semibold">Fundo de Emergência</h4>
@@ -206,13 +207,13 @@ export default function Onboarding() {
               Registre transações diretamente pelo bot do Telegram
             </p>
           </div>
-          
+
           <div className="bg-gray-50 p-4 rounded-lg font-mono text-sm space-y-2">
             <div className="text-green-600">"Gastei R$ 50 no mercado"</div>
             <div className="text-blue-600">"Recebi R$ 1000 de salário"</div>
             <div className="text-purple-600">"Transferi R$ 200 da conta para carteira"</div>
           </div>
-          
+
           <div className="bg-blue-50 p-4 rounded-lg">
             <h4 className="font-semibold mb-2">🤖 Comandos Úteis:</h4>
             <ul className="text-sm space-y-1">
@@ -241,7 +242,7 @@ export default function Onboarding() {
               Gráficos e análises para entender seus padrões de gastos
             </p>
           </div>
-          
+
           <div className="grid grid-cols-2 gap-4">
             <Card className="p-4 text-center">
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-2">
@@ -258,7 +259,7 @@ export default function Onboarding() {
               <p className="text-sm text-muted-foreground">Orçado vs Realizado</p>
             </Card>
           </div>
-          
+
           <div className="bg-purple-50 p-4 rounded-lg">
             <h4 className="font-semibold mb-2">🎯 IA Integrada:</h4>
             <p className="text-sm">
@@ -315,6 +316,18 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5 flex items-center justify-center p-4">
+      {/* Botão de sair no canto */}
+      <div className="absolute top-4 right-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleComplete}
+          disabled={isSubmitting}
+        >
+          <X className="h-4 w-4 mr-2" />
+          Sair
+        </Button>
+      </div>
       <Card className="w-full max-w-2xl">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
@@ -323,7 +336,7 @@ export default function Onboarding() {
             </div>
             <span className="text-xl font-bold">Zaq - Boas Contas</span>
           </div>
-          
+
           <div className="space-y-2">
             <CardTitle className="flex items-center justify-center gap-2">
               <Icon className="h-6 w-6 text-primary" />
@@ -331,7 +344,7 @@ export default function Onboarding() {
             </CardTitle>
             <CardDescription>{currentStepData.description}</CardDescription>
           </div>
-          
+
           <div className="space-y-2">
             <Progress value={progress} className="w-full" />
             <div className="flex justify-between text-sm text-muted-foreground">
@@ -340,10 +353,10 @@ export default function Onboarding() {
             </div>
           </div>
         </CardHeader>
-        
+
         <CardContent className="space-y-6">
           {currentStepData.content}
-          
+
           <div className="flex justify-between pt-4">
             <div className="flex gap-2">
               {currentStep > 0 && (
@@ -356,7 +369,7 @@ export default function Onboarding() {
                 Pular Tutorial
               </Button>
             </div>
-            
+
             <Button onClick={handleNext} disabled={isSubmitting}>
               {isSubmitting ? 'Aguarde...' : currentStep === steps.length - 1 ? (
                 <>
@@ -371,15 +384,14 @@ export default function Onboarding() {
               )}
             </Button>
           </div>
-          
+
           {/* Progress indicators */}
           <div className="flex justify-center gap-2">
             {steps.map((_, index) => (
               <div
                 key={index}
-                className={`w-2 h-2 rounded-full transition-colors ${
-                  index <= currentStep ? 'bg-primary' : 'bg-muted'
-                }`}
+                className={`w-2 h-2 rounded-full transition-colors ${index <= currentStep ? 'bg-primary' : 'bg-muted'
+                  }`}
               />
             ))}
           </div>

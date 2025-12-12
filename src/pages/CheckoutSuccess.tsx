@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, XCircle, Loader2, ArrowRight } from "lucide-react";
+import { BackButton } from "@/components/ui/back-button";
 
 const CheckoutSuccess = () => {
     const [searchParams] = useSearchParams();
@@ -27,6 +28,9 @@ const CheckoutSuccess = () => {
     if (status === 'loading') {
         return (
             <div className="container max-w-2xl mx-auto px-4 py-16">
+                <div className="mb-4">
+                    <BackButton to="/planos" label="Cancelar" />
+                </div>
                 <Card>
                     <CardContent className="pt-6 text-center space-y-4">
                         <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
@@ -43,6 +47,9 @@ const CheckoutSuccess = () => {
     if (status === 'error') {
         return (
             <div className="container max-w-2xl mx-auto px-4 py-16">
+                <div className="mb-4">
+                    <BackButton to="/planos" />
+                </div>
                 <Card className="border-destructive">
                     <CardHeader className="text-center">
                         <XCircle className="h-16 w-16 text-destructive mx-auto mb-4" />
@@ -71,6 +78,9 @@ const CheckoutSuccess = () => {
 
     return (
         <div className="container max-w-2xl mx-auto px-4 py-16">
+            <div className="mb-4">
+                <BackButton to="/dashboard" />
+            </div>
             <Card className="border-green-500">
                 <CardHeader className="text-center">
                     <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
