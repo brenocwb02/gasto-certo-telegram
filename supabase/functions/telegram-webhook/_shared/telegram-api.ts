@@ -115,3 +115,33 @@ export async function sendTelegramPhoto(chatId: number, photoUrl: string, captio
         return null;
     }
 }
+
+/**
+ * Envia um sticker para o Telegram.
+ * @param chatId - ID do chat de destino
+ * @param stickerId - file_id do sticker (obtido via @idstickerbot)
+ */
+export async function sendTelegramSticker(chatId: number, stickerId: string): Promise<any> {
+    const telegramApiUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendSticker`;
+    try {
+        const response = await fetch(telegramApiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                chat_id: chatId,
+                sticker: stickerId
+            })
+        });
+        if (!response.ok) {
+            console.error("Erro ao enviar sticker:", await response.json());
+            return null;
+        }
+        const data = await response.json();
+        return data.result;
+    } catch (e) {
+        console.error("Falha ao enviar sticker para o Telegram:", e);
+        return null;
+    }
+}

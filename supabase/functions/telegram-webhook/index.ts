@@ -7,6 +7,7 @@ import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 import { corsHeaders, ParsedTransaction, AccountData, CategoryData } from './_shared/types.ts';
 import { sendTelegramMessage, editTelegramMessage, answerCallbackQuery } from './_shared/telegram-api.ts';
 import { formatCurrency } from './_shared/formatters.ts';
+import { processCelebrations } from './_shared/sticker-helper.ts';
 
 import {
   handleFaturaCommand,
@@ -2822,6 +2823,10 @@ serve(async (req) => {
         }
 
         await editTelegramMessage(chatId, messageId, successMsg);
+
+        // 🎉 Processar celebrações (stickers) após sucesso
+        // Extrai user_id do contexto da sessão
+        await processCelebrations(transactionData.user_id, chatId);
       } else if (action === 'cancel_transaction') {
         await editTelegramMessage(chatId, messageId, "❌ Registo cancelado.");
       }

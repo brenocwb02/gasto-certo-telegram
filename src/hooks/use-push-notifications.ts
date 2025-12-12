@@ -58,40 +58,50 @@ export const usePushNotifications = () => {
             return;
         }
 
-        if (permission === 'granted' && isSupported) {
-            try {
-                // FORÇANDO API NATIVA (Ignorando SW quebrado do screenshot)
-                console.log('Modo: FORCED NATIVE (Ignorando Service Worker)');
+        try {
+            // TENTATIVA 1: Via Service Worker (Padrão PWA)
+            const registration = await navigator.serviceWorker.ready;
 
+            if (registration && registration.active) {
+                console.log('Modo: SERVICE WORKER (Background Capable)');
+                await registration.showNotification(title, {
+                    body: body,
+                    icon: '/pwa-icon.svg',
+                    vibrate: [200, 100, 200],
+                    requireInteraction: true,
+                    tag: 'gasto-certo-notification',
+                    renotify: true,
+                    data: {
+                        dateOfArrival: Date.now()
+                    }
+                });
+                toast.success('Notificação enviada via Service Worker!');
+            } else {
+                throw new Error('Service Worker não está pronto ou ativo.');
+            }
+        } catch (swError) {
+            console.warn('Falha no SW, tentando API Nativa:', swError);
+
+            // TENTATIVA 2: Fallback API Nativa (Foreground)
+            try {
+                console.log('Modo: FALLBACK NATIVE (Foreground)');
                 const notification = new Notification(title, {
                     body: body,
-                    // icon: '/pwa-icon.svg', // Comentado para evitar erro 404 quebrando o fluxo
+                    icon: '/pwa-icon.svg',
                     requireInteraction: true,
                     silent: false
                 });
 
-                notification.onshow = () => {
-                    console.log('Evento onshow disparado!');
-                    toast.success('Evento de notificação disparado pelo navegador!');
-                };
-
                 notification.onclick = () => {
-                    console.log('Notificação clicada');
                     window.focus();
                     notification.close();
                 };
 
-                notification.onerror = (e) => {
-                    console.error('ERRO CRÍTICO no evento onerror:', e);
-                    toast.error('Navegador reportou erro ao exibir. Verifique "Não Perturbe".');
-                };
-
-            } catch (error) {
-                console.error('Exception no envio:', error);
-                toast.error('Exception: ' + (error as Error).message);
+                toast.success('Notificação enviada via API Nativa!');
+            } catch (nativeError) {
+                console.error('ERRO CRÍTICO: Falha em ambos os métodos.', nativeError);
+                toast.error('Não foi possível exibir a notificação.');
             }
-        } else {
-            toast.warning('Estado interno inconsistente (hook permission != granted).');
         }
     };
 
