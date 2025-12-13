@@ -1,7 +1,5 @@
-// Parser robusto de transações (sem dependência de IA)
-// Extrai valor, tipo, conta, categoria e descrição de mensagens em linguagem natural
 
-import { ParsedTransaction, AccountData, CategoryData } from '../_shared/types.ts';
+import { ParsedTransaction, AccountData, CategoryData } from '../types.ts';
 
 /**
  * Calcula similaridade entre duas strings (Levenshtein simplificado)
@@ -86,21 +84,34 @@ export function encontrarContaSimilar(termo: string, contas: AccountData[]): { c
  */
 export function extrairValor(texto: string): number | null {
     const patterns = [
-        /R\$\s*(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?)/i,
-        /(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?)\s*reais?/i,
-        /(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?)\s*(?:conto|pila|real)/i,
-        /(\d+(?:,\d{1,2})?)/,
+        /R\$\s*(\d+(?:\.\d{3})*(?:,\d{1,2})?)/i, // R$ 1.200,50 ou R$ 1200,50
+        /(\d+(?:\.\d{3})*(?:,\d{1,2})?)\s*reais?/i, // 1.200,50 reais
+        /(\d+(?:\.\d{3})*(?:,\d{1,2})?)\s*(?:conto|pila|real)/i,
+        /(\d+(?:\.\d{1,2}))/, // 1200.50 (Genérico com ponto - Prioridade)
+        /(\d+(?:,\d{1,2})?)/  // 1200,50 (Genérico com vírgula)
     ];
 
     for (const pattern of patterns) {
         const match = texto.match(pattern);
         if (match) {
-            // Normalizar: "1.234,56" → 1234.56
-            let valor = match[1]
-                .replace(/\./g, '')  // Remove pontos de milhar
-                .replace(',', '.');   // Troca vírgula por ponto
+            let valorStr = match[1];
 
-            const num = parseFloat(valor);
+            // Se tiver ponto e vírgula, assume formato BR (ponto = milhar)
+            if (valorStr.includes('.') && valorStr.includes(',')) {
+                valorStr = valorStr.replace(/\./g, '').replace(',', '.');
+            }
+            // Se tiver apenas vírgula, troca por ponto
+            else if (valorStr.includes(',')) {
+                valorStr = valorStr.replace(',', '.');
+            }
+            // Se tiver apenas ponto
+            else if (valorStr.includes('.')) {
+                // Se tiver mais de 2 casas decimais ou parecer milhar (ex: 1.000), remove ponto
+                // Mas aqui estamos pegando \d.\d{1,2}, então é seguro assumir decimal se o regex casou
+                // O regex anterior já pegou os casos de milhar (1.200.000)
+            }
+
+            const num = parseFloat(valorStr);
             if (!isNaN(num) && num > 0 && num < 1000000) {
                 return num;
             }
@@ -194,7 +205,7 @@ export function encontrarCategoriaPorKeywords(
     subcategoria_nome: string | null;
 } {
     const textoLower = texto.toLowerCase();
-    console.log('[CatMatch] Buscando categoria para texto:', textoLower);
+    // console.log('[CatMatch] Buscando categoria para texto:', textoLower);
 
     // Primeiro, buscar nas subcategorias (que têm parent_id)
     for (const cat of categorias) {
@@ -202,7 +213,7 @@ export function encontrarCategoriaPorKeywords(
             for (const keyword of cat.keywords) {
                 const keywordLower = keyword.toLowerCase();
                 if (matchPalavraCompleta(textoLower, keywordLower)) {
-                    console.log(`[CatMatch] MATCH! Keyword "${keywordLower}" em categoria "${cat.nome}" (sub de ${cat.parent_id})`);
+                    // console.log(`[CatMatch] MATCH! Keyword "${keywordLower}" em categoria "${cat.nome}" (sub de ${cat.parent_id})`);
                     // Encontrou subcategoria, buscar pai
                     const pai = categorias.find(c => c.id === cat.parent_id);
                     return {

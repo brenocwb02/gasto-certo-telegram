@@ -14,6 +14,8 @@ import {
   Users,
   Repeat,
   Wallet,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "../../contexts/AuthContext";
@@ -28,9 +30,11 @@ import { cn } from "@/lib/utils";
 interface SidebarProps {
   className?: string;
   onClose?: () => void;
+  isExpanded?: boolean;
+  onToggle?: () => void;
 }
 
-export function Sidebar({ className, onClose }: SidebarProps) {
+export function Sidebar({ className, onClose, isExpanded = false, onToggle }: SidebarProps) {
   const { signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -44,245 +48,141 @@ export function Sidebar({ className, onClose }: SidebarProps) {
     onClose?.();
   };
 
+  const menuItems = [
+    { to: "/", icon: Home, label: "Dashboard", end: true },
+    { to: "/transactions", icon: Receipt, label: "Transações" },
+    { to: "/accounts", icon: Banknote, label: "Contas" },
+    { to: "/categories", icon: Folders, label: "Categorias" },
+    { to: "/orcamento", icon: Calculator, label: "Orçamento" },
+    { to: "/reports", icon: PieChart, label: "Relatórios" },
+    { to: "/goals", icon: Target, label: "Metas" },
+    { to: "/patrimonio", icon: Wallet, label: "Patrimônio" },
+  ];
+
+  const bottomItems = [
+    { to: "/recorrentes", icon: Repeat, label: "Recorrentes" },
+    { to: "/familia", icon: Users, label: "Família" },
+    { to: "/planos", icon: Crown, label: "Planos" },
+    { to: "/support", icon: LifeBuoy, label: "Suporte" },
+    { to: "/settings", icon: Settings, label: "Configurações" },
+  ];
+
+  const renderLink = (item: any) => (
+    <NavLink
+      key={item.to}
+      to={item.to}
+      onClick={handleLinkClick}
+      end={item.end}
+      className={({ isActive }) =>
+        cn(
+          "flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-foreground",
+          isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground",
+          isExpanded ? "justify-start w-full" : "justify-center h-9 w-9 p-0 md:h-8 md:w-8"
+        )
+      }
+    >
+      <item.icon className={cn("h-5 w-5 flex-shrink-0", isExpanded ? "mr-1" : "")} />
+      {isExpanded && <span className="truncate">{item.label}</span>}
+      {!isExpanded && <span className="sr-only">{item.label}</span>}
+    </NavLink>
+  );
+
   return (
-    <aside className={cn("fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background sm:flex", className)}>
-      <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
+    <aside
+      className={cn(
+        "fixed inset-y-0 left-0 z-10 flex flex-col border-r bg-background transition-all duration-300",
+        isExpanded ? "w-64" : "w-14",
+        className
+      )}
+    >
+      {/* Header / Logo */}
+      <div className={cn("flex items-center h-14 border-b px-3", isExpanded ? "justify-between" : "justify-center")}>
         <NavLink
           to="/"
           onClick={handleLinkClick}
-          className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:h-8 md:w-8 md:text-base"
+          className={cn(
+            "group flex items-center justify-center gap-2 rounded-full bg-primary text-primary-foreground font-semibold transition-all",
+            isExpanded ? "h-8 px-3" : "h-9 w-9 md:h-8 md:w-8"
+          )}
         >
           <Home className="h-4 w-4 transition-all group-hover:scale-110" />
-          <span className="sr-only">Boas Contas</span>
+          {isExpanded && <span className="text-sm">Boas Contas</span>}
+          {!isExpanded && <span className="sr-only">Boas Contas</span>}
         </NavLink>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <NavLink
-                to="/"
-                onClick={handleLinkClick}
-                className={({ isActive }) =>
-                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${isActive ? "bg-accent text-accent-foreground" : ""
-                  }`
-                }
-              >
-                <Home className="h-5 w-5" />
-                <span className="sr-only">Dashboard</span>
-              </NavLink>
-            </TooltipTrigger>
-            <TooltipContent side="right">Dashboard</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <NavLink
-                to="/transactions"
-                onClick={handleLinkClick}
-                className={({ isActive }) =>
-                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${isActive ? "bg-accent text-accent-foreground" : ""
-                  }`
-                }
-              >
-                <Receipt className="h-5 w-5" />
-                <span className="sr-only">Transações</span>
-              </NavLink>
-            </TooltipTrigger>
-            <TooltipContent side="right">Transações</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <NavLink
-                to="/accounts"
-                onClick={handleLinkClick}
-                className={({ isActive }) =>
-                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${isActive ? "bg-accent text-accent-foreground" : ""
-                  }`
-                }
-              >
-                <Banknote className="h-5 w-5" />
-                <span className="sr-only">Contas</span>
-              </NavLink>
-            </TooltipTrigger>
-            <TooltipContent side="right">Contas</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <NavLink
-                to="/categories"
-                onClick={handleLinkClick}
-                className={({ isActive }) =>
-                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${isActive ? "bg-accent text-accent-foreground" : ""
-                  }`
-                }
-              >
-                <Folders className="h-5 w-5" />
-                <span className="sr-only">Categorias</span>
-              </NavLink>
-            </TooltipTrigger>
-            <TooltipContent side="right">Categorias</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <NavLink
-                to="/orcamento"
-                onClick={handleLinkClick}
-                className={({ isActive }) =>
-                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${isActive ? "bg-accent text-accent-foreground" : ""
-                  }`
-                }
-              >
-                <Calculator className="h-5 w-5" />
-                <span className="sr-only">Orçamento</span>
-              </NavLink>
-            </TooltipTrigger>
-            <TooltipContent side="right">Orçamento</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <NavLink
-                to="/reports"
-                onClick={handleLinkClick}
-                className={({ isActive }) =>
-                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${isActive ? "bg-accent text-accent-foreground" : ""
-                  }`
-                }
-              >
-                <PieChart className="h-5 w-5" />
-                <span className="sr-only">Relatórios</span>
-              </NavLink>
-            </TooltipTrigger>
-            <TooltipContent side="right">Relatórios</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <NavLink
-                to="/goals"
-                onClick={handleLinkClick}
-                className={({ isActive }) =>
-                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${isActive ? "bg-accent text-accent-foreground" : ""
-                  }`
-                }
-              >
-                <Target className="h-5 w-5" />
-                <span className="sr-only">Metas</span>
-              </NavLink>
-            </TooltipTrigger>
-            <TooltipContent side="right">Metas</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <NavLink
-                to="/patrimonio"
-                onClick={handleLinkClick}
-                className={({ isActive }) =>
-                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${isActive ? "bg-accent text-accent-foreground" : ""
-                  }`
-                }
-              >
-                <Wallet className="h-5 w-5" />
-                <span className="sr-only">Patrimônio</span>
-              </NavLink>
-            </TooltipTrigger>
-            <TooltipContent side="right">Patrimônio</TooltipContent>
-          </Tooltip>
+
+        {/* Mobile Close Button (if needed, though standard sheet handles it) or Desktop Toggle */}
+        {onToggle && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 hidden sm:flex"
+            onClick={onToggle}
+          >
+            {isExpanded ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </Button>
+        )}
+      </div>
+
+      <nav className="flex-1 flex flex-col gap-2 overflow-y-auto py-4 px-2 no-scrollbar">
+        <TooltipProvider delayDuration={0}>
+          {menuItems.map((item) => {
+            // Only use tooltip if collapsed
+            if (!isExpanded) {
+              return (
+                <Tooltip key={item.to}>
+                  <TooltipTrigger asChild>
+                    {renderLink(item)}
+                  </TooltipTrigger>
+                  <TooltipContent side="right">{item.label}</TooltipContent>
+                </Tooltip>
+              )
+            }
+            return renderLink(item);
+          })}
         </TooltipProvider>
-      </nav>
-      <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <NavLink
-                to="/recorrentes"
-                onClick={handleLinkClick}
-                className={({ isActive }) =>
-                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${isActive ? "bg-accent text-accent-foreground" : ""
-                  }`
-                }
-              >
-                <Repeat className="h-5 w-5" />
-                <span className="sr-only">Recorrentes</span>
-              </NavLink>
-            </TooltipTrigger>
-            <TooltipContent side="right">Recorrentes</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <NavLink
-                to="/familia"
-                onClick={handleLinkClick}
-                className={({ isActive }) =>
-                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${isActive ? "bg-accent text-accent-foreground" : ""
-                  }`
-                }
-              >
-                <Users className="h-5 w-5" />
-                <span className="sr-only">Família</span>
-              </NavLink>
-            </TooltipTrigger>
-            <TooltipContent side="right">Família</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <NavLink
-                to="/planos"
-                onClick={handleLinkClick}
-                className={({ isActive }) =>
-                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${isActive ? "bg-accent text-accent-foreground" : ""
-                  }`
-                }
-              >
-                <Crown className="h-5 w-5" />
-                <span className="sr-only">Planos</span>
-              </NavLink>
-            </TooltipTrigger>
-            <TooltipContent side="right">Planos</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <NavLink
-                to="/support"
-                onClick={handleLinkClick}
-                className={({ isActive }) =>
-                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${isActive ? "bg-accent text-accent-foreground" : ""
-                  }`
-                }
-              >
-                <LifeBuoy className="h-5 w-5" />
-                <span className="sr-only">Suporte</span>
-              </NavLink>
-            </TooltipTrigger>
-            <TooltipContent side="right">Suporte</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <NavLink
-                to="/settings"
-                onClick={handleLinkClick}
-                className={({ isActive }) =>
-                  `flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8 ${isActive ? "bg-accent text-accent-foreground" : ""
-                  }`
-                }
-              >
-                <Settings className="h-5 w-5" />
-                <span className="sr-only">Configurações</span>
-              </NavLink>
-            </TooltipTrigger>
-            <TooltipContent side="right">Configurações</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
+
+        <div className="mt-auto pt-4 border-t space-y-2">
+          <TooltipProvider delayDuration={0}>
+            {bottomItems.map((item) => {
+              if (!isExpanded) {
+                return (
+                  <Tooltip key={item.to}>
+                    <TooltipTrigger asChild>{renderLink(item)}</TooltipTrigger>
+                    <TooltipContent side="right">{item.label}</TooltipContent>
+                  </Tooltip>
+                )
+              }
+              return renderLink(item);
+            })}
+
+            {/* Logout */}
+            {!isExpanded ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-muted-foreground hover:text-foreground md:h-8 md:w-8 mx-auto flex"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="h-5 w-5" />
+                    <span className="sr-only">Sair</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Sair</TooltipContent>
+              </Tooltip>
+            ) : (
               <Button
                 variant="ghost"
-                size="icon"
-                className="h-9 w-9 text-muted-foreground hover:text-foreground md:h-8 md:w-8"
+                className="w-full justify-start gap-3 px-3 text-muted-foreground hover:text-foreground"
                 onClick={handleLogout}
               >
-                <LogOut className="h-5 w-5" />
-                <span className="sr-only">Sair</span>
+                <LogOut className="h-5 w-5 mr-1" />
+                <span>Sair</span>
               </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">Sair</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+            )}
+          </TooltipProvider>
+        </div>
       </nav>
     </aside>
   );
