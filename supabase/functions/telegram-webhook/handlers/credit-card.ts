@@ -197,12 +197,26 @@ export async function handlePaymentCardSelection(
             return;
         }
 
-        const fatura = Math.abs(card.saldo_atual);
+        // 💾 Salvar contexto do cartão selecionado na sessão
+
+        await supabase.from('telegram_sessions').upsert({
+            telegram_id: chatId.toString(),
+            chat_id: chatId, // Coluna obrigatória adicionada!
+            user_id: userId,
+            contexto: {
+                action: 'payment_flow',
+                payment_card_id: cardId
+            },
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'telegram_id' });
+
+        const fatura = Math.abs(card.saldo_atual || 0);
 
         // Criar botões para cada conta disponível
+        // Callback curto: pay_acc_{accountId}
         const buttons = accounts.map((account: any) => [{
             text: `${account.nome} (${formatCurrency(account.saldo_atual)})`,
-            callback_data: `confirm_pay_${cardId}_${account.id}`
+            callback_data: `pay_acc_${account.id}`
         }]);
 
         buttons.push([{

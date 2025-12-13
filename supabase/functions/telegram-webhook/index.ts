@@ -2034,6 +2034,20 @@ serve(async (req) => {
       headers: corsHeaders
     });
   }
+
+  // 🛡️ SECURITY: Validar Secret Token do Telegram
+  // Isso garante que apenas requisições vindas do Telegram oficial sejam processadas
+  const secretToken = req.headers.get("X-Telegram-Bot-Api-Secret-Token");
+  const configuredSecret = Deno.env.get("TELEGRAM_WEBHOOK_SECRET");
+
+  if (configuredSecret && secretToken !== configuredSecret) {
+    console.error("⛔ SECURITY: Tentativa de acesso não autorizado - Token inválido");
+    return new Response("Unauthorized", {
+      status: 401,
+      headers: corsHeaders
+    });
+  }
+
   try {
     const body = await req.json();
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
@@ -2168,66 +2182,7 @@ serve(async (req) => {
         }
       }
 
-      // Configuração de cartão de crédito
-      if (data.startsWith('config_card_')) {
-        const cardId = data.replace('config_card_', '');
-        console.log(`[Config Card] Configurando cartão: ${cardId}`);
-
-        // Buscar informações do cartão
-        const { data: card, error: cardError } = await supabaseAdmin
-          .from('accounts')
-          .select('nome, auto_pagamento_ativo, dia_vencimento')
-          .eq('id', cardId)
-          .eq('user_id', userId)
-          .single();
-
-        if (cardError) {
-          console.error(`[Config Card] ❌ Erro ao buscar cartão:`, cardError);
-        }
-
-        if (!card) {
-          console.log(`[Config Card] ⚠️ Cartão não encontrado. cardId=${cardId}, userId=${userId}`);
-          await answerCallbackQuery(callbackQuery.id, { text: 'Cartão não encontrado' });
-          return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
-        }
-
-        const autoPagAtivo = card.auto_pagamento_ativo || false;
-        const diaVencimento = card.dia_vencimento || 'não configurado';
-
-        const keyboard = {
-          inline_keyboard: [
-            [
-              {
-                text: autoPagAtivo ? '✅ Pagamento Automático: ATIVO' : '❌ Pagamento Automático: INATIVO',
-                callback_data: `toggle_autopay_${cardId}`
-              }
-            ],
-
-            [
-              { text: '◀️ Voltar', callback_data: 'menu_invoices' }
-            ]
-          ]
-        };
-
-        await editTelegramMessage(
-          chatId,
-          messageId,
-          `⚙️ *Configurações - ${card.nome}*\n\n` +
-          `Gerencie as automações deste cartão:\n\n` +
-          `💳 *Pagamento Automático:*\n` +
-          `   ${autoPagAtivo ? '✅ Ativado' : '❌ Desativado'}\n\n` +
-          `🔔 *Lembrete de Vencimento:*\n` +
-          `   ${diaLembrete !== 'não configurado' ? `Dia ${diaLembrete}` : 'Não configurado'}\n\n` +
-          `⚡ Clique nos botões para alterar`,
-          {
-            parse_mode: 'Markdown',
-            reply_markup: keyboard
-          }
-        );
-
-        await answerCallbackQuery(callbackQuery.id);
-        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
-      }
+      // (Bloco config_card_ removido - agora tratado pelo handler centralizado abaixo)
 
       // Cancelar configuração
       if (data === 'config_cancel') {
@@ -2520,23 +2475,54 @@ serve(async (req) => {
 
       // --- Callbacks de Cartão de Crédito ---
       if (data.startsWith('pay_')) {
-        const accountId = data.replace('pay_', '');
-        if (accountId !== 'cancel') {
-          await handlePaymentCardSelection(supabaseAdmin, chatId, userId, accountId);
-        } else {
+        const payload = data.replace('pay_', '');
+
+        if (payload === 'cancel') {
           await editTelegramMessage(chatId, messageId, '❌ Pagamento cancelado.');
+        }
+        else if (payload.startsWith('acc_')) {
+          // 🆕 Handler para confirmação de pagamento usando sessão
+          const accountId = payload.replace('acc_', '');
+
+          // Recuperar cardId da sessão
+          // Tentar buscar tanto como string quanto number para garantir
+          const { data: session } = await supabaseAdmin
+            .from('telegram_sessions')
+            .select('contexto')
+            .or(`telegram_id.eq.${chatId},telegram_id.eq.${chatId.toString()}`)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+          if (session?.contexto?.payment_card_id) {
+            const cardId = session.contexto.payment_card_id;
+            await confirmInvoicePayment(supabaseAdmin, chatId, userId, cardId, accountId);
+          } else {
+            await editTelegramMessage(chatId, messageId, '❌ Sessão expirada. Por favor, inicie o pagamento novamente.');
+          }
+        }
+        else {
+          // Seleção inicial de cartão (payload é o cardId)
+          await handlePaymentCardSelection(supabaseAdmin, chatId, userId, payload);
         }
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
 
       if (data.startsWith('config_')) {
-        const accountId = data.replace('config_', '');
-        if (accountId === 'cancel') {
+        // Extrair ID do callback_data
+        let cardId = null;
+        if (data.startsWith('config_card_')) {
+          cardId = data.replace('config_card_', '');
+        } else {
+          cardId = data.replace('config_', '');
+        }
+
+        if (data === 'config_cancel') {
           await editTelegramMessage(chatId, messageId, '❌ Operação cancelada.');
-        } else if (accountId === 'back') {
+        } else if (data === 'config_back') {
           await handleConfigCartaoCommand(supabaseAdmin, chatId, userId);
         } else {
-          await handleCardConfigCallback(supabaseAdmin, chatId, userId, accountId);
+          await handleCardConfigCallback(supabaseAdmin, chatId, userId, cardId);
         }
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }

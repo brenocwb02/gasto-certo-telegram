@@ -23,12 +23,23 @@ interface UserContext {
   categories: string[];
 }
 
+// 🛡️ SECURITY: Sanitizar input do usuário para prevenir Prompt Injection
+function sanitizeUserInput(input: string): string {
+  return input
+    .replace(/```/g, '')           // Remove blocos de código
+    .replace(/\n/g, ' ')           // Remove quebras de linha
+    .replace(/[{}[\]]/g, '')       // Remove caracteres JSON
+    .replace(/ignore|previous|instructions|system|prompt/gi, '') // Remove termos de ataque
+    .trim()
+    .slice(0, 500);                // Limita tamanho
+}
+
 async function callGeminiAI(question: string, context: UserContext): Promise<QueryFilters> {
   const apiKey = Deno.env.get('GOOGLE_AI_API_KEY');
   if (!apiKey) throw new Error('GOOGLE_AI_API_KEY not configured');
 
   const today = new Date().toISOString().split('T')[0];
-  
+
   const prompt = `Você é um assistente que interpreta perguntas sobre finanças pessoais.
 
 Data de hoje: ${today}
@@ -83,7 +94,7 @@ Retorne APENAS o JSON, sem explicações.`;
 
   const data = await response.json();
   const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  
+
   const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('No valid JSON in AI response');
 
@@ -139,7 +150,7 @@ async function executeQuery(
   let results = data || [];
   if (filters.category) {
     const catLower = filters.category.toLowerCase();
-    results = results.filter((t: { category?: { nome: string } | null }) => 
+    results = results.filter((t: { category?: { nome: string } | null }) =>
       t.category?.nome?.toLowerCase().includes(catLower)
     );
   }
@@ -179,7 +190,7 @@ function formatResults(results: any[], filters: QueryFilters): string {
       const date = new Date(t.data_transacao).toLocaleDateString('pt-BR');
       return `${emoji} ${t.descricao}: ${formatCurrency(t.valor)} (${date})`;
     }).join('\n');
-    
+
     const more = results.length > 10 ? `\n\n... e mais ${results.length - 10} transações` : '';
     return `📋 Transações encontradas:\n\n${list}${more}`;
   }
@@ -198,7 +209,7 @@ function formatResults(results: any[], filters: QueryFilters): string {
       .sort(([, a], [, b]) => (b as number) - (a as number))
       .slice(0, 10);
 
-    const list = sorted.map(([cat, val], i) => 
+    const list = sorted.map(([cat, val], i) =>
       `${i + 1}. ${cat}: ${formatCurrency(val as number)}`
     ).join('\n');
 
@@ -237,10 +248,13 @@ serve(async (req) => {
       categories: categoriesData.data?.map((c: { nome: string }) => c.nome) || []
     };
 
-    console.log('Processing question:', question);
+    console.log('Processing question:', question.slice(0, 50) + '...');
+
+    // 🛡️ SECURITY: Sanitizar input antes de enviar para IA
+    const sanitizedQuestion = sanitizeUserInput(question);
 
     // Interpret question with AI
-    const filters = await callGeminiAI(question, userContext);
+    const filters = await callGeminiAI(sanitizedQuestion, userContext);
     console.log('Generated filters:', JSON.stringify(filters));
 
     // Execute query
@@ -259,11 +273,11 @@ serve(async (req) => {
     console.error('Error in query-engine:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: errorMessage,
         answer: '❌ Desculpe, não consegui entender sua pergunta. Tente reformular ou seja mais específico.'
       }),
-      { 
+      {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
