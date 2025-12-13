@@ -20,6 +20,17 @@ interface AccountData {
   nome: string;
 }
 
+// 🛡️ SECURITY: Sanitizar input do usuário para prevenir Prompt Injection
+function sanitizeUserInput(input: string): string {
+  return input
+    .replace(/```/g, '')           // Remove blocos de código
+    .replace(/\n/g, ' ')           // Remove quebras de linha
+    .replace(/[{}[\]]/g, '')       // Remove caracteres JSON
+    .replace(/ignore|previous|instructions|system|prompt/gi, '') // Remove termos de ataque
+    .trim()
+    .slice(0, 500);                // Limita tamanho
+}
+
 async function callGoogleAi(prompt: string): Promise<any> {
   const apiKey = Deno.env.get('GOOGLE_AI_API_KEY');
   if (!apiKey) {
@@ -78,7 +89,8 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[NLP] Processing: "${text}" for user ${userId}`);
+    // 🛡️ SECURITY: Log mascarado para proteção de dados sensíveis
+    console.log(`[NLP] Processing for user ***${userId.slice(-4)}`);
 
     // Fetch user accounts
     const { data: accounts, error: accountsError } = await supabase
@@ -132,10 +144,13 @@ serve(async (req) => {
       })
       .join('\n');
 
+    // 🛡️ SECURITY: Sanitizar input antes de enviar para IA
+    const sanitizedText = sanitizeUserInput(text);
+
     // Build improved AI prompt
     const prompt = `Você é um assistente financeiro que extrai informações de transações.
 
-Analise esta frase: "${text}"
+Analise esta frase: "${sanitizedText}"
 
 Contas disponíveis: ${accountsList}
 
