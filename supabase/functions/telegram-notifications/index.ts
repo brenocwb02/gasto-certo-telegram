@@ -24,13 +24,13 @@ serve(async (req) => {
         message = result.message
         shouldSend = result.shouldAlert
         break
-      
+
       case 'goal_reminder':
         const goalResult = await checkGoalProgress(supabase, userId)
         message = goalResult.message
         shouldSend = goalResult.shouldRemind
         break
-      
+
       case 'monthly_summary':
         const summaryResult = await generateMonthlySummary(supabase, userId)
         message = summaryResult.message
@@ -69,11 +69,11 @@ serve(async (req) => {
 async function checkSpendingLimits(supabase: any, userId: string) {
   const currentDate = new Date()
   const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
-  
+
   // Get this month's expenses
   const { data: transactions } = await supabase
     .from('transactions')
-    .select('valor, categoria_id, categories(nome)')
+    .select('valor, data_transacao')
     .eq('user_id', userId)
     .eq('tipo', 'despesa')
     .gte('data_transacao', firstDay.toISOString().split('T')[0])
@@ -84,10 +84,33 @@ async function checkSpendingLimits(supabase: any, userId: string) {
 
   const totalSpent = transactions.reduce((sum: number, t: any) => sum + Number(t.valor), 0)
 
-  // Check if spending is above average (simple alert)
-  if (totalSpent > 2000) { // Basic threshold
-    const message = `🚨 *Alerta de Gastos*\n\nVocê já gastou R$ ${totalSpent.toFixed(2)} este mês.\n\nConsidere revisar seus gastos para manter o controle financeiro! 💰`
-    return { shouldAlert: true, message }
+  // Check if spending is above threshold
+  if (totalSpent > 2000) {
+    // SPAM FIX: Only alert if there is a RECENT transaction (last 2 hours)
+    // This prevents the bot from spamming every hour just because you are over limit.
+    const twoHoursAgo = new Date(currentDate.getTime() - 2 * 60 * 60 * 1000);
+
+    // Check if any transaction in the list is recent
+    // Note: data_transacao might be just date "YYYY-MM-DD" depending on how it's saved, 
+    // but usually for comprehensive logs we'd want 'created_at'. 
+    // If 'data_transacao' is date-only, we should check 'created_at' if available, 
+    // or rely on the cron job running shortly after insertion.
+    // Let's assume we need to check 'created_at' for precision, or fetch it if not selected.
+    // Re-fetching recent activity specifically to be sure.
+
+    const { data: recentActivity } = await supabase
+      .from('transactions')
+      .select('id')
+      .eq('user_id', userId)
+      .gte('created_at', twoHoursAgo.toISOString())
+      .limit(1)
+
+    const hasRecentActivity = recentActivity && recentActivity.length > 0;
+
+    if (hasRecentActivity) {
+      const message = `🚨 *Alerta de Gastos*\n\nVocê realizou uma nova despesa e já gastou R$ ${totalSpent.toFixed(2)} este mês.\n\nConsidere revisar seus gastos para manter o controle financeiro! 💰`
+      return { shouldAlert: true, message }
+    }
   }
 
   return { shouldAlert: false, message: '' }
@@ -105,11 +128,11 @@ async function checkGoalProgress(supabase: any, userId: string) {
   }
 
   const reminders = []
-  
+
   for (const goal of goals) {
     const progress = (Number(goal.valor_atual) / Number(goal.valor_meta)) * 100
     const daysUntilEnd = Math.ceil((new Date(goal.data_fim).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-    
+
     if (progress < 50 && daysUntilEnd <= 7) {
       reminders.push(`🎯 *${goal.titulo}*\nProgresso: ${progress.toFixed(1)}%\nFaltam ${daysUntilEnd} dias!`)
     }
@@ -153,7 +176,7 @@ async function generateMonthlySummary(supabase: any, userId: string) {
 
   const saldo = receitas - despesas
   const topCategory = Object.entries(categoriesSpent)
-    .sort(([,a], [,b]) => b - a)[0]
+    .sort(([, a], [, b]) => b - a)[0]
 
   const message = `📈 *Resumo Mensal - ${currentDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}*
 
@@ -170,7 +193,7 @@ ${saldo > 0 ? '🎉 Parabéns! Mês positivo!' : '⚠️ Atenção aos gastos no
 
 async function sendTelegramNotification(chatId: number, message: string) {
   const telegramApiUrl = `https://api.telegram.org/bot${Deno.env.get('TELEGRAM_BOT_TOKEN')}/sendMessage`
-  
+
   try {
     const response = await fetch(telegramApiUrl, {
       method: 'POST',
@@ -181,7 +204,7 @@ async function sendTelegramNotification(chatId: number, message: string) {
         parse_mode: 'Markdown'
       })
     })
-    
+
     if (!response.ok) {
       console.error('Telegram API error:', await response.json())
     }
