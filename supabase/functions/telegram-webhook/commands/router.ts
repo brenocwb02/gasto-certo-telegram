@@ -10,6 +10,7 @@ import { handleTutorialCommand } from './general.ts';
 import { handlePerguntarCommand } from './ai.ts';
 import { handleContextCommand, handlePersonalCommand, handleGroupCommand, handleConfigCommand } from '../utils/context.ts';
 import { sendTelegramMessage } from '../_shared/telegram-api.ts';
+import { unlinkUser } from '../utils/auth.ts';
 
 /**
  * Roteador central de comandos
@@ -117,6 +118,13 @@ export async function handleCommand(supabase: any, command: string, userId: stri
 
         case '/meuperfil':
             await handleMeuPerfilCommand(supabase, chatId, userId);
+            break;
+
+        case '/sair':
+        case '/logout':
+        case '/desvincular':
+            const result = await unlinkUser(supabase, chatId, userId);
+            await sendTelegramMessage(chatId, result.message, { parse_mode: 'Markdown' });
             break;
 
         case '/perguntar':

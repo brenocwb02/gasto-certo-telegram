@@ -41,6 +41,33 @@ export async function linkUserWithLicense(supabaseAdmin: any, chatId: number, li
 
     } catch (e) {
         console.error("Erro em linkUserWithLicense:", e);
+        // ... existing code ...
         return { success: false, message: '❌ Erro interno ao processar licença.' };
+    }
+}
+
+/**
+ * Unlink user telegram ID from profile
+ */
+export async function unlinkUser(supabaseAdmin: any, chatId: number, userId: string): Promise<{ success: boolean; message: string }> {
+    try {
+        const { error: updateError } = await supabaseAdmin
+            .from('profiles')
+            .update({ telegram_chat_id: null })
+            .eq('user_id', userId)
+            .eq('telegram_chat_id', chatId); // Garantir que está desvinculando o chat correto
+
+        if (updateError) {
+            console.error("Erro ao desvincular profile:", updateError);
+            return { success: false, message: '❌ Erro ao desvincular sua conta.' };
+        }
+
+        return {
+            success: true,
+            message: '👋 *Conta desvinculada!*\n\nVocê não receberá mais atualizações aqui. Para reconectar, use `/start SEU_CODIGO`.'
+        };
+    } catch (e) {
+        console.error("Erro em unlinkUser:", e);
+        return { success: false, message: '❌ Erro interno ao desvincular conta.' };
     }
 }
