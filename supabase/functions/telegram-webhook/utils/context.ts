@@ -11,6 +11,9 @@
 // CONTEXTO ATIVO - MODELO 5 HÍBRIDO
 // ============================================================================
 
+import { sendTelegramMessage } from '../_shared/telegram-api.ts';
+import { formatCurrency } from '../_shared/formatters.ts';
+
 /**
  * Obtém o contexto ativo do usuário no Telegram
  */
