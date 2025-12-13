@@ -89,7 +89,7 @@
 
 ## 4️⃣ Plano Individual (Premium)
 
-### 👤 Plano Individual — R$ 19,90/mês
+### 👤 Plano Individual — R$ 14,90/mês
 
 *Para quem controla apenas o próprio dinheiro.*
 
@@ -111,7 +111,7 @@
 
 ## 5️⃣ Plano Família (Premium Global)
 
-### 👨‍👩‍👧‍👦 Plano Família — R$ 34,90/mês
+### 👨‍👩‍👧‍👦 Plano Família — R$ 24,90/mês
 
 *O coração do produto.*
 
@@ -205,7 +205,7 @@ Se expirado → bloqueio de escrita, modo leitura
 
 | Recurso | Trial | Individual | Família |
 |---------|-------|------------|---------|
-| **Preço** | R$ 0 | R$ 19,90/mês | R$ 34,90/mês |
+| **Preço** | R$ 0 | R$ 14,90/mês | R$ 24,90/mês |
 | **Duração** | 14 dias | Ilimitado | Ilimitado |
 | **Usuários** | 1 | 1 | Até 4 |
 | **Transações** | ∞ (14 dias) | ∞ | ∞ |
@@ -221,4 +221,4 @@ Se expirado → bloqueio de escrita, modo leitura
 2. **IA que entende português** — "Gastei 50 no mercado"
 3. **Trial generoso** — 14 dias, não 7
 4. **Família real** — Feito para casais/famílias, não para amigos
-5. **Preço justo** — R$ 8,73/pessoa no plano Família
+5. **Preço justo** — R$ 6,23/pessoa no plano Família
