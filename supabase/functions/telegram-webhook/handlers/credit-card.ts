@@ -10,7 +10,7 @@ export async function handleFaturaCommand(supabase: any, chatId: number, userId:
     try {
         const { data: cards, error } = await supabase
             .from('accounts')
-            .select('id, nome, saldo_atual, dia_fechamento, dia_vencimento')
+            .select('id, nome, saldo_atual, dia_fechamento, dia_vencimento, parent_account_id')
             .eq('user_id', userId)
             .eq('tipo', 'cartao')
             .eq('ativo', true);
@@ -27,17 +27,44 @@ export async function handleFaturaCommand(supabase: any, chatId: number, userId:
 
         let message = `💳 *Faturas de Cartão de Crédito*\n\n`;
 
-        for (const card of cards) {
-            const fatura = Math.abs(card.saldo_atual || 0);
-            const status = (card.saldo_atual || 0) < 0 ? '🔴' : '🟢';
+        // Organizar Família de Cartões
+        const parents = cards.filter((c: any) => !c.parent_account_id);
+        const children = cards.filter((c: any) => c.parent_account_id);
 
-            message += `${status} *${card.nome}*\n`;
-            message += `   Fatura: ${formatCurrency(fatura)}\n`;
-            message += `   Fechamento: dia ${card.dia_fechamento || 'N/A'}\n`;
-            message += `   Vencimento: dia ${card.dia_vencimento || 'N/A'}\n\n`;
+        for (const parent of parents) {
+            // Encontrar filhos deste pai
+            const myChildren = children.filter((c: any) => c.parent_account_id === parent.id);
+
+            // Calcular total consolidado (Lembrando: saldo negativo = dívida)
+            let totalBalance = parent.saldo_atual || 0;
+            myChildren.forEach((child: any) => totalBalance += (child.saldo_atual || 0));
+
+            const fatura = Math.abs(totalBalance);
+            const status = totalBalance < 0 ? '🔴' : '🟢';
+
+            message += `${status} *${parent.nome}* (Total)\n`;
+            message += `   Valor: ${formatCurrency(fatura)}\n`;
+            message += `   Vencimento: dia ${parent.dia_vencimento || 'N/A'}\n`;
+
+            // Detalhar composição se tiver filhos ou se o pai tiver gasto
+            if (myChildren.length > 0) {
+                // Mostrar o gasto do titular
+                if (parent.saldo_atual !== 0) {
+                    message += `   ├─ 👤 Titular: ${formatCurrency(Math.abs(parent.saldo_atual))}\n`;
+                }
+
+                // Mostrar gastos dos dependentes
+                myChildren.forEach((child: any) => {
+                    const childBalance = Math.abs(child.saldo_atual || 0);
+                    if (childBalance > 0) {
+                        message += `   └─ 👤 ${child.nome}: ${formatCurrency(childBalance)}\n`;
+                    }
+                });
+            }
+            message += `\n`;
         }
 
-        message += `\n💡 Use /pagar para pagar uma fatura.`;
+        message += `\n💡 Use /pagar para pagar uma fatura consolidada.`;
 
         await sendTelegramMessage(chatId, message);
 
@@ -57,11 +84,10 @@ export async function handlePagarCommand(supabase: any, chatId: number, userId: 
     try {
         const { data: cards, error } = await supabase
             .from('accounts')
-            .select('id, nome, saldo_atual, dia_vencimento')
+            .select('id, nome, saldo_atual, dia_vencimento, parent_account_id')
             .eq('user_id', userId)
             .eq('tipo', 'cartao')
-            .eq('ativo', true)
-            .lt('saldo_atual', 0);
+            .eq('ativo', true);
 
         if (error) throw error;
 
@@ -73,9 +99,38 @@ export async function handlePagarCommand(supabase: any, chatId: number, userId: 
             return;
         }
 
-        // Criar botões para cada cartão com fatura
-        const buttons = cards.map((card: any) => [{
-            text: `💳 ${card.nome} - ${formatCurrency(Math.abs(card.saldo_atual))}`,
+        // Organizar Família de Cartões para Pagamento
+        const parents = cards.filter((c: any) => !c.parent_account_id);
+        const children = cards.filter((c: any) => c.parent_account_id);
+
+        const activeInvoices = [];
+
+        for (const parent of parents) {
+            const myChildren = children.filter((c: any) => c.parent_account_id === parent.id);
+            let totalBalance = parent.saldo_atual || 0;
+            myChildren.forEach((child: any) => totalBalance += (child.saldo_atual || 0));
+
+            // Só mostrar se tiver dívida (saldo negativo)
+            if (totalBalance < 0) {
+                activeInvoices.push({
+                    ...parent,
+                    saldo_consolidado: totalBalance,
+                    tem_dependentes: myChildren.length > 0
+                });
+            }
+        }
+
+        if (activeInvoices.length === 0) {
+            await sendTelegramMessage(
+                chatId,
+                `✅ *Nenhuma fatura pendente!*\n\nTodos os seus cartões (e adicionais) estão em dia.`
+            );
+            return;
+        }
+
+        // Criar botões para cada cartão PAI com fatura consolidada
+        const buttons = activeInvoices.map((card: any) => [{
+            text: `💳 ${card.nome} - ${formatCurrency(Math.abs(card.saldo_consolidado))}`,
             callback_data: `pay_${card.id}`
         }]);
 
@@ -86,7 +141,7 @@ export async function handlePagarCommand(supabase: any, chatId: number, userId: 
 
         await sendTelegramMessage(
             chatId,
-            `💳 *Pagar Fatura*\n\nSelecione o cartão que deseja pagar:`,
+            `💳 *Pagar Fatura Consolidada*\n\nSelecione o cartão que deseja pagar (inclui adicionais):`,
             {
                 reply_markup: {
                     inline_keyboard: buttons
@@ -256,7 +311,7 @@ export async function confirmInvoicePayment(
     accountId: string
 ): Promise<void> {
     try {
-        // Buscar dados do cartão e conta
+        // 1. Buscar Cartão Pai
         const { data: card } = await supabase
             .from('accounts')
             .select('id, nome, saldo_atual')
@@ -264,6 +319,14 @@ export async function confirmInvoicePayment(
             .eq('user_id', userId)
             .single();
 
+        // 2. Buscar Cartões Filhos (Adicionais)
+        const { data: children } = await supabase
+            .from('accounts')
+            .select('id, nome, saldo_atual')
+            .eq('parent_account_id', cardId)
+            .eq('user_id', userId);
+
+        // 3. Buscar Conta de Pagamento (Origem)
         const { data: account } = await supabase
             .from('accounts')
             .select('id, nome, saldo_atual')
@@ -276,67 +339,69 @@ export async function confirmInvoicePayment(
             return;
         }
 
-        const fatura = Math.abs(card.saldo_atual);
+        // 4. Calcular Total Consolidado
+        let totalFatura = Math.abs(card.saldo_atual || 0); // Começa com o pai
+        let breakdownMsg = `   - ${card.nome}: ${formatCurrency(totalFatura)}\n`;
 
-        // Verificar saldo suficiente
-        if (account.saldo_atual < fatura) {
+        if (children && children.length > 0) {
+            children.forEach((child: any) => {
+                const childDebt = Math.abs(child.saldo_atual || 0);
+                totalFatura += childDebt;
+                breakdownMsg += `   - ${child.nome}: ${formatCurrency(childDebt)}\n`;
+            });
+        }
+
+        // 5. Verificar saldo suficiente na conta origem
+        if (account.saldo_atual < totalFatura) {
             await sendTelegramMessage(
                 chatId,
                 `❌ *Saldo insuficiente*\n\n` +
-                `Fatura: ${formatCurrency(fatura)}\n` +
-                `Saldo disponível: ${formatCurrency(account.saldo_atual)}\n` +
-                `Faltam: ${formatCurrency(fatura - account.saldo_atual)}`
+                `Fatura Total: ${formatCurrency(totalFatura)}\n` +
+                `Saldo em ${account.nome}: ${formatCurrency(account.saldo_atual)}\n` +
+                `Faltam: ${formatCurrency(totalFatura - account.saldo_atual)}`
             );
             return;
         }
 
-        // Tentar usar a função RPC do banco
-        const { data: result, error: rpcError } = await supabase.rpc('process_invoice_payment', {
-            p_card_account_id: cardId,
-            p_payment_account_id: accountId,
-            p_amount: fatura
-        });
+        // 6. Executar Pagamentos (Sequencial para simplificar sem RPC complexo)
+        // A. Debitar Conta Origem (Total)
+        await supabase.from('accounts').update({
+            saldo_atual: account.saldo_atual - totalFatura
+        }).eq('id', accountId);
 
-        if (rpcError) {
-            console.error('Erro RPC:', rpcError);
-            // Fallback: fazer manualmente se RPC falhar
-            // Debitar da conta
-            await supabase.from('accounts').update({
-                saldo_atual: account.saldo_atual - fatura
-            }).eq('id', accountId);
+        // B. Zerar Cartão Pai
+        // Nota: saldo_atual de cartão é negativo qdo deve. Ao pagar, somamos o valor positivo.
+        // Se saldo era -100 e pagamos 100, vira 0.
+        // Como 'totalFatura' é a soma absoluta de todos, precisamos "injetar" dinheiro em cada cartão separadamente.
 
-            // Creditar no cartão
-            await supabase.from('accounts').update({
-                saldo_atual: card.saldo_atual + fatura
-            }).eq('id', cardId);
+        // Pagar Pai
+        const dividaPai = Math.abs(card.saldo_atual || 0);
+        await supabase.from('accounts').update({
+            saldo_atual: (card.saldo_atual || 0) + dividaPai
+        }).eq('id', card.id);
 
-            await sendTelegramMessage(
-                chatId,
-                `✅ *Pagamento realizado!*\n\n` +
-                `💳 Cartão: ${card.nome}\n` +
-                `💰 Valor pago: ${formatCurrency(fatura)}\n` +
-                `🏦 Conta: ${account.nome}\n` +
-                `📊 Novo saldo: ${formatCurrency(account.saldo_atual - fatura)}`
-            );
-            return;
+        // C. Zerar Cartões Filhos
+        if (children && children.length > 0) {
+            for (const child of children) {
+                const dividaFilho = Math.abs(child.saldo_atual || 0);
+                if (dividaFilho > 0) {
+                    await supabase.from('accounts').update({
+                        saldo_atual: (child.saldo_atual || 0) + dividaFilho
+                    }).eq('id', child.id);
+                }
+            }
         }
 
-        if (result?.success) {
-            await sendTelegramMessage(
-                chatId,
-                `✅ *Pagamento realizado com sucesso!*\n\n` +
-                `💳 Cartão: ${result.card_name}\n` +
-                `💰 Valor pago: ${formatCurrency(result.amount_paid)}\n` +
-                `🏦 Conta: ${result.payment_account_name}\n` +
-                `📊 Saldo restante: ${formatCurrency(result.new_payment_balance)}`
-            );
-        } else {
-            await sendTelegramMessage(
-                chatId,
-                `❌ *Pagamento não realizado*\n\n` +
-                `Motivo: ${result?.error || 'Erro desconhecido'}`
-            );
-        }
+        // 7. Mensagem de Sucesso
+        await sendTelegramMessage(
+            chatId,
+            `✅ *Fatura Paga com Sucesso!*\n\n` +
+            `💸 **Valor Total:** ${formatCurrency(totalFatura)}\n` +
+            `🏦 **Saiu de:** ${account.nome}\n\n` +
+            `**Cartões Quitados:**\n` +
+            breakdownMsg +
+            `\n📊 Novo saldo ${account.nome}: ${formatCurrency(account.saldo_atual - totalFatura)}`
+        );
 
     } catch (error) {
         console.error('Erro ao confirmar pagamento:', error);

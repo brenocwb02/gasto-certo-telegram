@@ -48,6 +48,14 @@ serve(async (req) => {
         results.push({ userId, type: 'goal_reminder', result: data })
       }
 
+      // Send weekly summary on Sundays
+      if (currentDate.getDay() === 0) {
+        const { data } = await supabase.functions.invoke('telegram-notifications', {
+          body: { type: 'weekly_summary', userId }
+        })
+        results.push({ userId, type: 'weekly_summary', result: data })
+      }
+
       // Always check spending alerts
       const { data } = await supabase.functions.invoke('telegram-notifications', {
         body: { type: 'spending_alert', userId }
@@ -55,10 +63,10 @@ serve(async (req) => {
       results.push({ userId, type: 'spending_alert', result: data })
     }
 
-    return new Response(JSON.stringify({ 
-      success: true, 
+    return new Response(JSON.stringify({
+      success: true,
       processed: integrations.length,
-      results 
+      results
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })

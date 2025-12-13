@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -19,6 +19,7 @@ const accountSchema = z.object({
   dia_fechamento: z.string().optional(),
   dia_vencimento: z.string().optional(),
   cor: z.string().min(1, "Cor é obrigatória"),
+  parent_account_id: z.string().optional(),
 });
 
 interface AccountFormProps {
@@ -29,6 +30,7 @@ interface AccountFormProps {
 
 export function AccountForm({ account, onSuccess, groupId }: AccountFormProps) {
   const [loading, setLoading] = useState(false);
+  const [parentCards, setParentCards] = useState<any[]>([]);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -43,10 +45,29 @@ export function AccountForm({ account, onSuccess, groupId }: AccountFormProps) {
       dia_fechamento: account?.dia_fechamento?.toString() || "",
       dia_vencimento: account?.dia_vencimento?.toString() || "",
       cor: account?.cor || "#10b981",
+      parent_account_id: account?.parent_account_id || undefined,
     },
   });
 
   const accountType = form.watch("tipo");
+
+  // Fetch potential parent cards (only if current type is card)
+  useEffect(() => {
+    if (accountType === 'cartao' && user) {
+      const fetchParentCards = async () => {
+        const { data } = await supabase
+          .from('accounts')
+          .select('id, nome')
+          .eq('user_id', user.id)
+          .eq('tipo', 'cartao')
+          .is('parent_account_id', null) // Only main cards can be parents
+          .neq('id', account?.id || ''); // Exclude self
+
+        if (data) setParentCards(data);
+      };
+      fetchParentCards();
+    }
+  }, [accountType, user, account]);
 
   const onSubmit = async (values: z.infer<typeof accountSchema>) => {
     if (!user) return;
@@ -65,6 +86,7 @@ export function AccountForm({ account, onSuccess, groupId }: AccountFormProps) {
         dia_fechamento: values.dia_fechamento ? parseInt(values.dia_fechamento) : null,
         dia_vencimento: values.dia_vencimento ? parseInt(values.dia_vencimento) : null,
         cor: values.cor,
+        parent_account_id: values.parent_account_id || null, // Add to payload
         user_id: user.id,
         group_id: groupId || null,
         ativo: true,
@@ -151,6 +173,37 @@ export function AccountForm({ account, onSuccess, groupId }: AccountFormProps) {
             </FormItem>
           )}
         />
+
+        {accountType === "cartao" && parentCards.length > 0 && (
+          <FormField
+            control={form.control}
+            name="parent_account_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Cartão Principal (Vincular Fatura)</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o cartão pai (Opcional)" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="undefined">Nenhum (Cartão Principal)</SelectItem>
+                    {parentCards.map((card) => (
+                      <SelectItem key={card.id} value={card.id}>
+                        {card.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Selecione apenas se este for um cartão adicional/dependente.
+                </p>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         <FormField
           control={form.control}

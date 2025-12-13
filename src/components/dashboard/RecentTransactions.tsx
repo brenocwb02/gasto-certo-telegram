@@ -1,17 +1,14 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ArrowUpRight, ArrowDownLeft, ArrowRightLeft, MoreHorizontal } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { useTransactions, useAccounts, useCategories } from "@/hooks/useSupabaseData";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { TransactionForm } from "@/components/forms/TransactionForm";
 import { toast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
+import { TransactionItem } from "@/components/transactions/TransactionItem";
 
 export function RecentTransactions({ showViewAllButton = true, title = "Transações Recentes", limit = 5, groupId }: { showViewAllButton?: boolean; title?: string; limit?: number; groupId?: string }) {
   const { transactions: allTransactions, loading, deleteTransaction } = useTransactions(groupId);
@@ -50,32 +47,7 @@ export function RecentTransactions({ showViewAllButton = true, title = "Transaç
     }
   };
 
-  const getTransactionIcon = (type: string) => {
-    switch (type) {
-      case "receita":
-        return <ArrowDownLeft className="h-4 w-4 text-success" />;
-      case "despesa":
-        return <ArrowUpRight className="h-4 w-4 text-expense" />;
-      case "transferencia":
-        return <ArrowRightLeft className="h-4 w-4 text-warning" />;
-      default:
-        return null;
-    }
-  };
 
-  const formatAmount = (amount: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(Math.abs(amount));
-  };
-
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: 'short'
-    });
-  };
 
   const getCategoryName = (categoryId: string | null) => {
     if (!categoryId) return 'Sem categoria';
@@ -126,73 +98,17 @@ export function RecentTransactions({ showViewAllButton = true, title = "Transaç
           </div>
         ) : (
           transactions.map((transaction) => (
-            <div
+            <TransactionItem
               key={transaction.id}
-              className="flex items-center justify-between p-3 rounded-xl border border-border hover:bg-card-hover transition-colors group"
-            >
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-muted">
-                  {getTransactionIcon(transaction.tipo)}
-                </div>
-                <div className="space-y-1">
-                  <p className="font-medium text-foreground group-hover:text-primary transition-colors">
-                    {transaction.descricao}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant="secondary"
-                      className="text-xs px-2 py-0.5"
-                    >
-                      {getCategoryName(transaction.categoria_id)}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {getAccountName(transaction.conta_origem_id)}
-                      {transaction.tipo === 'transferencia' && transaction.conta_destino_id &&
-                        ` → ${getAccountName(transaction.conta_destino_id)}`
-                      }
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <p className={cn(
-                    "font-semibold",
-                    transaction.tipo === "receita" && "text-success",
-                    transaction.tipo === "despesa" && "text-expense",
-                    transaction.tipo === "transferencia" && "text-warning"
-                  )}>
-                    {transaction.tipo === "receita" ? "+" : transaction.tipo === "despesa" ? "-" : ""}
-                    {formatAmount(Number(transaction.valor))}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDate(transaction.data_transacao)}
-                  </p>
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleEdit(transaction)}>
-                      Editar
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
-                      onClick={() => {
-                        setSelected(transaction);
-                        setDeleteOpen(true);
-                      }}
-                    >
-                      Excluir
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
+              transaction={transaction}
+              onEdit={handleEdit}
+              onDelete={(t) => {
+                setSelected(t);
+                setDeleteOpen(true);
+              }}
+              getCategoryName={getCategoryName}
+              getAccountName={getAccountName}
+            />
           ))
         )}
       </CardContent>

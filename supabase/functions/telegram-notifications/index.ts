@@ -36,6 +36,12 @@ serve(async (req) => {
         message = summaryResult.message
         shouldSend = true
         break
+
+      case 'weekly_summary':
+        const weeklyResult = await generateWeeklySummary(supabase, userId)
+        message = weeklyResult.message
+        shouldSend = true
+        break
     }
 
     if (shouldSend && message) {
@@ -187,6 +193,52 @@ async function generateMonthlySummary(supabase: any, userId: string) {
 🏆 Maior gasto: ${topCategory ? `${topCategory[0]} (R$ ${topCategory[1].toFixed(2)})` : 'N/A'}
 
 ${saldo > 0 ? '🎉 Parabéns! Mês positivo!' : '⚠️ Atenção aos gastos no próximo mês!'}`
+
+  return { message }
+}
+
+async function generateWeeklySummary(supabase: any, userId: string) {
+  const currentDate = new Date()
+  const sevenDaysAgo = new Date(currentDate)
+  sevenDaysAgo.setDate(currentDate.getDate() - 7)
+
+  const { data: transactions } = await supabase
+    .from('transactions')
+    .select('tipo, valor, categories(nome)')
+    .eq('user_id', userId)
+    .gte('data_transacao', sevenDaysAgo.toISOString().split('T')[0])
+    .lte('data_transacao', currentDate.toISOString().split('T')[0])
+
+  let receitas = 0
+  let despesas = 0
+  const categoriesSpent: { [key: string]: number } = {}
+
+  if (transactions) {
+    transactions.forEach((t: any) => {
+      const value = Number(t.valor)
+      if (t.tipo === 'receita') receitas += value
+      if (t.tipo === 'despesa') {
+        despesas += value
+        const categoryName = t.categories?.nome || 'Outros'
+        categoriesSpent[categoryName] = (categoriesSpent[categoryName] || 0) + value
+      }
+    })
+  }
+
+  const saldo = receitas - despesas
+  const topCategory = Object.entries(categoriesSpent)
+    .sort(([, a], [, b]) => b - a)[0]
+
+  if (receitas === 0 && despesas === 0) {
+    return { message: `📅 *Resumo Semanal*\n\nNão houve movimentações registradas nos últimos 7 dias. Que tal registrar algo hoje?` }
+  }
+
+  const message = `📅 *Resumo Semanal*\n(${sevenDaysAgo.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} a ${currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })})\n\n` +
+    `💸 Despesas: R$ ${despesas.toFixed(2)}\n` +
+    `💰 Receitas: R$ ${receitas.toFixed(2)}\n` +
+    `📊 Saldo: R$ ${saldo.toFixed(2)}\n\n` +
+    `${topCategory ? `🏆 Maior gasto: ${topCategory[0]} (R$ ${topCategory[1].toFixed(2)})\n` : ''}` +
+    `\nFique no controle! 💪`
 
   return { message }
 }

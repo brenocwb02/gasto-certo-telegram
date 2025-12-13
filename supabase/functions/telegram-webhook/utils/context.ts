@@ -14,7 +14,7 @@
 /**
  * Obtém o contexto ativo do usuário no Telegram
  */
-async function getUserTelegramContext(supabase: any, userId: string): Promise<{
+export async function getUserTelegramContext(supabase: any, userId: string): Promise<{
     defaultContext: 'personal' | 'group';
     showConfirmation: boolean;
     groupId: string | null;
@@ -46,7 +46,7 @@ async function getUserTelegramContext(supabase: any, userId: string): Promise<{
 /**
  * Define o contexto padrão do usuário no Telegram
  */
-async function setUserTelegramContext(
+export async function setUserTelegramContext(
     supabase: any,
     userId: string,
     context: 'personal' | 'group'
@@ -68,7 +68,7 @@ async function setUserTelegramContext(
  * Detecta prefixos de contexto na mensagem (#p ou #g)
  * Retorna o contexto forçado (se houver) e a mensagem limpa
  */
-function parseContextFromMessage(message: string): {
+export function parseContextFromMessage(message: string): {
     forcedContext: 'personal' | 'group' | null;
     cleanMessage: string;
 } {
@@ -100,7 +100,7 @@ function parseContextFromMessage(message: string): {
  * Obtém o group_id correto baseado no contexto
  * Retorna null para contexto pessoal, UUID do grupo para contexto group
  */
-async function resolveGroupIdFromContext(
+export async function resolveGroupIdFromContext(
     supabase: any,
     userId: string,
     context: 'personal' | 'group',
@@ -131,7 +131,7 @@ async function resolveGroupIdFromContext(
 /**
  * Gera mensagem de confirmação com indicador de contexto
  */
-function formatTransactionConfirmation(params: {
+export function formatTransactionConfirmation(params: {
     tipo: string;
     valor: number;
     descricao: string;
@@ -184,7 +184,7 @@ function formatTransactionConfirmation(params: {
 /**
  * Calcula se deve mostrar alerta de limite
  */
-function shouldShowLimitAlert(
+export function shouldShowLimitAlert(
     usage: number,
     limit: number,
     alertAt80: boolean,
@@ -222,7 +222,7 @@ function shouldShowLimitAlert(
 /**
  * Comando /contexto - Menu para escolher contexto padrão
  */
-async function handleContextCommand(supabase: any, userId: string, chatId: number): Promise<void> {
+export async function handleContextCommand(supabase: any, userId: string, chatId: number): Promise<void> {
     const context = await getUserTelegramContext(supabase, userId);
 
     const message = `📌 *Escolha o contexto padrão*\n\n` +
@@ -261,7 +261,7 @@ async function handleContextCommand(supabase: any, userId: string, chatId: numbe
 /**
  * Comando /p - Alternar para contexto pessoal
  */
-async function handlePersonalCommand(supabase: any, userId: string, chatId: number): Promise<void> {
+export async function handlePersonalCommand(supabase: any, userId: string, chatId: number): Promise<void> {
     await setUserTelegramContext(supabase, userId, 'personal');
 
     const { data: limits } = await supabase.rpc('check_transaction_limit', { user_id: userId });
@@ -280,7 +280,7 @@ async function handlePersonalCommand(supabase: any, userId: string, chatId: numb
 /**
  * Comando /g - Alternar para contexto grupo
  */
-async function handleGroupCommand(supabase: any, userId: string, chatId: number): Promise<void> {
+export async function handleGroupCommand(supabase: any, userId: string, chatId: number): Promise<void> {
     const context = await getUserTelegramContext(supabase, userId);
 
     if (!context.groupId) {
@@ -309,7 +309,7 @@ async function handleGroupCommand(supabase: any, userId: string, chatId: number)
 /**
  * Comando /config - Configurações do bot
  */
-async function handleConfigCommand(supabase: any, userId: string, chatId: number): Promise<void> {
+export async function handleConfigCommand(supabase: any, userId: string, chatId: number): Promise<void> {
     const context = await getUserTelegramContext(supabase, userId);
 
     const message = `⚙️ *Configurações do Telegram*\n\n` +
