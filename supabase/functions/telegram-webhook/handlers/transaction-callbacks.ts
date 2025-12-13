@@ -32,10 +32,10 @@ export async function handleSelectAccountCallback(
 
         const pending = session.contexto.pending_transaction;
 
-        // Buscar nome da conta
+        // Buscar nome e visibilidade da conta
         const { data: conta } = await supabase
             .from('accounts')
-            .select('nome')
+            .select('nome, visibility')
             .eq('id', accountId)
             .single();
 
@@ -75,12 +75,14 @@ export async function handleSelectAccountCallback(
         }
 
         // Buscar contexto
-        const context = await getUserTelegramContext(supabase, userId);
+        // Contexto agora é definido pela conta, não pelo usuário
+        const contextGroupId = (conta?.visibility === 'family') ? (session.contexto.group_id || null) : null;
 
         // Preparar transação completa
         const transactionData = {
             user_id: userId,
-            group_id: context.groupId || null,
+            user_id: userId,
+            group_id: contextGroupId,
             valor: pending.valor,
             descricao: pending.descricao,
             tipo: pending.tipo,
@@ -120,10 +122,13 @@ export async function handleSelectAccountCallback(
             confirmMsg += `*Categoria:* ${categoriaNome}\n`;
         }
 
-        if (context.defaultContext === 'group' && context.groupName) {
-            confirmMsg += `\n🏠 *Grupo:* ${context.groupName}`;
+        // Indicador de Visibilidade baseado na Conta
+        if (conta?.visibility === 'personal') {
+            confirmMsg += `\n👤 *Pessoal* (só você vê)`;
         } else {
-            confirmMsg += `\n👤 *Pessoal*`;
+            // Default é família/grupo se não for explicitamente pessoal
+            // Se tiver nome do grupo na sessão ou contexto, poderia mostrar, mas "Família" é genérico o suficiente
+            confirmMsg += `\n🏠 *Família* (todos veem)`;
         }
 
         const keyboard = {

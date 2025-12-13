@@ -20,6 +20,7 @@ const accountSchema = z.object({
   dia_vencimento: z.string().optional(),
   cor: z.string().min(1, "Cor é obrigatória"),
   parent_account_id: z.string().optional(),
+  visibility: z.enum(["family", "personal"]),
 });
 
 interface AccountFormProps {
@@ -46,6 +47,7 @@ export function AccountForm({ account, onSuccess, groupId }: AccountFormProps) {
       dia_vencimento: account?.dia_vencimento?.toString() || "",
       cor: account?.cor || "#10b981",
       parent_account_id: account?.parent_account_id || undefined,
+      visibility: account?.visibility || "family",
     },
   });
 
@@ -74,6 +76,25 @@ export function AccountForm({ account, onSuccess, groupId }: AccountFormProps) {
 
     setLoading(true);
     try {
+      // Validar limite de contas pessoais (apenas na criação)
+      if (!account && values.visibility === 'personal') {
+        const { data: canCreate, error: limitError } = await supabase
+          .rpc('check_personal_account_limit', { p_user_id: user.id });
+
+        if (limitError) {
+          console.error('Erro ao verificar limites:', limitError);
+          // Permite prosseguir em caso de erro no RPC para não bloquear user (fail open)
+        } else if (canCreate === false) {
+          toast({
+            title: "Limite Atingido",
+            description: "Membros do plano família podem ter no máximo 2 contas pessoais.",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+      }
+
       const saldoInicial = parseFloat(values.saldo_inicial);
 
       const accountData = {
@@ -86,7 +107,8 @@ export function AccountForm({ account, onSuccess, groupId }: AccountFormProps) {
         dia_fechamento: values.dia_fechamento ? parseInt(values.dia_fechamento) : null,
         dia_vencimento: values.dia_vencimento ? parseInt(values.dia_vencimento) : null,
         cor: values.cor,
-        parent_account_id: values.parent_account_id || null, // Add to payload
+        parent_account_id: values.parent_account_id || null,
+        visibility: values.visibility,
         user_id: user.id,
         group_id: groupId || null,
         ativo: true,
@@ -169,6 +191,35 @@ export function AccountForm({ account, onSuccess, groupId }: AccountFormProps) {
                   <SelectItem value="cartao">Cartão de Crédito</SelectItem>
                 </SelectContent>
               </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="visibility"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Quem vê transações desta conta?</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a visibilidade" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="family">
+                    🏠 Família (todos do grupo veem)
+                  </SelectItem>
+                  <SelectItem value="personal">
+                    👤 Só eu (privado)
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Transações nesta conta herdam esta visibilidade automaticamente.
+              </p>
               <FormMessage />
             </FormItem>
           )}

@@ -453,6 +453,19 @@ export default function FamilySettings() {
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
+                      {/* Anti-Abuse Warning */}
+                      <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800">
+                        <AlertCircle className="h-4 w-4 text-amber-600" />
+                        <AlertTitle className="text-amber-800 dark:text-amber-200">Importante saber</AlertTitle>
+                        <AlertDescription className="text-amber-700 dark:text-amber-300 text-sm">
+                          No <strong>Boas Contas Família</strong>, todos os membros podem ver o{' '}
+                          <strong>total dos gastos familiares por categoria</strong> para gerar{' '}
+                          consciência financeira coletiva.
+                          <br /><br />
+                          Ninguém vê os detalhes pessoais de outros membros.
+                        </AlertDescription>
+                      </Alert>
+
                       <div>
                         <Label htmlFor="inviteCode">Código do Convite</Label>
                         <Input
@@ -463,7 +476,7 @@ export default function FamilySettings() {
                         />
                       </div>
                       <Button onClick={handleAcceptFamilyInvite} className="w-full">
-                        Aceitar Convite
+                        Entendo e Aceito Participar
                       </Button>
                     </div>
                   </DialogContent>

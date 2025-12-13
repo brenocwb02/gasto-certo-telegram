@@ -175,9 +175,35 @@ export function useFamily() {
     }
   };
 
-  // Convidar membro para o grupo
+  // Convidar membro para o grupo (limite de 4 membros total = 1 owner + 3 convidados)
+  const MAX_FAMILY_MEMBERS = 4;
+
   const inviteFamilyMember = async (groupId: string, name: string, role: string = 'member') => {
     try {
+      // Verificar limite de membros (4 pessoas no total)
+      const { count: activeCount, error: countError } = await supabase
+        .from('family_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('group_id', groupId)
+        .eq('status', 'active');
+
+      if (countError) throw countError;
+
+      // Contar convites pendentes também
+      const { count: pendingCount, error: pendingError } = await supabase
+        .from('family_invites')
+        .select('*', { count: 'exact', head: true })
+        .eq('group_id', groupId)
+        .eq('status', 'pending');
+
+      if (pendingError) throw pendingError;
+
+      const totalSlots = (activeCount || 0) + (pendingCount || 0);
+
+      if (totalSlots >= MAX_FAMILY_MEMBERS) {
+        throw new Error(`Limite atingido! O plano Família permite até ${MAX_FAMILY_MEMBERS} pessoas (1 titular + 3 convidados).`);
+      }
+
       const token = 'FAM_' + Math.random().toString(36).substring(2, 10).toUpperCase();
 
       const { error: inviteError } = await supabase

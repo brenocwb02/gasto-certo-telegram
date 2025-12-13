@@ -220,59 +220,30 @@ export function shouldShowLimitAlert(
 // ============================================================================
 
 /**
- * Comando /contexto - Menu para escolher contexto padrão
+ * Comando /contexto - Explica o novo modelo
  */
 export async function handleContextCommand(supabase: any, userId: string, chatId: number): Promise<void> {
-    const context = await getUserTelegramContext(supabase, userId);
+    const message = `📌 *Mudança na Visibilidade*\n\n` +
+        `Agora ficou mais fácil! Você não precisa mais ficar trocando de contexto.\n\n` +
+        `🔒 *Pessoal:* Basta registrar em uma conta marcada como "Pessoal" (ex: seu Nubank).\n` +
+        `🏠 *Família:* Basta registrar em uma conta marcada como "Família" (ex: Conta Conjunta).\n\n` +
+        `⚙️ *Como configurar?*\n` +
+        `Acesse o App e edite suas contas para escolher quem pode ver as transações.\n\n` +
+        `💡 _Todas as transações mostram automaticamente se são Pessoais ou Familiares._`;
 
-    const message = `📌 *Escolha o contexto padrão*\n\n` +
-        `Onde suas próximas transações serão registradas?\n\n` +
-        `*Contexto atual:* ${context.defaultContext === 'personal' ? '👤 Pessoal' : '🏠 ' + (context.groupName || 'Grupo')}\n\n` +
-        `${context.groupId ? '🏠 *Grupo:* Transações compartilhadas (ILIMITADAS)\n' : ''}` +
-        `👤 *Pessoal:* Apenas você vê (${context.defaultContext === 'personal' ? 'limite de 75/mês para free' : '75/mês para free'})`;
-
-    const keyboard: any = {
-        inline_keyboard: [
-            [
-                { text: context.defaultContext === 'personal' ? '✅ 👤 Pessoal' : '👤 Pessoal', callback_data: 'context_personal' }
-            ]
-        ]
-    };
-
-    // Adicionar opção de grupo apenas se usuário tiver grupo
-    if (context.groupId) {
-        keyboard.inline_keyboard.push([
-            { text: context.defaultContext === 'group' ? `✅ 🏠 ${context.groupName}` : `🏠 ${context.groupName}`, callback_data: 'context_group' }
-        ]);
-    } else {
-        keyboard.inline_keyboard.push([
-            { text: '⚠️ Você não está em nenhum grupo', callback_data: 'context_no_group' }
-        ]);
-    }
-
-    keyboard.inline_keyboard.push([{ text: '❌ Cancelar', callback_data: 'context_cancel' }]);
-
-    await sendTelegramMessage(chatId, message, {
-        parse_mode: 'Markdown',
-        reply_markup: keyboard
-    });
+    await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
 }
 
 /**
  * Comando /p - Alternar para contexto pessoal
  */
+/**
+ * Comando /p - Atalho informativo
+ */
 export async function handlePersonalCommand(supabase: any, userId: string, chatId: number): Promise<void> {
-    await setUserTelegramContext(supabase, userId, 'personal');
-
-    const { data: limits } = await supabase.rpc('check_transaction_limit', { user_id: userId });
-    const usage = limits?.usage || 0;
-    const limit = limits?.limit || 75;
-
-    const message = `✅ *Contexto alterado!*\n\n` +
-        `📌 Suas transações agora vão para:\n` +
-        `👤 *Pessoal* (só você vê)\n\n` +
-        `📊 Limite: ${usage}/${limit} transações este mês\n\n` +
-        `💡 Para voltar ao grupo: /g`;
+    const message = `👤 *Modo Pessoal*\n\n` +
+        `Não é mais necessário usar /p!\n\n` +
+        `Basta escolher uma conta **Pessoal** na hora de registrar o gasto, e ele será privado automaticamente.`;
 
     await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
 }
@@ -280,28 +251,13 @@ export async function handlePersonalCommand(supabase: any, userId: string, chatI
 /**
  * Comando /g - Alternar para contexto grupo
  */
+/**
+ * Comando /g - Atalho informativo
+ */
 export async function handleGroupCommand(supabase: any, userId: string, chatId: number): Promise<void> {
-    const context = await getUserTelegramContext(supabase, userId);
-
-    if (!context.groupId) {
-        await sendTelegramMessage(
-            chatId,
-            '⚠️ Você não está em nenhum grupo familiar.\n\n' +
-            '👥 Para criar ou entrar em um grupo, acesse:\n' +
-            '🔗 [App Boas Contas](https://app.boascontas.com/familia)',
-            { parse_mode: 'Markdown' }
-        );
-        return;
-    }
-
-    await setUserTelegramContext(supabase, userId, 'group');
-
-    const message = `✅ *Contexto alterado!*\n\n` +
-        `📌 Suas transações agora vão para:\n` +
-        `🏠 *${context.groupName}*\n\n` +
-        `♾️ Transações do grupo: ILIMITADAS\n` +
-        `👥 Todos do grupo verão suas transações\n\n` +
-        `💡 Para voltar ao pessoal: /p`;
+    const message = `🏠 *Modo Família*\n\n` +
+        `Não é mais necessário usar /g!\n\n` +
+        `Basta escolher uma conta **Familiar** (ou criar uma nova) que todos do grupo verão automaticamente.`;
 
     await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
 }
