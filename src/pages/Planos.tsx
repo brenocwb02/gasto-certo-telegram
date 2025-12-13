@@ -52,10 +52,10 @@ const plans: Plan[] = [
         yearlyPerMonth: "R$ 0",
         yearlySavings: "",
         description: "Experimente o poder do controle financeiro",
-        tagline: "7 dias de acesso completo",
+        tagline: "14 dias de acesso completo",
         icon: Star,
         features: [
-            { text: "7 dias com acesso total", included: true },
+            { text: "14 dias com acesso total", included: true },
             { text: "Após trial: 30 transações/mês", included: true },
             { text: "1 conta bancária", included: true },
             { text: "5 categorias", included: true },
@@ -69,14 +69,14 @@ const plans: Plan[] = [
         stripePriceIdYearly: ""
     },
     {
-        id: "pessoal",
-        name: "Pessoal",
-        priceMonthly: 14.90,
-        priceYearly: 143,
-        priceMonthlyDisplay: "R$ 14,90",
-        priceYearlyDisplay: "R$ 143",
-        yearlyPerMonth: "R$ 11,92",
-        yearlySavings: "Economize R$ 35,80",
+        id: "individual",
+        name: "Individual",
+        priceMonthly: 19.90,
+        priceYearly: 199,
+        priceMonthlyDisplay: "R$ 19,90",
+        priceYearlyDisplay: "R$ 199",
+        yearlyPerMonth: "R$ 16,58",
+        yearlySavings: "Economize R$ 39,80",
         description: "Controle total, no seu ritmo",
         icon: User,
         features: [
@@ -93,24 +93,24 @@ const plans: Plan[] = [
         ],
         popular: false,
         highlight: false,
-        stripePriceIdMonthly: import.meta.env.VITE_STRIPE_PRICE_PESSOAL_MONTHLY || "",
-        stripePriceIdYearly: import.meta.env.VITE_STRIPE_PRICE_PESSOAL_YEARLY || ""
+        stripePriceIdMonthly: import.meta.env.VITE_STRIPE_PRICE_INDIVIDUAL_MONTHLY || "",
+        stripePriceIdYearly: import.meta.env.VITE_STRIPE_PRICE_INDIVIDUAL_YEARLY || ""
     },
     {
         id: "familia",
         name: "Família",
-        priceMonthly: 24.90,
-        priceYearly: 239,
-        priceMonthlyDisplay: "R$ 24,90",
-        priceYearlyDisplay: "R$ 239",
-        yearlyPerMonth: "R$ 19,92",
-        yearlySavings: "Economize R$ 59,80",
+        priceMonthly: 34.90,
+        priceYearly: 349,
+        priceMonthlyDisplay: "R$ 34,90",
+        priceYearlyDisplay: "R$ 349",
+        yearlyPerMonth: "R$ 29,08",
+        yearlySavings: "Economize R$ 69,80",
         description: "Finanças em família, de forma leve",
         tagline: "Mais Popular",
         icon: Users,
         features: [
-            { text: "Tudo do plano Pessoal", included: true },
-            { text: "Até 6 membros na família", included: true },
+            { text: "Tudo do plano Individual", included: true },
+            { text: "Até 4 membros (1 titular + 3 convidados)", included: true },
             { text: "Grupo familiar no Telegram", included: true },
             { text: "Orçamento compartilhado", included: true },
             { text: "Visão de gastos por membro", included: true },
@@ -222,7 +222,7 @@ const Planos = () => {
 
     const getPlanDisplayName = () => {
         if (currentPlan === 'gratuito') return 'Gratuito';
-        if (currentPlan === 'premium' || currentPlan === 'individual' || currentPlan === 'pessoal') return 'Pessoal';
+        if (currentPlan === 'premium' || currentPlan === 'individual' || currentPlan === 'pessoal') return 'Individual';
         if (currentPlan === 'familia') return 'Família';
         return currentPlan;
     };
@@ -310,7 +310,7 @@ const Planos = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
                 {plans.map((plan) => {
                     const isCurrentPlan = plan.id === currentPlan ||
-                        (plan.id === 'pessoal' && (currentPlan === 'premium' || currentPlan === 'individual'));
+                        (plan.id === 'individual' && (currentPlan === 'premium' || currentPlan === 'pessoal'));
 
                     return (
                         <Card

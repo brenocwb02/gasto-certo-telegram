@@ -40,7 +40,7 @@ const PLAN_LIMITS = {
     }
 };
 
-const TRIAL_DURATION_DAYS = 7;
+const TRIAL_DURATION_DAYS = 14;
 
 export function useLimits() {
     const { user } = useAuth();
