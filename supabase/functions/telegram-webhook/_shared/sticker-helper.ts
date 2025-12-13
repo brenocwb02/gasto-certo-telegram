@@ -1,57 +1,38 @@
 /**
- * Helper de Stickers - "Micro-Celebrações" 🎉
+ * Helper de Celebrações - Tom Profissional 🎯
  * 
- * Como obter file_ids:
- * 1. Encontre stickers no Telegram (packs populares: Pepe, Pusheen, etc)
- * 2. Envie para @idstickerbot
- * 3. Copie o file_id retornado
- * 4. Cole abaixo
+ * Versão minimalista: apenas mensagens de texto com emojis unicode
+ * Sem stickers animados - tom neutro e profissional
  */
 
-import { sendTelegramSticker, sendTelegramMessage } from './telegram-api.ts';
+import { sendTelegramMessage } from './telegram-api.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
-// 🎨 IDs dos Stickers (SUBSTITUIR pelos seus file_ids reais)
-export const STICKER_IDS = {
-    // Exemplo de file_id real (trocar pelos seus):
-    // THUMBS_UP: 'CAACAgIAAxkBAAEMqLZnW...',
-    // FIRE: 'CAACAgIAAxkBAAEMqLhnW...',
-
-    // Placeholders - SUBSTITUIR:
-    THUMBS_UP: 'PLACEHOLDER_THUMBS_UP_FILE_ID',  // 👍 Para primeira transação do dia
-    FIRE: 'PLACEHOLDER_FIRE_FILE_ID'              // 🔥 Para streak de 7 dias
-};
-
 /**
  * Celebra a primeira transação do dia
  */
 export async function celebrateFirstTransactionOfDay(chatId: number) {
-    // Apenas envia se o file_id foi configurado
-    if (!STICKER_IDS.THUMBS_UP.startsWith('PLACEHOLDER')) {
-        await sendTelegramSticker(chatId, STICKER_IDS.THUMBS_UP);
-        await sendTelegramMessage(chatId, '🌅 *Primeira transação do dia!* Ótimo começo! 💪');
-    }
+    await sendTelegramMessage(
+        chatId,
+        '🌅 *Primeira transação do dia registrada!*\n\nÓtimo começo de controle financeiro. 💪'
+    );
 }
 
 /**
  * Celebra um streak de dias consecutivos
  */
 export async function celebrateStreak(chatId: number, days: number) {
-    // Apenas envia se o file_id foi configurado
-    if (!STICKER_IDS.FIRE.startsWith('PLACEHOLDER')) {
-        await sendTelegramSticker(chatId, STICKER_IDS.FIRE);
-    }
-
     let message = '';
+
     if (days === 7) {
-        message = '🔥 *7 DIAS CONSECUTIVOS!*\n\nVocê está criando um hábito incrível de organização financeira! Continue assim! 💪';
+        message = '🏆 *7 dias consecutivos!*\n\nVocê está criando um hábito consistente de organização financeira.';
     } else if (days === 30) {
-        message = '🔥🔥🔥 *30 DIAS! UM MÊS COMPLETO!*\n\nVocê é disciplina personificada! Parabéns! 🏆';
+        message = '🎯 *30 dias consecutivos - Um mês completo!*\n\nDisciplina financeira em alto nível. Parabéns!';
     } else {
-        message = `🔥 *${days} dias consecutivos!* Continue assim!`;
+        message = `✨ *${days} dias consecutivos de registros!*\n\nContinue assim!`;
     }
 
     await sendTelegramMessage(chatId, message);
