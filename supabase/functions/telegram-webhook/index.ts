@@ -32,12 +32,20 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
+    console.log('📨 Webhook recebido:', JSON.stringify(body).substring(0, 500));
+    
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 
     // ============================================================================
     // RATE LIMITING - Proteção contra abuso (60 req/min por usuário)
+    // NOTA: Desabilitado temporariamente para debug
     // ============================================================================
     const telegramId = body.message?.from?.id || body.callback_query?.from?.id;
+    console.log('👤 Telegram ID:', telegramId);
+    
+    // RATE LIMIT DESABILITADO TEMPORARIAMENTE PARA DEBUG
+    // TODO: Reativar após correção do fluxo de vinculação
+    /*
     if (telegramId) {
       const { data: rateLimitCheck, error: rateLimitError } = await supabaseAdmin.rpc('check_rate_limit', {
         p_telegram_id: telegramId,
@@ -47,12 +55,13 @@ serve(async (req) => {
 
       if (rateLimitError) console.error('Erro ao verificar rate limit:', rateLimitError);
 
-      if (rateLimitCheck && rateLimitCheck[0] && !rateLimitCheck[0].allowed) {
+      const isBlocked = rateLimitCheck && Array.isArray(rateLimitCheck) && rateLimitCheck[0] && !rateLimitCheck[0].allowed;
+      if (isBlocked) {
         console.warn(`[Rate Limit] Bloqueado: ${telegramId}`);
-        // Return OK without processing - silent rate limit
         return new Response('OK', { status: 200, headers: corsHeaders });
       }
     }
+    */
 
     // ============================================================================
     // ROUTING
