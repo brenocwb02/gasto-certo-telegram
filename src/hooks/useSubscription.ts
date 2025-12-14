@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -13,17 +13,17 @@ export const useSubscription = () => {
   const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
+  const { user, session } = useAuth();
 
-  const checkSubscription = async (silent = false) => {
-    if (!user) {
+  const checkSubscription = useCallback(async (silent = false) => {
+    // Only check if we have both user AND session
+    if (!user || !session) {
       setSubscriptionInfo(null);
       setLoading(false);
       return;
     }
 
     try {
-      // Apenas mostra loading na primeira verificação, não nos refreshes silenciosos
       if (!silent) {
         setLoading(true);
       }
@@ -31,11 +31,26 @@ export const useSubscription = () => {
 
       const { data, error: functionError } = await supabase.functions.invoke('check-subscription');
 
+      // Handle 401 gracefully - user might not have subscription
       if (functionError) {
+        // Check if it's an auth error - don't throw, just set as not subscribed
+        if (data?.error?.includes('Auth') || data?.error?.includes('session')) {
+          console.log('[useSubscription] Auth error, treating as not subscribed');
+          setSubscriptionInfo({ subscribed: false });
+          return;
+        }
         throw functionError;
       }
 
       console.log('[useSubscription] Response from check-subscription:', data);
+      
+      // Handle error response from function
+      if (data?.error) {
+        console.log('[useSubscription] Function returned error:', data.error);
+        setSubscriptionInfo({ subscribed: false });
+        return;
+      }
+      
       setSubscriptionInfo(data);
     } catch (err) {
       console.error('Error checking subscription:', err);
@@ -46,7 +61,7 @@ export const useSubscription = () => {
         setLoading(false);
       }
     }
-  };
+  }, [user, session]);
 
   const createCheckout = async () => {
     if (!user) {
@@ -91,19 +106,23 @@ export const useSubscription = () => {
   };
 
   useEffect(() => {
-    checkSubscription();
-  }, [user]);
+    // Add small delay to ensure session is fully established
+    const timer = setTimeout(() => {
+      checkSubscription();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [user, session, checkSubscription]);
 
-  // Auto-refresh subscription status every 5 minutes (silently, without showing loading)
+  // Auto-refresh subscription status every 5 minutes (silently)
   useEffect(() => {
+    if (!user || !session) return;
+    
     const interval = setInterval(() => {
-      if (user) {
-        checkSubscription(true);  // silent=true para não mostrar loading
-      }
-    }, 300000);  // 5 minutos ao invés de 1 minuto
+      checkSubscription(true);
+    }, 300000);
 
     return () => clearInterval(interval);
-  }, [user]);
+  }, [user, session, checkSubscription]);
 
   // Consider any active subscription as premium (Pessoal or Família)
   const isPremium = subscriptionInfo?.subscribed === true;
