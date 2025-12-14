@@ -47,9 +47,10 @@ serve(async (req) => {
 
       if (rateLimitError) console.error('Erro ao verificar rate limit:', rateLimitError);
 
-      if (rateLimitCheck && !rateLimitCheck.allowed) {
+      if (rateLimitCheck && rateLimitCheck[0] && !rateLimitCheck[0].allowed) {
         console.warn(`[Rate Limit] Bloqueado: ${telegramId}`);
-        // return new Response('Rate Limit Exceeded', { status: 429, headers: corsHeaders });
+        // Return OK without processing - silent rate limit
+        return new Response('OK', { status: 200, headers: corsHeaders });
       }
     }
 
