@@ -39,9 +39,20 @@ serve(async (req) => {
     logStep("Authenticating user with token");
 
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError) throw new Error(`Authentication error: ${userError.message}`);
+    if (userError) {
+      logStep("Auth error - returning 401", { error: userError.message });
+      return new Response(JSON.stringify({ subscribed: false, error: userError.message }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401,
+      });
+    }
     const user = userData.user;
-    if (!user?.email) throw new Error("User not authenticated or email not available");
+    if (!user?.email) {
+      return new Response(JSON.stringify({ subscribed: false, error: "User not authenticated" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401,
+      });
+    }
     logStep("User authenticated", { userId: user.id, email: user.email });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
