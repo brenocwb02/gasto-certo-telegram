@@ -12,7 +12,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import Landing from "@/pages/Landing";
 
 // Lazy load internal pages
-const Dashboard = lazy(() => import("@/pages/Dashboard"));
+// Dashboard moved to DashboardNew
 const DashboardNew = lazy(() => import("@/pages/DashboardNew"));
 const Auth = lazy(() => import("@/pages/Auth"));
 const Onboarding = lazy(() => import("@/pages/Onboarding"));

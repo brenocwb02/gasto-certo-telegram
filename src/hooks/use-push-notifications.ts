@@ -67,10 +67,8 @@ export const usePushNotifications = () => {
                 await registration.showNotification(title, {
                     body: body,
                     icon: '/pwa-icon.svg',
-                    vibrate: [200, 100, 200],
                     requireInteraction: true,
                     tag: 'gasto-certo-notification',
-                    renotify: true,
                     data: {
                         dateOfArrival: Date.now()
                     }

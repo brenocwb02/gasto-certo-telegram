@@ -27,7 +27,6 @@ import {
     Lock,
     Lightbulb,
     AlertTriangle,
-    Info,
     Bot,
     Sparkles
 } from "lucide-react";

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+// Badge removed - unused
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -18,12 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+// DropdownMenu removed - unused
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,13 +30,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  ArrowUpRight,
-  ArrowDownLeft,
-  ArrowRightLeft,
   Plus,
   Search,
   Filter,
-  MoreHorizontal,
   TrendingUp,
   TrendingDown,
   Calendar,

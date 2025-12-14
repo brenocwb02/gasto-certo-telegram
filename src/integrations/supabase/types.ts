@@ -40,6 +40,7 @@ export type Database = {
           total_installments: number | null
           updated_at: string
           user_id: string
+          visibility: string | null
         }
         Insert: {
           ativo?: boolean
@@ -66,6 +67,7 @@ export type Database = {
           total_installments?: number | null
           updated_at?: string
           user_id: string
+          visibility?: string | null
         }
         Update: {
           ativo?: boolean
@@ -92,6 +94,7 @@ export type Database = {
           total_installments?: number | null
           updated_at?: string
           user_id?: string
+          visibility?: string | null
         }
         Relationships: [
           {
@@ -1244,7 +1247,7 @@ export type Database = {
     Functions: {
       accept_family_invite:
         | { Args: { invite_token: string }; Returns: Json }
-        | { Args: { invite_token: string; p_user_id: string }; Returns: Json }
+        | { Args: { invite_token: string; p_user_id?: string }; Returns: Json }
         | { Args: { p_invite_code: string }; Returns: string }
       auto_learn_category: {
         Args: {
@@ -1261,6 +1264,10 @@ export type Database = {
           dia_vencimento: number
         }
         Returns: string
+      }
+      check_personal_account_limit: {
+        Args: { p_user_id: string }
+        Returns: boolean
       }
       check_rate_limit: {
         Args: {
