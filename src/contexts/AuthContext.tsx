@@ -114,24 +114,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    // Clean up any existing state
-    try {
-      await supabase.auth.signOut({ scope: 'global' });
-    } catch (err) {
-      // Continue even if this fails
-    }
-    
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-    
-    if (!error) {
-      // Force page reload for clean state
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 100);
-    }
     
     return { error };
   };
