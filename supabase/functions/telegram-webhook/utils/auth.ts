@@ -3,21 +3,24 @@
  */
 export async function linkUserWithLicense(supabaseAdmin: any, chatId: number, licenseCode: string): Promise<{ success: boolean; message: string }> {
     try {
-        console.log(`🔗 Tentando vincular chatId ${chatId} com código: ${licenseCode}`);
+        const cleanCode = licenseCode.trim().toUpperCase();
+        console.log(`🔗 Tentando vincular chatId ${chatId} com código: "${cleanCode}" (original: "${licenseCode}")`);
         
         // 1. Verificar licença - usando coluna correta 'codigo'
         const { data: license, error: licenseError } = await supabaseAdmin
             .from('licenses')
-            .select('user_id, status')
-            .eq('codigo', licenseCode.toUpperCase())
+            .select('user_id, status, codigo')
+            .eq('codigo', cleanCode)
             .single();
 
+        console.log(`🔍 Resultado da busca de licença:`, { license, licenseError });
+
         if (licenseError || !license) {
-            console.error("Erro ao buscar licença:", licenseError);
+            console.error("❌ Erro ao buscar licença:", licenseError);
             return { success: false, message: '❌ Código de licença inválido ou expirado.\n\nVerifique o código em Configurações no app web.' };
         }
 
-        console.log(`✅ Licença encontrada para user_id: ${license.user_id}, status: ${license.status}`);
+        console.log(`✅ Licença encontrada para user_id: ${license.user_id}, status: ${license.status}, codigo: ${license.codigo}`);
 
         // 2. Verificar se já existe outro usuário vinculado a este chatId
         const { data: existingProfile } = await supabaseAdmin

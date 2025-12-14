@@ -90,10 +90,15 @@ export async function handleTextMessage(supabase: any, chatId: number, message: 
 
     // 3. Comando /start com código de licença
     if (text.startsWith('/start')) {
+        console.log('📱 Processando /start:', { text, chatId });
+        
         const parts = text.split(' ');
-        const licenseCode = parts.length > 1 ? parts[1] : null;
+        const licenseCode = parts.length > 1 ? parts[1].trim() : null;
+        
+        console.log('📱 Partes do comando:', { parts, licenseCode });
 
         if (!licenseCode) {
+            console.log('📱 Sem código de licença, verificando perfil existente...');
             const { data: existingProfile } = await supabase
                 .from('profiles')
                 .select('user_id')
@@ -101,13 +106,17 @@ export async function handleTextMessage(supabase: any, chatId: number, message: 
                 .single();
 
             if (existingProfile) {
+                console.log('📱 Perfil encontrado:', existingProfile.user_id);
                 await handleCommand(supabase, '/start', existingProfile.user_id, chatId);
             } else {
+                console.log('📱 Perfil não encontrado, mostrando mensagem de link');
                 await handleStartUnlinkedCommand(chatId);
             }
         } else {
+            console.log('📱 Tentando vincular com código:', licenseCode);
             const result = await linkUserWithLicense(supabase, chatId, licenseCode);
-            await sendTelegramMessage(chatId, result.message);
+            console.log('📱 Resultado do vínculo:', result);
+            await sendTelegramMessage(chatId, result.message, { parse_mode: 'Markdown' });
         }
         return new Response('OK', { headers: corsHeaders });
     }
