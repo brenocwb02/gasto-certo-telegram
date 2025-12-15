@@ -81,9 +81,18 @@ export function Sidebar({ className, onClose, isExpanded = false, onToggle }: Si
         )
       }
     >
-      <item.icon className={cn("h-5 w-5 flex-shrink-0", isExpanded ? "mr-1" : "")} />
-      {isExpanded && <span className="truncate">{item.label}</span>}
-      {!isExpanded && <span className="sr-only">{item.label}</span>}
+
+      <item.icon className="h-5 w-5 flex-shrink-0" />
+      <span
+        className={cn(
+          "truncate transition-all duration-300",
+          isExpanded
+            ? "opacity-100 max-w-[200px]"
+            : "opacity-0 max-w-0 w-0 hidden"
+        )}
+      >
+        {item.label}
+      </span>
     </NavLink>
   );
 
@@ -105,9 +114,15 @@ export function Sidebar({ className, onClose, isExpanded = false, onToggle }: Si
             isExpanded ? "h-8 px-3" : "h-9 w-9 md:h-8 md:w-8"
           )}
         >
-          <Home className="h-4 w-4 transition-all group-hover:scale-110" />
-          {isExpanded && <span className="text-sm">Boas Contas</span>}
-          {!isExpanded && <span className="sr-only">Boas Contas</span>}
+          <Home className="h-4 w-4 transition-all group-hover:scale-110 flex-shrink-0" />
+          <span
+            className={cn(
+              "whitespace-nowrap transition-all duration-300 overflow-hidden",
+              isExpanded ? "opacity-100 w-auto ml-2" : "opacity-0 w-0"
+            )}
+          >
+            Boas Contas
+          </span>
         </NavLink>
 
         {/* Mobile Close Button (if needed, though standard sheet handles it) or Desktop Toggle */}
@@ -155,32 +170,31 @@ export function Sidebar({ className, onClose, isExpanded = false, onToggle }: Si
               return renderLink(item);
             })}
 
-            {/* Logout */}
-            {!isExpanded ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 text-muted-foreground hover:text-foreground md:h-8 md:w-8 mx-auto flex"
-                    onClick={handleLogout}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "flex items-center gap-3 transition-all duration-300 hover:text-foreground text-muted-foreground px-3",
+                    isExpanded ? "w-full justify-start" : "justify-center h-9 w-9 p-0 md:h-8 md:w-8 mx-auto"
+                  )}
+                  onClick={handleLogout}
+                >
+                  <LogOut className="h-5 w-5 flex-shrink-0" />
+                  <span
+                    className={cn(
+                      "truncate transition-all duration-300",
+                      isExpanded
+                        ? "opacity-100 max-w-[200px]"
+                        : "opacity-0 max-w-0 w-0 hidden"
+                    )}
                   >
-                    <LogOut className="h-5 w-5" />
-                    <span className="sr-only">Sair</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right">Sair</TooltipContent>
-              </Tooltip>
-            ) : (
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-3 px-3 text-muted-foreground hover:text-foreground"
-                onClick={handleLogout}
-              >
-                <LogOut className="h-5 w-5 mr-1" />
-                <span>Sair</span>
-              </Button>
-            )}
+                    Sair
+                  </span>
+                </Button>
+              </TooltipTrigger>
+              {!isExpanded && <TooltipContent side="right">Sair</TooltipContent>}
+            </Tooltip>
           </TooltipProvider>
         </div>
       </nav>
