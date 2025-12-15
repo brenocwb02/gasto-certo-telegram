@@ -33,7 +33,7 @@ serve(async (req) => {
   try {
     const body = await req.json();
     console.log('📨 Webhook recebido:', JSON.stringify(body).substring(0, 500));
-    
+
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 
     // ============================================================================
@@ -42,10 +42,10 @@ serve(async (req) => {
     // ============================================================================
     const telegramId = body.message?.from?.id || body.callback_query?.from?.id;
     console.log('👤 Telegram ID:', telegramId);
-    
-    // RATE LIMIT DESABILITADO TEMPORARIAMENTE PARA DEBUG
-    // TODO: Reativar após correção do fluxo de vinculação
-    /*
+
+    // ============================================================================
+    // RATE LIMITING - 60 requests/minute per user
+    // ============================================================================
     if (telegramId) {
       const { data: rateLimitCheck, error: rateLimitError } = await supabaseAdmin.rpc('check_rate_limit', {
         p_telegram_id: telegramId,
@@ -58,10 +58,16 @@ serve(async (req) => {
       const isBlocked = rateLimitCheck && Array.isArray(rateLimitCheck) && rateLimitCheck[0] && !rateLimitCheck[0].allowed;
       if (isBlocked) {
         console.warn(`[Rate Limit] Bloqueado: ${telegramId}`);
+        // Send friendly message to user
+        const resetAt = rateLimitCheck[0].reset_at;
+        const waitSeconds = Math.max(1, Math.ceil((new Date(resetAt).getTime() - Date.now()) / 1000));
+        await sendMessage(
+          body.message?.chat?.id || body.callback_query?.message?.chat?.id,
+          `⏳ *Muitas mensagens!*\n\nAguarde ${waitSeconds} segundos antes de enviar mais mensagens.\n\n💡 _Dica: Use comandos como /saldo ou /extrato para consultas rápidas._`
+        );
         return new Response('OK', { status: 200, headers: corsHeaders });
       }
     }
-    */
 
     // ============================================================================
     // ROUTING
