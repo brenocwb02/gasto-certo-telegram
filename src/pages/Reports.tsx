@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { Header } from "@/components/layout/Header";
-import { Sidebar } from "@/components/layout/Sidebar";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
@@ -274,249 +273,238 @@ const Reports = () => {
   const colors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#8dd1e1', '#d084d0'];
 
   return (
-    <div className="min-h-screen bg-background flex">
-      <div className="hidden lg:block">
-        <Sidebar />
+    <>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Relatórios</h1>
+          <p className="text-muted-foreground">Análises e insights das suas finanças</p>
+        </div>
+        <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+          <SelectTrigger className="w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="week">Última semana</SelectItem>
+            <SelectItem value="month">Este mês</SelectItem>
+            <SelectItem value="quarter">Últimos 3 meses</SelectItem>
+            <SelectItem value="year">Este ano</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
-      <div className="lg:hidden">
-        <Sidebar />
+
+      {/* Summary Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total de Receitas</CardTitle>
+            <TrendingUp className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              {formatCurrency(summaryStats.receitas)}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total de Despesas</CardTitle>
+            <TrendingDown className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">
+              {formatCurrency(summaryStats.despesas)}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Saldo</CardTitle>
+            <DollarSign className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${summaryStats.saldo >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatCurrency(summaryStats.saldo)}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Transações</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {summaryStats.totalTransactions}
+            </div>
+          </CardContent>
+        </Card>
       </div>
-      <div className="flex-1 flex flex-col sm:pl-14">
-        <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-        <main className="flex-1 p-6 space-y-6 animate-fade-in">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Relatórios</h1>
-              <p className="text-muted-foreground">Análises e insights das suas finanças</p>
-            </div>
-            <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="week">Última semana</SelectItem>
-                <SelectItem value="month">Este mês</SelectItem>
-                <SelectItem value="quarter">Últimos 3 meses</SelectItem>
-                <SelectItem value="year">Este ano</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
 
-          {/* Summary Cards */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total de Receitas</CardTitle>
-                <TrendingUp className="h-4 w-4 text-green-600" />
+      {loading ? (
+        <div className="grid gap-6 md:grid-cols-2">
+          {[1, 2].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader>
+                <div className="h-4 bg-muted rounded w-1/3"></div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-600">
-                  {formatCurrency(summaryStats.receitas)}
-                </div>
+                <div className="h-64 bg-muted rounded"></div>
               </CardContent>
             </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Monthly Trend Chart */}
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <CardTitle>Tendência Mensal</CardTitle>
+              <CardDescription>Receitas e despesas ao longo do tempo</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={(value) => {
+                      const date = new Date(value + 'T00:00:00');
+                      if (value.length > 7) return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                      return date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+                    }}
+                  />
+                  <YAxis />
+                  <Tooltip formatter={(value: number | string) => formatCurrency(Number(value))} />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="receitas"
+                    stroke="#22c55e"
+                    strokeWidth={2}
+                    name="Receitas"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="despesas"
+                    stroke="#ef4444"
+                    strokeWidth={2}
+                    name="Despesas"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total de Despesas</CardTitle>
-                <TrendingDown className="h-4 w-4 text-red-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-600">
-                  {formatCurrency(summaryStats.despesas)}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Saldo</CardTitle>
-                <DollarSign className="h-4 w-4 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${summaryStats.saldo >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatCurrency(summaryStats.saldo)}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Transações</CardTitle>
-                <Activity className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {summaryStats.totalTransactions}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {loading ? (
-            <div className="grid gap-6 md:grid-cols-2">
-              {[1, 2].map((i) => (
-                <Card key={i} className="animate-pulse">
-                  <CardHeader>
-                    <div className="h-4 bg-muted rounded w-1/3"></div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-64 bg-muted rounded"></div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Monthly Trend Chart */}
-              <Card className="md:col-span-2">
-                <CardHeader>
-                  <CardTitle>Tendência Mensal</CardTitle>
-                  <CardDescription>Receitas e despesas ao longo do tempo</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={monthlyData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis
-                        dataKey="date"
-                        tickFormatter={(value) => {
-                          const date = new Date(value + 'T00:00:00');
-                          if (value.length > 7) return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-                          return date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
-                        }}
-                      />
-                      <YAxis />
-                      <Tooltip formatter={(value: number | string) => formatCurrency(Number(value))} />
-                      <Legend />
-                      <Line
-                        type="monotone"
-                        dataKey="receitas"
-                        stroke="#22c55e"
-                        strokeWidth={2}
-                        name="Receitas"
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="despesas"
-                        stroke="#ef4444"
-                        strokeWidth={2}
-                        name="Despesas"
-                      />
-                    </LineChart>
+          {/* Category Distribution */}
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <CardTitle>Despesas por Categoria</CardTitle>
+              <CardDescription>Distribuição dos gastos por categoria</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={categoryData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={90}
+                        paddingAngle={2}
+                        dataKey="value"
+                      >
+                        {categoryData.map((_entry, index) => (
+                          <Cell key={`cell-${index}`} fill={colors[index % colors.length]} strokeWidth={0} />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<CustomTooltip />} />
+                    </PieChart>
                   </ResponsiveContainer>
-                </CardContent>
-              </Card>
+                </div>
 
-              {/* Category Distribution */}
-              <Card className="md:col-span-2">
-                <CardHeader>
-                  <CardTitle>Despesas por Categoria</CardTitle>
-                  <CardDescription>Distribuição dos gastos por categoria</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                    <div className="h-[300px] w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={categoryData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={60}
-                            outerRadius={90}
-                            paddingAngle={2}
-                            dataKey="value"
-                          >
-                            {categoryData.map((_entry, index) => (
-                              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} strokeWidth={0} />
-                            ))}
-                          </Pie>
-                          <Tooltip content={<CustomTooltip />} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-
-                    <div className="space-y-5">
-                      {categoryData.slice(0, 5).map((category, index) => (
-                        <div key={index} className="space-y-2">
-                          <div className="flex items-center justify-between text-sm">
-                            <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: colors[index % colors.length] }} />
-                              <span className="font-medium text-foreground">{category.name}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-foreground">{formatCurrency(category.value)}</span>
-                              <span className="text-xs text-muted-foreground w-12 text-right">
-                                {totalCategoryExpenses > 0 ? ((category.value / totalCategoryExpenses) * 100).toFixed(1) : 0}%
-                              </span>
-                            </div>
-                          </div>
-                          <div className="h-2.5 w-full bg-secondary/50 rounded-full overflow-hidden">
-                            <div
-                              className="h-full rounded-full transition-all duration-500 ease-out"
-                              style={{
-                                width: `${totalCategoryExpenses > 0 ? (category.value / totalCategoryExpenses * 100) : 0}%`,
-                                backgroundColor: colors[index % colors.length]
-                              }}
-                            />
-                          </div>
+                <div className="space-y-5">
+                  {categoryData.slice(0, 5).map((category, index) => (
+                    <div key={index} className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: colors[index % colors.length] }} />
+                          <span className="font-medium text-foreground">{category.name}</span>
                         </div>
-                      ))}
-                      {categoryData.length > 5 && (
-                        <p className="text-xs text-center text-muted-foreground pt-2">
-                          E mais {categoryData.length - 5} categorias menores...
-                        </p>
-                      )}
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-foreground">{formatCurrency(category.value)}</span>
+                          <span className="text-xs text-muted-foreground w-12 text-right">
+                            {totalCategoryExpenses > 0 ? ((category.value / totalCategoryExpenses) * 100).toFixed(1) : 0}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-2.5 w-full bg-secondary/50 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500 ease-out"
+                          style={{
+                            width: `${totalCategoryExpenses > 0 ? (category.value / totalCategoryExpenses * 100) : 0}%`,
+                            backgroundColor: colors[index % colors.length]
+                          }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  ))}
+                  {categoryData.length > 5 && (
+                    <p className="text-xs text-center text-muted-foreground pt-2">
+                      E mais {categoryData.length - 5} categorias menores...
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-              {/* Monthly Comparison Bar Chart */}
-              <Card className="md:col-span-2">
-                <CardHeader>
-                  <CardTitle>Comparativo Mensal</CardTitle>
-                  <CardDescription>Receitas vs Despesas por mês</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={350}>
-                    <BarChart data={monthlyData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis
-                        dataKey="date"
-                        tickFormatter={(value) => {
-                          const date = new Date(value + 'T00:00:00');
-                          if (value.length > 7) return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-                          return date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
-                        }}
-                      />
-                      <YAxis />
-                      <Tooltip formatter={(value: number | string) => formatCurrency(Number(value))} />
-                      <Legend />
-                      <Bar dataKey="receitas" fill="#22c55e" name="Receitas" />
-                      <Bar dataKey="despesas" fill="#ef4444" name="Despesas" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </div>
-          )}
+          {/* Monthly Comparison Bar Chart */}
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <CardTitle>Comparativo Mensal</CardTitle>
+              <CardDescription>Receitas vs Despesas por mês</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={350}>
+                <BarChart data={monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={(value) => {
+                      const date = new Date(value + 'T00:00:00');
+                      if (value.length > 7) return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                      return date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+                    }}
+                  />
+                  <YAxis />
+                  <Tooltip formatter={(value: number | string) => formatCurrency(Number(value))} />
+                  <Legend />
+                  <Bar dataKey="receitas" fill="#22c55e" name="Receitas" />
+                  <Bar dataKey="despesas" fill="#ef4444" name="Despesas" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
-          {!loading && monthlyData.length === 0 && (
-            <Card className="text-center py-12">
-              <CardContent>
-                <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Nenhum dado encontrado</h3>
-                <p className="text-muted-foreground">
-                  Não há transações no período selecionado.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </main>
-      </div>
-    </div>
+      {!loading && monthlyData.length === 0 && (
+        <Card className="text-center py-12">
+          <CardContent>
+            <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Nenhum dado encontrado</h3>
+            <p className="text-muted-foreground">
+              Não há transações no período selecionado.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+    </>
   );
 };
 export default Reports;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -6,6 +6,12 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 interface AppLayoutProps {
   children: React.ReactNode;
 }
+
+const LayoutLoader = () => (
+  <div className="flex items-center justify-center h-[50vh]">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+  </div>
+);
 
 export function AppLayout({ children }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -48,7 +54,9 @@ export function AppLayout({ children }: AppLayoutProps) {
       >
         <Header onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-1 p-6 space-y-6 animate-fade-in">
-          {children}
+          <Suspense fallback={<LayoutLoader />}>
+            {children}
+          </Suspense>
         </main>
       </div>
     </div>

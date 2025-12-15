@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
-// @ts-ignore
-import { Header } from "../components/layout/Header";
-// @ts-ignore
-import { Sidebar } from "../components/layout/Sidebar";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -406,564 +403,552 @@ export default function FamilySettings() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex">
-        <Sidebar />
-        <div className="flex-1 flex flex-col sm:pl-14">
-          <Header />
-          <main className="flex-1 p-6 flex items-center justify-center">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-muted-foreground">Carregando grupos familiares...</p>
-            </div>
-          </main>
+      <div className="flex flex-col items-center justify-center min-h-[50vh] p-6">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Carregando grupos familiares...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex">
-      <Sidebar />
-      <div className="flex-1 flex flex-col sm:pl-14">
-        <Header />
-        <main className="flex-1 p-6 space-y-6 animate-fade-in">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
-                <Users className="h-7 w-7 text-primary" />
-                Configurações Familiares
-              </h1>
-              <p className="text-muted-foreground">Gerencie o grupo e compartilhe suas finanças.</p>
-            </div>
+    <>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
+            <Users className="h-7 w-7 text-primary" />
+            Configurações Familiares
+          </h1>
+          <p className="text-muted-foreground">Gerencie o grupo e compartilhe suas finanças.</p>
+        </div>
 
-            {!hasGroup && (
-              <div className="flex gap-2">
-                <Dialog open={showInviteCode} onOpenChange={setShowInviteCode}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline">
-                      <Mail className="h-4 w-4 mr-2" />
-                      Aceitar Convite
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Aceitar Convite Familiar</DialogTitle>
-                      <DialogDescription>
-                        Digite o código do convite que você recebeu.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      {/* Anti-Abuse Warning */}
-                      <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800">
-                        <AlertCircle className="h-4 w-4 text-amber-600" />
-                        <AlertTitle className="text-amber-800 dark:text-amber-200">Importante saber</AlertTitle>
-                        <AlertDescription className="text-amber-700 dark:text-amber-300 text-sm">
-                          No <strong>Boas Contas Família</strong>, todos os membros podem ver o{' '}
-                          <strong>total dos gastos familiares por categoria</strong> para gerar{' '}
-                          consciência financeira coletiva.
-                          <br /><br />
-                          Ninguém vê os detalhes pessoais de outros membros.
-                        </AlertDescription>
-                      </Alert>
-
-                      <div>
-                        <Label htmlFor="inviteCode">Código do Convite</Label>
-                        <Input
-                          id="inviteCode"
-                          value={inviteCode}
-                          onChange={(e) => setInviteCode(e.target.value)}
-                          placeholder="FAM_XXXXXXXXXXXX"
-                        />
-                      </div>
-                      <Button onClick={handleAcceptFamilyInvite} className="w-full">
-                        Entendo e Aceito Participar
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-
-                <Dialog open={showCreateGroup} onOpenChange={setShowCreateGroup}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Criar Grupo
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Criar Grupo Familiar</DialogTitle>
-                      <DialogDescription>
-                        Crie um novo grupo familiar para compartilhar finanças.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="groupName">Nome do Grupo</Label>
-                        <Input
-                          id="groupName"
-                          value={newGroupName}
-                          onChange={(e) => setNewGroupName(e.target.value)}
-                          placeholder="Ex: Família Silva"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="groupDescription">Descrição (opcional)</Label>
-                        <Textarea
-                          id="groupDescription"
-                          value={newGroupDescription}
-                          onChange={(e) => setNewGroupDescription(e.target.value)}
-                          placeholder="Ex: Grupo familiar para controle financeiro"
-                        />
-                      </div>
-                      <Button onClick={handleCreateFamilyGroup} className="w-full">
-                        Criar Grupo
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            )}
-          </div>
-
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Erro</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {!hasGroup ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Users className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Nenhum grupo familiar encontrado</h3>
-                <p className="text-muted-foreground text-center mb-4">
-                  Crie um grupo familiar ou aceite um convite para começar a compartilhar suas finanças.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <Tabs defaultValue="members" className="space-y-4">
-              <TabsList>
-                <TabsTrigger value="members">Membros</TabsTrigger>
-                <TabsTrigger value="invites">Convites</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="members" className="space-y-4">
-                {currentGroup ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-semibold">
-                        Membros do Grupo: {currentGroup.name}
-                      </h3>
-                      {isGroupAdmin(currentGroup.id) && (
-                        <Dialog open={showInviteMember} onOpenChange={setShowInviteMember}>
-                          <DialogTrigger asChild>
-                            <Button size="sm">
-                              <Plus className="h-4 w-4 mr-2" />
-                              Convidar Membro
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Convidar Membro</DialogTitle>
-                              <DialogDescription>
-                                Gere um código de convite para compartilhar com seu familiar
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-4">
-                              <div>
-                                <Label htmlFor="inviteName">Nome do familiar</Label>
-                                <Input
-                                  id="inviteName"
-                                  type="text"
-                                  value={inviteName}
-                                  onChange={(e) => setInviteName(e.target.value)}
-                                  placeholder="Ex: Maria Silva"
-                                />
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Este nome será usado apenas para identificar o convite
-                                </p>
-                              </div>
-                              <div>
-                                <Label htmlFor="inviteRole">Permissão</Label>
-                                <Select value={inviteRole} onValueChange={setInviteRole}>
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="member">Membro</SelectItem>
-                                    <SelectItem value="admin">Administrador</SelectItem>
-                                    <SelectItem value="viewer">Visualizador</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <Button onClick={handleInviteFamilyMember} className="w-full">
-                                <QrCode className="h-4 w-4 mr-2" />
-                                Gerar Código
-                              </Button>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
-                      )}
-                    </div>
-
-                    <div className="grid gap-4">
-                      {members.map((member) => (
-                        <Card key={member.id}>
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                  {/* @ts-ignore */}
-                                  <User className="h-5 w-5 text-primary" />
-                                </div>
-                                <div>
-                                  <p className="font-medium">
-                                    {/* @ts-ignore */}
-                                    {member.profile?.nome || 'Usuário'}
-                                  </p>
-                                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    {getRoleIcon(member.role)}
-                                    <span>{getRoleLabel(member.role)}</span>
-                                    <span>•</span>
-                                    {/* @ts-ignore */}
-                                    {getStatusIcon(member.status)}
-                                    {/* @ts-ignore */}
-                                    <span>{getStatusLabel(member.status)}</span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {isGroupAdmin(currentGroup.id) && member.role !== 'owner' && (
-                                <div className="flex items-center gap-2">
-                                  <Select
-                                    value={member.role}
-                                    // @ts-ignore
-                                    onValueChange={(value) => handleUpdateMemberRole(member.id, value)}
-                                  >
-                                    <SelectTrigger className="w-32">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="admin">Admin</SelectItem>
-                                      <SelectItem value="member">Membro</SelectItem>
-                                      <SelectItem value="viewer">Visualizador</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleRemoveFamilyMember(member.id)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-
-                    {/* !! NOVA ZONA DE PERIGO ADICIONADA !! */}
-                    {isGroupOwner(currentGroup.id) && (
-                      <Card className="border-destructive mt-6">
-                        <CardHeader>
-                          <CardTitle className="text-destructive">Zona de Perigo</CardTitle>
-                          <CardDescription>
-                            A ação abaixo é permanente e não pode ser desfeita.
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <Dialog open={showDeleteGroup} onOpenChange={setShowDeleteGroup}>
-                            <DialogTrigger asChild>
-                              <Button variant="destructive">
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Apagar Grupo Familiar
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Tem a certeza absoluta?</DialogTitle>
-                                <DialogDescription>
-                                  Esta ação não pode ser desfeita. Isto irá apagar permanentemente o grupo
-                                  <strong className="px-1">{currentGroup.name}</strong>
-                                  e todos os dados financeiros (transações, contas, orçamentos) associados a ele.
-                                </DialogDescription>
-                              </DialogHeader>
-                              <div className="flex justify-end gap-2 mt-4">
-                                <Button variant="outline" onClick={() => setShowDeleteGroup(false)}>
-                                  Cancelar
-                                </Button>
-                                <Button variant="destructive" onClick={handleDeleteGroup}>
-                                  Eu entendo, apagar o grupo
-                                </Button>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-
-                          <Dialog open={showDissolveGroup} onOpenChange={setShowDissolveGroup}>
-                            <DialogTrigger asChild>
-                              <Button variant="outline" className="w-full mt-4 border-orange-500 text-orange-600 hover:bg-orange-50">
-                                <Shield className="h-4 w-4 mr-2" />
-                                Dissolver Grupo (Manter Dados)
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Dissolver Grupo e Manter Dados?</DialogTitle>
-                                <DialogDescription>
-                                  Esta ação irá excluir o grupo <strong className="px-1">{currentGroup.name}</strong>,
-                                  mas <strong>MANTERÁ</strong> todos os seus dados (transações, contas, orçamentos).
-                                  <br /><br />
-                                  Os dados voltarão a ser "pessoais" e vinculados apenas a você. Outros membros perderão o acesso.
-                                </DialogDescription>
-                              </DialogHeader>
-                              <div className="flex justify-end gap-2 mt-4">
-                                <Button variant="outline" onClick={() => setShowDissolveGroup(false)}>
-                                  Cancelar
-                                </Button>
-                                <Button onClick={handleDissolveFamilyGroup}>
-                                  Sim, dissolver e manter dados
-                                </Button>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-                        </CardContent>
-                      </Card>
-                    )}
-
-                  </div>
-                ) : (
-                  <Card>
-                    <CardContent className="flex flex-col items-center justify-center py-12">
-                      <Users className="h-12 w-12 text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-semibold mb-2">Nenhum grupo selecionado</h3>
-                      <p className="text-muted-foreground text-center">
-                        Ocorreu um erro ao carregar o seu grupo.
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-              </TabsContent>
-
-              <TabsContent value="invites" className="space-y-4">
-                {currentGroup ? (
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">
-                      Convites do Grupo: {currentGroup.name}
-                    </h3>
-
-                    <div className="grid gap-4">
-                      {invites.map((invite) => (
-                        <Card key={invite.id}>
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                                  <Mail className="h-5 w-5" />
-                                </div>
-                                <div>
-                                  {/* @ts-ignore */}
-                                  <p className="font-medium">{invite.email || invite.name}</p>
-                                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    {getRoleIcon(invite.role)}
-                                    <span>{getRoleLabel(invite.role)}</span>
-                                    <span>•</span>
-                                    {getStatusIcon(invite.status)}
-                                    <span>{getStatusLabel(invite.status)}</span>
-                                    <span>•</span>
-                                    <span>
-                                      Expira em {new Date(invite.expires_at).toLocaleDateString('pt-BR')}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {isGroupAdmin(currentGroup.id) && invite.status === 'pending' && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleCancelInvite(invite.id)}
-                                >
-                                  <XCircle className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-
-                      {invites.length === 0 && (
-                        <Card>
-                          <CardContent className="flex flex-col items-center justify-center py-8">
-                            <Mail className="h-8 w-8 text-muted-foreground mb-2" />
-                            <p className="text-muted-foreground">Nenhum convite pendente</p>
-                          </CardContent>
-                        </Card>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <Card>
-                    <CardContent className="flex flex-col items-center justify-center py-12">
-                      <Mail className="h-12 w-12 text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-semibold mb-2">Nenhum grupo selecionado</h3>
-                      <p className="text-muted-foreground text-center">
-                        Ocorreu um erro ao carregar os convites do grupo.
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-              </TabsContent>
-            </Tabs>
-          )}
-
-          {/* Dialog para mostrar código gerado */}
-          <Dialog open={showGeneratedCode} onOpenChange={setShowGeneratedCode}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Convite Criado com Sucesso! 🎉</DialogTitle>
-                <DialogDescription>
-                  Compartilhe este código com seu familiar
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label>Código do Convite</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      value={generatedCode}
-                      readOnly
-                      className="font-mono text-xl font-bold text-center bg-muted"
-                    />
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      onClick={() => {
-                        try {
-                          // Tentar a API moderna primeiro
-                          // @ts-ignore
-                          navigator.clipboard.writeText(generatedCode);
-                        } catch (err) {
-                          // Fallback para o método antigo (pode não funcionar em todos os browsers)
-                          try {
-                            // @ts-ignore
-                            document.execCommand('copy', true, generatedCode);
-                          } catch (e) {
-                            console.error("Falha ao copiar para o clipboard");
-                          }
-                        }
-                        toast({
-                          title: "Copiado!",
-                          description: "Código copiado para a área de transferência",
-                        });
-                      }}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                <Alert>
-                  <QrCode className="h-4 w-4" />
-                  <AlertTitle>Como compartilhar</AlertTitle>
-                  <AlertDescription className="space-y-2 mt-2">
-                    <p>• Envie este código via WhatsApp, Telegram ou qualquer outro meio</p>
-                    <p>• Seu familiar pode aceitar na página Família ou no bot do Telegram</p>
-                    <p>• No Telegram, use: <code className="bg-background px-2 py-1 rounded font-mono">/entrar {generatedCode}</code></p>
-                    <p className="text-muted-foreground">Válido por 30 dias</p>
-                  </AlertDescription>
-                </Alert>
-              </div>
-              <div className="flex justify-end">
-                <Button onClick={() => setShowGeneratedCode(false)}>
-                  Entendi
+        {!hasGroup && (
+          <div className="flex gap-2">
+            <Dialog open={showInviteCode} onOpenChange={setShowInviteCode}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Mail className="h-4 w-4 mr-2" />
+                  Aceitar Convite
                 </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Aceitar Convite Familiar</DialogTitle>
+                  <DialogDescription>
+                    Digite o código do convite que você recebeu.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  {/* Anti-Abuse Warning */}
+                  <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800">
+                    <AlertCircle className="h-4 w-4 text-amber-600" />
+                    <AlertTitle className="text-amber-800 dark:text-amber-200">Importante saber</AlertTitle>
+                    <AlertDescription className="text-amber-700 dark:text-amber-300 text-sm">
+                      No <strong>Boas Contas Família</strong>, todos os membros podem ver o{' '}
+                      <strong>total dos gastos familiares por categoria</strong> para gerar{' '}
+                      consciência financeira coletiva.
+                      <br /><br />
+                      Ninguém vê os detalhes pessoais de outros membros.
+                    </AlertDescription>
+                  </Alert>
 
-          {/* Dialog para migrar dados pessoais */}
-          <Dialog open={showMigrateData} onOpenChange={setShowMigrateData}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Importar dados pessoais? 📦</DialogTitle>
-                <DialogDescription>
-                  Você possui dados pessoais que podem ser importados para o grupo.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                {personalDataCount && (
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Encontramos:</p>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      {personalDataCount.transactions > 0 && (
-                        <div className="flex justify-between border rounded p-2">
-                          <span>Transações:</span>
-                          <span className="font-bold">{personalDataCount.transactions}</span>
-                        </div>
-                      )}
-                      {personalDataCount.budgets > 0 && (
-                        <div className="flex justify-between border rounded p-2">
-                          <span>Orçamentos:</span>
-                          <span className="font-bold">{personalDataCount.budgets}</span>
-                        </div>
-                      )}
-                      {personalDataCount.accounts > 0 && (
-                        <div className="flex justify-between border rounded p-2">
-                          <span>Contas:</span>
-                          <span className="font-bold">{personalDataCount.accounts}</span>
-                        </div>
-                      )}
-                      {personalDataCount.categories > 0 && (
-                        <div className="flex justify-between border rounded p-2">
-                          <span>Categorias:</span>
-                          <span className="font-bold">{personalDataCount.categories}</span>
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Total: <strong>{personalDataCount.total}</strong> itens
-                    </p>
+                  <div>
+                    <Label htmlFor="inviteCode">Código do Convite</Label>
+                    <Input
+                      id="inviteCode"
+                      value={inviteCode}
+                      onChange={(e) => setInviteCode(e.target.value)}
+                      placeholder="FAM_XXXXXXXXXXXX"
+                    />
                   </div>
+                  <Button onClick={handleAcceptFamilyInvite} className="w-full">
+                    Entendo e Aceito Participar
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={showCreateGroup} onOpenChange={setShowCreateGroup}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Criar Grupo
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Criar Grupo Familiar</DialogTitle>
+                  <DialogDescription>
+                    Crie um novo grupo familiar para compartilhar finanças.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="groupName">Nome do Grupo</Label>
+                    <Input
+                      id="groupName"
+                      value={newGroupName}
+                      onChange={(e) => setNewGroupName(e.target.value)}
+                      placeholder="Ex: Família Silva"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="groupDescription">Descrição (opcional)</Label>
+                    <Textarea
+                      id="groupDescription"
+                      value={newGroupDescription}
+                      onChange={(e) => setNewGroupDescription(e.target.value)}
+                      placeholder="Ex: Grupo familiar para controle financeiro"
+                    />
+                  </div>
+                  <Button onClick={handleCreateFamilyGroup} className="w-full">
+                    Criar Grupo
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
+      </div>
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Erro</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {!hasGroup ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Users className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Nenhum grupo familiar encontrado</h3>
+            <p className="text-muted-foreground text-center mb-4">
+              Crie um grupo familiar ou aceite um convite para começar a compartilhar suas finanças.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <Tabs defaultValue="members" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="members">Membros</TabsTrigger>
+            <TabsTrigger value="invites">Convites</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="members" className="space-y-4">
+            {currentGroup ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">
+                    Membros do Grupo: {currentGroup.name}
+                  </h3>
+                  {isGroupAdmin(currentGroup.id) && (
+                    <Dialog open={showInviteMember} onOpenChange={setShowInviteMember}>
+                      <DialogTrigger asChild>
+                        <Button size="sm">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Convidar Membro
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Convidar Membro</DialogTitle>
+                          <DialogDescription>
+                            Gere um código de convite para compartilhar com seu familiar
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="inviteName">Nome do familiar</Label>
+                            <Input
+                              id="inviteName"
+                              type="text"
+                              value={inviteName}
+                              onChange={(e) => setInviteName(e.target.value)}
+                              placeholder="Ex: Maria Silva"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Este nome será usado apenas para identificar o convite
+                            </p>
+                          </div>
+                          <div>
+                            <Label htmlFor="inviteRole">Permissão</Label>
+                            <Select value={inviteRole} onValueChange={setInviteRole}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="member">Membro</SelectItem>
+                                <SelectItem value="admin">Administrador</SelectItem>
+                                <SelectItem value="viewer">Visualizador</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <Button onClick={handleInviteFamilyMember} className="w-full">
+                            <QrCode className="h-4 w-4 mr-2" />
+                            Gerar Código
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  )}
+                </div>
+
+                <div className="grid gap-4">
+                  {members.map((member) => (
+                    <Card key={member.id}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                              {/* @ts-ignore */}
+                              <User className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-medium">
+                                {/* @ts-ignore */}
+                                {member.profile?.nome || 'Usuário'}
+                              </p>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                {getRoleIcon(member.role)}
+                                <span>{getRoleLabel(member.role)}</span>
+                                <span>•</span>
+                                {/* @ts-ignore */}
+                                {getStatusIcon(member.status)}
+                                {/* @ts-ignore */}
+                                <span>{getStatusLabel(member.status)}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {isGroupAdmin(currentGroup.id) && member.role !== 'owner' && (
+                            <div className="flex items-center gap-2">
+                              <Select
+                                value={member.role}
+                                // @ts-ignore
+                                onValueChange={(value) => handleUpdateMemberRole(member.id, value)}
+                              >
+                                <SelectTrigger className="w-32">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="admin">Admin</SelectItem>
+                                  <SelectItem value="member">Membro</SelectItem>
+                                  <SelectItem value="viewer">Visualizador</SelectItem>
+                                </SelectContent>
+                              </Select>
+
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveFamilyMember(member.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* !! NOVA ZONA DE PERIGO ADICIONADA !! */}
+                {isGroupOwner(currentGroup.id) && (
+                  <Card className="border-destructive mt-6">
+                    <CardHeader>
+                      <CardTitle className="text-destructive">Zona de Perigo</CardTitle>
+                      <CardDescription>
+                        A ação abaixo é permanente e não pode ser desfeita.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Dialog open={showDeleteGroup} onOpenChange={setShowDeleteGroup}>
+                        <DialogTrigger asChild>
+                          <Button variant="destructive">
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Apagar Grupo Familiar
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Tem a certeza absoluta?</DialogTitle>
+                            <DialogDescription>
+                              Esta ação não pode ser desfeita. Isto irá apagar permanentemente o grupo
+                              <strong className="px-1">{currentGroup.name}</strong>
+                              e todos os dados financeiros (transações, contas, orçamentos) associados a ele.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="flex justify-end gap-2 mt-4">
+                            <Button variant="outline" onClick={() => setShowDeleteGroup(false)}>
+                              Cancelar
+                            </Button>
+                            <Button variant="destructive" onClick={handleDeleteGroup}>
+                              Eu entendo, apagar o grupo
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+
+                      <Dialog open={showDissolveGroup} onOpenChange={setShowDissolveGroup}>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" className="w-full mt-4 border-orange-500 text-orange-600 hover:bg-orange-50">
+                            <Shield className="h-4 w-4 mr-2" />
+                            Dissolver Grupo (Manter Dados)
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Dissolver Grupo e Manter Dados?</DialogTitle>
+                            <DialogDescription>
+                              Esta ação irá excluir o grupo <strong className="px-1">{currentGroup.name}</strong>,
+                              mas <strong>MANTERÁ</strong> todos os seus dados (transações, contas, orçamentos).
+                              <br /><br />
+                              Os dados voltarão a ser "pessoais" e vinculados apenas a você. Outros membros perderão o acesso.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="flex justify-end gap-2 mt-4">
+                            <Button variant="outline" onClick={() => setShowDissolveGroup(false)}>
+                              Cancelar
+                            </Button>
+                            <Button onClick={handleDissolveFamilyGroup}>
+                              Sim, dissolver e manter dados
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </CardContent>
+                  </Card>
                 )}
-                <Alert>
-                  <AlertTitle>O que isso faz?</AlertTitle>
-                  <AlertDescription className="space-y-2 mt-2">
-                    <p>• Seus dados pessoais serão movidos para o grupo</p>
-                    <p>• Todos os membros do grupo poderão visualizá-los</p>
-                    <p>• Você não perderá nenhum dado</p>
-                  </AlertDescription>
-                </Alert>
+
               </div>
-              <div className="flex justify-end gap-2">
+            ) : (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <Users className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Nenhum grupo selecionado</h3>
+                  <p className="text-muted-foreground text-center">
+                    Ocorreu um erro ao carregar o seu grupo.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="invites" className="space-y-4">
+            {currentGroup ? (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">
+                  Convites do Grupo: {currentGroup.name}
+                </h3>
+
+                <div className="grid gap-4">
+                  {invites.map((invite) => (
+                    <Card key={invite.id}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                              <Mail className="h-5 w-5" />
+                            </div>
+                            <div>
+                              {/* @ts-ignore */}
+                              <p className="font-medium">{invite.email || invite.name}</p>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                {getRoleIcon(invite.role)}
+                                <span>{getRoleLabel(invite.role)}</span>
+                                <span>•</span>
+                                {getStatusIcon(invite.status)}
+                                <span>{getStatusLabel(invite.status)}</span>
+                                <span>•</span>
+                                <span>
+                                  Expira em {new Date(invite.expires_at).toLocaleDateString('pt-BR')}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {isGroupAdmin(currentGroup.id) && invite.status === 'pending' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleCancelInvite(invite.id)}
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+
+                  {invites.length === 0 && (
+                    <Card>
+                      <CardContent className="flex flex-col items-center justify-center py-8">
+                        <Mail className="h-8 w-8 text-muted-foreground mb-2" />
+                        <p className="text-muted-foreground">Nenhum convite pendente</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <Mail className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Nenhum grupo selecionado</h3>
+                  <p className="text-muted-foreground text-center">
+                    Ocorreu um erro ao carregar os convites do grupo.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
+      )}
+
+      {/* Dialog para mostrar código gerado */}
+      <Dialog open={showGeneratedCode} onOpenChange={setShowGeneratedCode}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Convite Criado com Sucesso! 🎉</DialogTitle>
+            <DialogDescription>
+              Compartilhe este código com seu familiar
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Código do Convite</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={generatedCode}
+                  readOnly
+                  className="font-mono text-xl font-bold text-center bg-muted"
+                />
                 <Button
+                  size="icon"
                   variant="outline"
                   onClick={() => {
-                    setShowMigrateData(false);
-                    setPersonalDataCount(null);
-                    setNewlyCreatedGroupId(null);
-                  }}
-                >
-                  Não, obrigado
-                </Button>
-                <Button
-                  onClick={() => {
-                    if (newlyCreatedGroupId) {
-                      migratePersonalData(newlyCreatedGroupId);
+                    try {
+                      // Tentar a API moderna primeiro
+                      // @ts-ignore
+                      navigator.clipboard.writeText(generatedCode);
+                    } catch (err) {
+                      // Fallback para o método antigo (pode não funcionar em todos os browsers)
+                      try {
+                        // @ts-ignore
+                        document.execCommand('copy', true, generatedCode);
+                      } catch (e) {
+                        console.error("Falha ao copiar para o clipboard");
+                      }
                     }
+                    toast({
+                      title: "Copiado!",
+                      description: "Código copiado para a área de transferência",
+                    });
                   }}
                 >
-                  Sim, importar dados
+                  <Copy className="h-4 w-4" />
                 </Button>
               </div>
-            </DialogContent>
-          </Dialog>
-        </main>
-      </div>
-    </div>
+            </div>
+            <Alert>
+              <QrCode className="h-4 w-4" />
+              <AlertTitle>Como compartilhar</AlertTitle>
+              <AlertDescription className="space-y-2 mt-2">
+                <p>• Envie este código via WhatsApp, Telegram ou qualquer outro meio</p>
+                <p>• Seu familiar pode aceitar na página Família ou no bot do Telegram</p>
+                <p>• No Telegram, use: <code className="bg-background px-2 py-1 rounded font-mono">/entrar {generatedCode}</code></p>
+                <p className="text-muted-foreground">Válido por 30 dias</p>
+              </AlertDescription>
+            </Alert>
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={() => setShowGeneratedCode(false)}>
+              Entendi
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para migrar dados pessoais */}
+      <Dialog open={showMigrateData} onOpenChange={setShowMigrateData}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Importar dados pessoais? 📦</DialogTitle>
+            <DialogDescription>
+              Você possui dados pessoais que podem ser importados para o grupo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {personalDataCount && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Encontramos:</p>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  {personalDataCount.transactions > 0 && (
+                    <div className="flex justify-between border rounded p-2">
+                      <span>Transações:</span>
+                      <span className="font-bold">{personalDataCount.transactions}</span>
+                    </div>
+                  )}
+                  {personalDataCount.budgets > 0 && (
+                    <div className="flex justify-between border rounded p-2">
+                      <span>Orçamentos:</span>
+                      <span className="font-bold">{personalDataCount.budgets}</span>
+                    </div>
+                  )}
+                  {personalDataCount.accounts > 0 && (
+                    <div className="flex justify-between border rounded p-2">
+                      <span>Contas:</span>
+                      <span className="font-bold">{personalDataCount.accounts}</span>
+                    </div>
+                  )}
+                  {personalDataCount.categories > 0 && (
+                    <div className="flex justify-between border rounded p-2">
+                      <span>Categorias:</span>
+                      <span className="font-bold">{personalDataCount.categories}</span>
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Total: <strong>{personalDataCount.total}</strong> itens
+                </p>
+              </div>
+            )}
+            <Alert>
+              <AlertTitle>O que isso faz?</AlertTitle>
+              <AlertDescription className="space-y-2 mt-2">
+                <p>• Seus dados pessoais serão movidos para o grupo</p>
+                <p>• Todos os membros do grupo poderão visualizá-los</p>
+                <p>• Você não perderá nenhum dado</p>
+              </AlertDescription>
+            </Alert>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowMigrateData(false);
+                setPersonalDataCount(null);
+                setNewlyCreatedGroupId(null);
+              }}
+            >
+              Não, obrigado
+            </Button>
+            <Button
+              onClick={() => {
+                if (newlyCreatedGroupId) {
+                  migratePersonalData(newlyCreatedGroupId);
+                }
+              }}
+            >
+              Sim, importar dados
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

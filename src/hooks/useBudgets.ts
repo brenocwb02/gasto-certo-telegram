@@ -35,6 +35,9 @@ export function useBudgets(month: Date, groupId?: string) {
             setBudgets(budgetsData || []);
         } catch (err) {
             console.error("Erro ao carregar orçamentos:", err);
+            if (err && typeof err === 'object') {
+                console.error("Detalhes do erro:", JSON.stringify(err, null, 2));
+            }
             setError(err instanceof Error ? err.message : 'Erro ao carregar orçamentos');
         } finally {
             setLoading(false);
