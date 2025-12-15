@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -40,7 +40,6 @@ const CustomTooltip = ({ active, payload }: any) => {
 
 const Reports = () => {
   const { currentGroup } = useFamily();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState("month");
   const { transactions, loading } = useTransactions(currentGroup?.id);
   const { categories } = useCategories(currentGroup?.id);
@@ -121,11 +120,7 @@ const Reports = () => {
       granularity = 'month';
     }
 
-    // Initialize map with all intervals filled with 0
-    const current = new Date(startDate);
-    while (current <= endDate && current <= now) { // Don't project into future beyond today unless needed
-      // Actually showing full month/year context is better even if empty
-    }
+
 
     // Simplified: Just fill from startDate to now (or end of period)
     const loopDate = new Date(startDate);
@@ -246,8 +241,32 @@ const Reports = () => {
       .sort((a, b) => b.value - a.value);
   };
 
-  const categoryData = getCategoryData();
-  const totalCategoryExpenses = categoryData.reduce((acc, item) => acc + item.value, 0);
+  // Memoizar cálculos pesados para evitar re-renderizações desnecessárias
+  const filteredTransactions = useMemo(() => {
+    if (!transactions) return [];
+    const now = new Date();
+    let startDate;
+    switch (selectedPeriod) {
+      case "week":
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case "month":
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      case "quarter":
+        startDate = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+        break;
+      case "year":
+        startDate = new Date(now.getFullYear(), 0, 1);
+        break;
+      default:
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+    return transactions.filter(t => new Date(t.data_transacao) >= startDate);
+  }, [transactions, selectedPeriod]);
+
+  const categoryData = useMemo(() => getCategoryData(), [filteredTransactions, categories]);
+  const totalCategoryExpenses = useMemo(() => categoryData.reduce((acc, item) => acc + item.value, 0), [categoryData]);
 
   // Calculate summary statistics
   const getSummaryStats = () => {
@@ -267,8 +286,8 @@ const Reports = () => {
     return { receitas, despesas, saldo, totalTransactions };
   };
 
-  const monthlyData = getMonthlyData();
-  const summaryStats = getSummaryStats();
+  const monthlyData = useMemo(() => getMonthlyData(), [filteredTransactions, selectedPeriod]);
+  const summaryStats = useMemo(() => getSummaryStats(), [filteredTransactions]);
 
   const colors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#8dd1e1', '#d084d0'];
 
