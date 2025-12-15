@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Link, Copy, Shield, Bot, User } from "lucide-react";
+import { Link, Copy, Shield, Bot, User, HelpCircle, BookOpen, MessageCircle } from "lucide-react";
 import { useProfile } from "@/hooks/useSupabaseData";
 import { useLicense } from "@/hooks/useLicense";
 import { useToast } from "@/components/ui/use-toast";
@@ -14,11 +15,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { NotificationSettings } from "@/components/NotificationSettings";
 
 const Settings = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const navigate = useNavigate();
   const { profile, loading: profileLoading } = useProfile();
   const { license, loading: licenseLoading } = useLicense();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, updateOnboardingCompleted } = useAuth();
 
   useEffect(() => {
     document.title = "Configurações | Boas Contas";
@@ -305,6 +306,51 @@ const Settings = () => {
 
         {/* Notification Settings */}
         <NotificationSettings />
+
+        {/* Help & Support */}
+        <Card className="financial-card shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <div className="p-2 rounded-lg bg-amber-500/10">
+                <HelpCircle className="h-5 w-5 text-amber-500" />
+              </div>
+              Ajuda & Suporte
+            </CardTitle>
+            <CardDescription className="text-base">
+              Recursos para ajudar você a usar o Boas Contas
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Button
+                variant="outline"
+                className="h-auto py-4 flex flex-col items-center gap-2"
+                onClick={async () => {
+                  await updateOnboardingCompleted(false);
+                  navigate('/onboarding');
+                }}
+              >
+                <BookOpen className="h-5 w-5 text-primary" />
+                <div className="text-center">
+                  <p className="font-semibold">Rever Tutorial</p>
+                  <p className="text-xs text-muted-foreground">Ver as dicas novamente</p>
+                </div>
+              </Button>
+
+              <Button
+                variant="outline"
+                className="h-auto py-4 flex flex-col items-center gap-2"
+                onClick={() => navigate('/support')}
+              >
+                <MessageCircle className="h-5 w-5 text-primary" />
+                <div className="text-center">
+                  <p className="font-semibold">Suporte</p>
+                  <p className="text-xs text-muted-foreground">Precisa de ajuda?</p>
+                </div>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </>
   );
