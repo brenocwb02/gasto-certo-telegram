@@ -97,9 +97,9 @@ export default function Onboarding() {
               </div>
             </Card>
           </div>
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <h4 className="font-semibold mb-2">💡 Dica:</h4>
-            <p className="text-sm">
+          <div className="bg-blue-500/10 dark:bg-blue-500/20 p-4 rounded-lg border border-blue-200/50 dark:border-blue-500/30">
+            <h4 className="font-semibold mb-2 text-blue-700 dark:text-blue-300">💡 Dica:</h4>
+            <p className="text-sm text-blue-900 dark:text-blue-100">
               Registre suas transações naturalmente: "Gastei R$ 50 no mercado" ou "Recebi R$ 1000 de salário"
             </p>
           </div>
@@ -216,19 +216,19 @@ export default function Onboarding() {
             </div>
           )}
 
-          <div className="bg-gray-50 p-4 rounded-lg font-mono text-sm space-y-2">
-            <div className="text-green-600">"Gastei R$ 50 no mercado"</div>
-            <div className="text-blue-600">"Recebi R$ 1000 de salário"</div>
-            <div className="text-purple-600">"Transferi R$ 200 da conta para carteira"</div>
+          <div className="bg-muted/50 p-4 rounded-lg font-mono text-sm space-y-2 border border-border">
+            <div className="text-green-600 dark:text-green-400">"Gastei R$ 50 no mercado"</div>
+            <div className="text-blue-600 dark:text-blue-400">"Recebi R$ 1000 de salário"</div>
+            <div className="text-purple-600 dark:text-purple-400">"Transferi R$ 200 da conta para carteira"</div>
           </div>
 
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <h4 className="font-semibold mb-2">🤖 Comandos Úteis:</h4>
-            <ul className="text-sm space-y-1">
-              <li>• <code>/saldo</code> - Ver saldo das contas</li>
-              <li>• <code>/extrato</code> - Últimas transações</li>
-              <li>• <code>/metas</code> - Progresso das metas</li>
-              <li>• <code>/perguntar</code> - Faça perguntas sobre seus gastos</li>
+          <div className="bg-blue-500/10 dark:bg-blue-500/20 p-4 rounded-lg border border-blue-200/50 dark:border-blue-500/30">
+            <h4 className="font-semibold mb-2 text-blue-700 dark:text-blue-300">🤖 Comandos Úteis:</h4>
+            <ul className="text-sm space-y-1 text-blue-900 dark:text-blue-100">
+              <li>• <code className="bg-blue-200/50 dark:bg-blue-800/50 px-1 rounded">/saldo</code> - Ver saldo das contas</li>
+              <li>• <code className="bg-blue-200/50 dark:bg-blue-800/50 px-1 rounded">/extrato</code> - Últimas transações</li>
+              <li>• <code className="bg-blue-200/50 dark:bg-blue-800/50 px-1 rounded">/metas</code> - Progresso das metas</li>
+              <li>• <code className="bg-blue-200/50 dark:bg-blue-800/50 px-1 rounded">/perguntar</code> - Faça perguntas sobre seus gastos</li>
             </ul>
           </div>
         </div>
@@ -268,9 +268,9 @@ export default function Onboarding() {
             </Card>
           </div>
 
-          <div className="bg-purple-50 p-4 rounded-lg">
-            <h4 className="font-semibold mb-2">🎯 IA Integrada:</h4>
-            <p className="text-sm">
+          <div className="bg-purple-500/10 dark:bg-purple-500/20 p-4 rounded-lg border border-purple-200/50 dark:border-purple-500/30">
+            <h4 className="font-semibold mb-2 text-purple-700 dark:text-purple-300">🎯 IA Integrada:</h4>
+            <p className="text-sm text-purple-900 dark:text-purple-100">
               Faça perguntas como "Quanto gastei com alimentação este mês?" e receba respostas inteligentes!
             </p>
           </div>
