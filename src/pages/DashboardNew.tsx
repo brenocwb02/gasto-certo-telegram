@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { WelcomeWizard } from "@/components/onboarding/WelcomeWizard";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { LimitsBanner } from "@/components/dashboard/LimitsBanner";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
@@ -333,6 +334,7 @@ const DashboardNew = () => {
 
                 {/* Right Sidebar - 1/3 width */}
                 <div className="lg:col-span-1 space-y-6">
+
                     {/* Health + Goals Combined */}
                     <HealthAndGoalsSection />
 
@@ -343,6 +345,9 @@ const DashboardNew = () => {
                     <BudgetSummary month={currentMonth} groupId={currentGroup?.id} />
                 </div>
             </div>
+
+            {/* Wizard de Boas-vindas para novos usuários */}
+            <WelcomeWizard />
         </div>
     );
 };

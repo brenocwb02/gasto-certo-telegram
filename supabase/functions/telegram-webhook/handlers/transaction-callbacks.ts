@@ -177,7 +177,21 @@ export async function handleConfirmTransactionCallback(
         delete dbData.conta_nome; // Garantia
 
         const { error: transactionError } = await supabase.from('transactions').insert(dbData);
-        if (transactionError) throw transactionError;
+
+        if (transactionError) {
+            // Check for Custom Plan Limit Error (P0001)
+            if (transactionError.code === 'P0001') {
+                const upgradeMsg = `🔒 *Limite do Plano Gratuito Atingido*\n\n` +
+                    `Você já atingiu o limite de **30 transações mensais**.\n\n` +
+                    `Para continuar registrando, faça um upgrade para o **Plano Premium**! 🚀\n\n` +
+                    `/planos - Ver opções`;
+                await editTelegramMessage(chatId, messageId, upgradeMsg);
+                // Clear session to avoid stuck state
+                await supabase.from('telegram_sessions').delete().eq('id', sessionId);
+                return;
+            }
+            throw transactionError;
+        }
 
         // Buscar nomes para montar mensagem bonita
         const { data: catData } = await supabase.from('categories').select('nome').eq('id', transactionData.categoria_id).single();

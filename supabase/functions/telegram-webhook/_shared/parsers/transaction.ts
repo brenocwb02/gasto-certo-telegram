@@ -181,14 +181,26 @@ export function sugerirCategoria(texto: string): string | null {
 }
 
 /**
+ * Remove acentos de uma string (NFD normalization)
+ */
+export function removeAcentos(str: string): string {
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+/**
  * Helper: Verifica se keyword é palavra completa no texto (não substring de outra palavra)
+ * Robusto para acentos (Café == Cafe)
  */
 function matchPalavraCompleta(texto: string, keyword: string): boolean {
+    const textoNorm = removeAcentos(texto.toLowerCase());
+    const keywordNorm = removeAcentos(keyword.toLowerCase());
+
     // Escape special regex characters in keyword
-    const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const escaped = keywordNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     // Use word boundary (\b) to match complete words only
     const regex = new RegExp(`\\b${escaped}\\b`, 'i');
-    return regex.test(texto);
+
+    return regex.test(textoNorm);
 }
 
 /**
@@ -309,8 +321,8 @@ export function extrairDescricao(texto: string, contaEncontrada: string | null):
     // Remover "cartão", "pix", etc
     descricao = descricao.replace(/\b(cartão|cartao|pix|débito|debito|crédito|credito|conta)\b/gi, '');
 
-    // Limpar preposições restantes no final
-    descricao = descricao.replace(/\s+(com|no|na|em|de|do|da|pelo|pela)\s*$/gi, '');
+    // Limpar preposições restantes no final (com/sem artigos)
+    descricao = descricao.replace(/\s+(com|no|na|em|de|do|da|pelo|pela|para|pro|pra)(?:\s+(o|a|os|as|um|uma|uns|umas))?\s*$/gi, '');
 
     // Limpar espaços extras
     descricao = descricao.replace(/\s+/g, ' ').trim();

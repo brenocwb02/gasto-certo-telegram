@@ -83,6 +83,29 @@ export default function Categories() {
     }
   };
 
+  const handleDeleteAll = async () => {
+    if (!user) return;
+
+    try {
+      const { error } = await (supabase as any).rpc('delete_all_categories');
+
+      if (error) throw error;
+
+      toast({
+        title: "Limpeza concluída! 🧹",
+        description: "Todas as categorias foram removidas.",
+      });
+      refetchCategories();
+    } catch (error) {
+      console.error('Erro ao excluir todas:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir categorias.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSeedCategories = async () => {
     if (!user) return;
 
@@ -233,48 +256,78 @@ export default function Categories() {
             {currentGroup ? `Visualizando: ${currentGroup.name}` : 'Suas categorias pessoais'}
           </p>
         </div>
-        <Dialog open={formOpen} onOpenChange={setFormOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setEditingCategory(null)}>
-              {isCategoryLimitReached ? <Lock className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
-              Nova Categoria
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {editingCategory ? 'Editar Categoria' : 'Nova Categoria'}
-              </DialogTitle>
-            </DialogHeader>
 
-            {!editingCategory && isCategoryLimitReached ? (
-              <div className="space-y-4 py-4">
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-4 rounded-lg flex gap-3">
-                  <Lock className="h-5 w-5 text-yellow-600 dark:text-yellow-500 shrink-0" />
-                  <div>
-                    <h4 className="font-medium text-yellow-900 dark:text-yellow-400">Limite de Categorias Atingido</h4>
-                    <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                      O plano Gratuito permite apenas 10 categorias. Faça upgrade para criar categorias ilimitadas.
-                    </p>
+        <div className="flex gap-2">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Excluir Todas
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir TUDO?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta ação excluirá <b>todas as suas categorias</b>.
+                  <br /><br />
+                  Suas transações não serão excluídas, mas ficarão "Sem Categoria".
+                  <br />
+                  Isso é útil se você quiser recomeçar ou usar o padrão do sistema.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteAll} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Excluir tudo
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          <Dialog open={formOpen} onOpenChange={setFormOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => setEditingCategory(null)}>
+                {isCategoryLimitReached ? <Lock className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                Nova Categoria
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>
+                  {editingCategory ? 'Editar Categoria' : 'Nova Categoria'}
+                </DialogTitle>
+              </DialogHeader>
+
+              {!editingCategory && isCategoryLimitReached ? (
+                <div className="space-y-4 py-4">
+                  <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-4 rounded-lg flex gap-3">
+                    <Lock className="h-5 w-5 text-yellow-600 dark:text-yellow-500 shrink-0" />
+                    <div>
+                      <h4 className="font-medium text-yellow-900 dark:text-yellow-400">Limite de Categorias Atingido</h4>
+                      <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                        O plano Gratuito permite apenas 10 categorias. Faça upgrade para criar categorias ilimitadas.
+                      </p>
+                    </div>
                   </div>
+                  <Button className="w-full" asChild>
+                    <a href="/planos">Ver Planos Premium</a>
+                  </Button>
                 </div>
-                <Button className="w-full" asChild>
-                  <a href="/planos">Ver Planos Premium</a>
-                </Button>
-              </div>
-            ) : (
-              <CategoryForm
-                category={editingCategory}
-                parentCategories={getParentCategories()}
-                onSuccess={() => {
-                  setFormOpen(false);
-                  setEditingCategory(null);
-                  refetchCategories(); // Atualiza a lista após salvar
-                }}
-              />
-            )}
-          </DialogContent>
-        </Dialog>
+              ) : (
+                <CategoryForm
+                  category={editingCategory}
+                  parentCategories={getParentCategories()}
+                  onSuccess={() => {
+                    setFormOpen(false);
+                    setEditingCategory(null);
+                    refetchCategories(); // Atualiza a lista após salvar
+                  }}
+                />
+              )}
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {loading ? (
