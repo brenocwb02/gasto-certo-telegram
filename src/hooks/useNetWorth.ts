@@ -25,7 +25,20 @@ export const useNetWorth = () => {
       const { data: response, error: functionError } = await supabase.functions.invoke('calculate-net-worth');
 
       if (functionError) throw functionError;
-      setData(response);
+
+      // Transform raw response to match NetWorthData interface
+      const transformedData: NetWorthData = {
+        netWorth: response.netWorth || 0,
+        breakdown: {
+          cash: response.totalAssets || 0, // Simplificação: assume totalAssets como cash por enquanto
+          investments: response.assetsByType?.investimentos || 0,
+          debts: response.totalLiabilities || 0
+        },
+        monthlyChange: 0, // Backend ainda não retorna histórico
+        calculatedAt: new Date().toISOString()
+      };
+
+      setData(transformedData);
       setError(null);
     } catch (err: any) {
       setError(err.message);

@@ -11,7 +11,8 @@ import { useFamily } from "@/hooks/useFamily";
 
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
-    const data = payload[0].payload;
+    const data = payload[0]?.payload;
+    if (!data) return null;
     return (
       <div className="bg-popover border text-popover-foreground rounded-lg p-3 shadow-xl max-w-[250px] z-50">
         <p className="font-bold text-sm mb-1">{data.name}</p>
@@ -60,11 +61,12 @@ const Reports = () => {
     link.setAttribute("href", window.location.origin + "/reports");
   }, []);
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number | undefined | null) => {
+    const safeValue = value || 0;
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
-    }).format(value);
+    }).format(safeValue);
   };
 
   // Filter transactions by period
