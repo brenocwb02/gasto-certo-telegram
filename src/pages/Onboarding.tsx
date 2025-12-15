@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
+import { TelegramQRCode } from "@/components/TelegramQRCode";
 
 interface OnboardingStep {
   id: number;
@@ -207,6 +208,13 @@ export default function Onboarding() {
               Registre transações diretamente pelo bot do Telegram
             </p>
           </div>
+
+          {/* QR Code para vincular Telegram */}
+          {profile?.id && (
+            <div className="flex flex-col items-center py-4">
+              <TelegramQRCode userId={profile.id} size={150} />
+            </div>
+          )}
 
           <div className="bg-gray-50 p-4 rounded-lg font-mono text-sm space-y-2">
             <div className="text-green-600">"Gastei R$ 50 no mercado"</div>
