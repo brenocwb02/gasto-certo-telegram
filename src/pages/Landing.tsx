@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -39,72 +40,69 @@ const Landing = () => {
     color: "text-orange-500"
   }];
 
+  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
+
   const plans = [{
     name: "Gratuito",
-    price: "R$ 0",
+    priceMonthly: "R$ 0",
+    priceYearly: "R$ 0",
     period: "/mês",
-    description: "Para testar e organizar suas finanças pessoais",
+    description: "7 dias completos, depois limite básico",
     icon: Star,
     features: [
-      "75 transações/mês (100 no 1º mês)",
-      "2 contas",
-      "10 categorias",
-      "Telegram (Texto + Áudio)",
-      "20 créditos de IA/mês"
+      "🎁 7 dias: Tudo ilimitado!",
+      "Após trial: 30 transações/mês",
+      "1 conta",
+      "5 categorias",
+      "Telegram (Texto)",
+      "2 usos de IA/mês"
     ],
-    buttonText: "Começar Grátis",
+    buttonText: "Testar 7 Dias Grátis",
     popular: false,
-    highlight: false
+    highlight: false,
+    trial: true
   }, {
-    name: "Individual",
-    price: "R$ 14,90",
+    name: "Pessoal",
+    priceMonthly: "R$ 14,90",
+    priceYearly: "R$ 11,92",
     period: "/mês",
+    yearlyTotal: "R$ 143/ano",
+    yearlySavings: "2 meses grátis",
     description: "Para quem quer controle total sem limites",
     icon: User,
     features: [
-      "Tudo ilimitado",
-      "IA ilimitada",
+      "Transações ilimitadas",
+      "Contas ilimitadas",
+      "Categorias ilimitadas",
+      "Texto + Áudio + IA ilimitada",
       "Relatórios avançados",
-      "Exportação de dados",
+      "Exportação (CSV/PDF)",
       "Suporte prioritário"
     ],
-    buttonText: "Escolher Individual",
+    buttonText: "Assinar Pessoal",
     popular: false,
     highlight: false
   }, {
     name: "Família",
-    price: "R$ 24,90",
+    priceMonthly: "R$ 24,90",
+    priceYearly: "R$ 19,92",
     period: "/mês",
+    yearlyTotal: "R$ 239/ano",
+    yearlySavings: "2 meses grátis",
     description: "A melhor opção para casais e famílias",
     icon: Users,
     features: [
-      "Tudo do Individual, mais:",
-      "Até 5 usuários",
-      "Gestão de permissões (Roles)",
-      "Contas compartilhadas",
-      "Orçamento familiar",
-      "Notificações em grupo"
+      "Tudo do Pessoal, mais:",
+      "Até 6 membros na família",
+      "Grupo familiar no Telegram",
+      "Orçamento compartilhado",
+      "Visão de gastos por membro",
+      "Permissões personalizadas",
+      "Metas compartilhadas"
     ],
-    buttonText: "Escolher Família",
+    buttonText: "Assinar Família",
     popular: true,
     highlight: true
-  }, {
-    name: "Família Plus",
-    price: "R$ 39,90",
-    period: "/mês",
-    description: "Para grandes famílias e power users",
-    icon: Crown,
-    features: [
-      "Tudo do Família, mais:",
-      "Até 10 usuários",
-      "Suporte VIP (WhatsApp)",
-      "Consultoria mensal (30min)",
-      "API de integração",
-      "Onboarding personalizado"
-    ],
-    buttonText: "Escolher Família Plus",
-    popular: false,
-    highlight: false
   }];
 
   return <div className="min-h-screen bg-background">
@@ -158,10 +156,15 @@ const Landing = () => {
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
           <NavLink to="/auth">
             <Button size="lg" className="px-8 h-12 text-lg shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all">
-              Começar Grátis Agora
+              🎁 Testar 7 Dias Grátis
             </Button>
           </NavLink>
-          <Button variant="outline" size="lg" className="h-12 px-8">
+          <Button
+            variant="outline"
+            size="lg"
+            className="h-12 px-8"
+            onClick={() => document.getElementById('funcionalidades')?.scrollIntoView({ behavior: 'smooth' })}
+          >
             Ver Como Funciona
           </Button>
         </div>
@@ -318,18 +321,38 @@ const Landing = () => {
     {/* Pricing Section */}
     <section id="planos" className="py-20">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-16">
+        <div className="text-center mb-12">
           <Badge className="mb-4" variant="secondary">Planos Flexíveis</Badge>
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
             Escolha o plano ideal para <span className="text-primary">sua fase</span>
           </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Comece gratuitamente e evolua conforme suas necessidades.
-            Sem contratos de fidelidade.
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
+            Comece com 7 dias gratuitos completos. Sem contratos de fidelidade.
           </p>
+
+          {/* Billing Toggle */}
+          <div className="flex items-center justify-center gap-4 mb-8">
+            <span className={`text-sm font-medium ${billingPeriod === 'monthly' ? 'text-foreground' : 'text-muted-foreground'}`}>
+              Mensal
+            </span>
+            <button
+              onClick={() => setBillingPeriod(billingPeriod === 'monthly' ? 'yearly' : 'monthly')}
+              className={`relative w-14 h-7 rounded-full transition-colors ${billingPeriod === 'yearly' ? 'bg-primary' : 'bg-muted'}`}
+            >
+              <span className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${billingPeriod === 'yearly' ? 'translate-x-8' : 'translate-x-1'}`} />
+            </button>
+            <span className={`text-sm font-medium ${billingPeriod === 'yearly' ? 'text-foreground' : 'text-muted-foreground'}`}>
+              Anual
+            </span>
+            {billingPeriod === 'yearly' && (
+              <Badge className="bg-green-500/10 text-green-600 border-green-200">
+                2 meses grátis
+              </Badge>
+            )}
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
           {plans.map((plan, index) => (
             <Card key={index} className={`relative flex flex-col ${plan.highlight ? 'border-primary shadow-xl scale-105 z-10' : 'border-border shadow-sm hover:shadow-md'}`}>
               {plan.popular && (
@@ -348,8 +371,13 @@ const Landing = () => {
               </CardHeader>
               <CardContent className="flex-1 flex flex-col">
                 <div className="text-center mb-6">
-                  <span className="text-3xl font-bold">{plan.price}</span>
+                  <span className="text-3xl font-bold">
+                    {billingPeriod === 'yearly' ? plan.priceYearly : plan.priceMonthly}
+                  </span>
                   <span className="text-muted-foreground">{plan.period}</span>
+                  {billingPeriod === 'yearly' && plan.yearlyTotal && (
+                    <p className="text-xs text-muted-foreground mt-1">{plan.yearlyTotal}</p>
+                  )}
                 </div>
 
                 <ul className="space-y-3 mb-8 flex-1">
@@ -437,7 +465,7 @@ const Landing = () => {
         </div>
 
         <div className="border-t pt-8 text-center text-sm text-muted-foreground">
-          <p>© 2024 Zaq - Boas Contas. Todos os direitos reservados.</p>
+          <p>© 2025 Zaq - Boas Contas. Todos os direitos reservados.</p>
           <p className="mt-2 text-xs">
             Feito com <Heart className="h-3 w-3 inline text-red-500 mx-1" /> para famílias que querem crescer juntas.
           </p>
