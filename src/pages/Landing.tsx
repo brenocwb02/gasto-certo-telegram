@@ -125,6 +125,9 @@ const Landing = () => {
           <a href="#planos" className="text-sm hover:text-primary transition-colors">
             Planos
           </a>
+          <a href="#faq" className="text-sm hover:text-primary transition-colors">
+            FAQ
+          </a>
           <NavLink to="/auth">
             <Button variant="ghost">Entrar</Button>
           </NavLink>
@@ -419,6 +422,65 @@ const Landing = () => {
               <span>Garantia de 14 dias</span>
             </div>
           </div>
+        </div>
+      </div>
+    </section>
+
+    {/* FAQ Section */}
+    <section id="faq" className="py-20 bg-muted/30">
+      <div className="container mx-auto px-4 max-w-3xl">
+        <div className="text-center mb-12">
+          <Badge className="mb-4" variant="secondary">Dúvidas?</Badge>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            Perguntas <span className="text-primary">Frequentes</span>
+          </h2>
+        </div>
+
+        <div className="space-y-4">
+          {[
+            {
+              q: "Preciso de cartão de crédito para testar?",
+              a: "Não! Os 7 dias de trial são 100% gratuitos, sem necessidade de cartão. Você só adiciona forma de pagamento se decidir continuar após o trial."
+            },
+            {
+              q: "Como funciona o controle pelo Telegram?",
+              a: "Você vincula sua conta ao bot @BoasContasBot e envia mensagens naturais como 'Gastei R$ 50 no mercado'. Nossa IA entende automaticamente o valor, categoria e conta, registrando tudo em segundos."
+            },
+            {
+              q: "O que acontece após os 7 dias grátis?",
+              a: "Após o trial, você continua usando gratuitamente com limites básicos: 30 transações/mês, 1 conta e 5 categorias. Para recursos ilimitados, escolha um plano pago."
+            },
+            {
+              q: "Quantas pessoas podem usar o plano Família?",
+              a: "O plano Família permite até 6 membros, cada um com seu próprio acesso ao Telegram. O proprietário define permissões de quem pode ver ou editar transações."
+            },
+            {
+              q: "Posso enviar áudios para registrar gastos?",
+              a: "Sim! Nos planos Pessoal e Família, você pode enviar mensagens de voz. A IA transcreve e registra automaticamente. No plano gratuito (após trial), apenas texto."
+            },
+            {
+              q: "Meus dados financeiros estão seguros?",
+              a: "Absolutamente! Usamos Supabase com criptografia em trânsito e em repouso. Suas credenciais nunca são armazenadas, e você pode exportar ou deletar seus dados a qualquer momento."
+            },
+            {
+              q: "Posso cancelar a qualquer momento?",
+              a: "Sim! Sem fidelidade, sem burocracia. Cancele direto pelo app e seus dados ficam disponíveis no plano gratuito. Também oferecemos garantia de 14 dias com reembolso total."
+            },
+            {
+              q: "O Zaq funciona offline?",
+              a: "O Zaq precisa de internet para sincronizar, mas você pode usar o Telegram offline e as mensagens serão processadas quando reconectar."
+            }
+          ].map((faq, i) => (
+            <details key={i} className="group bg-background rounded-lg border shadow-sm">
+              <summary className="flex items-center justify-between cursor-pointer p-4 font-medium">
+                {faq.q}
+                <span className="ml-2 text-muted-foreground group-open:rotate-180 transition-transform">▼</span>
+              </summary>
+              <div className="px-4 pb-4 text-muted-foreground text-sm">
+                {faq.a}
+              </div>
+            </details>
+          ))}
         </div>
       </div>
     </section>
