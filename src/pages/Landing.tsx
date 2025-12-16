@@ -109,14 +109,9 @@ const Landing = () => {
     {/* Header */}
     <header className="border-b sticky top-0 bg-background/95 backdrop-blur z-50">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-            <Heart className="h-6 w-6 text-primary-foreground" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-primary">Zaq</h1>
-            <p className="text-xs text-muted-foreground">Boas Contas</p>
-          </div>
+        <div className="flex items-center gap-2">
+          <img src="/logo-icon.png" alt="Boas Contas" className="h-10 w-10" />
+          <span className="text-xl font-bold text-[#1a365d]">Boas Contas</span>
         </div>
         <nav className="hidden md:flex items-center gap-6">
           <a href="#funcionalidades" className="text-sm hover:text-primary transition-colors">
@@ -491,10 +486,8 @@ const Landing = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <Heart className="h-5 w-5 text-primary-foreground" />
-              </div>
-              <span className="font-bold text-xl">Zaq</span>
+              <img src="/logo-icon.png" alt="Boas Contas" className="h-8 w-8" />
+              <span className="font-bold text-xl">Boas Contas</span>
             </div>
             <p className="text-sm text-muted-foreground">
               Transformando a relação das famílias com o dinheiro através de organização e propósito.

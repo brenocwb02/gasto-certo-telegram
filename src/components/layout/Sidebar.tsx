@@ -110,15 +110,15 @@ export function Sidebar({ className, onClose, isExpanded = false, onToggle }: Si
           to="/"
           onClick={handleLinkClick}
           className={cn(
-            "group flex items-center justify-center gap-2 rounded-full bg-primary text-primary-foreground font-semibold transition-all",
-            isExpanded ? "h-8 px-3" : "h-9 w-9 md:h-8 md:w-8"
+            "group flex items-center justify-center gap-2 rounded-lg transition-all",
+            isExpanded ? "h-10 px-2" : "h-10 w-10"
           )}
         >
-          <Home className="h-4 w-4 transition-all group-hover:scale-110 flex-shrink-0" />
+          <img src="/logo-icon.png" alt="Boas Contas" className="h-8 w-8 flex-shrink-0" />
           <span
             className={cn(
-              "whitespace-nowrap transition-all duration-300 overflow-hidden",
-              isExpanded ? "opacity-100 w-auto ml-2" : "opacity-0 w-0"
+              "whitespace-nowrap font-bold text-[#1a365d] transition-all duration-300 overflow-hidden",
+              isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0"
             )}
           >
             Boas Contas
