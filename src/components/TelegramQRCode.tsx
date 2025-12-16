@@ -12,7 +12,7 @@ interface TelegramQRCodeProps {
  */
 export function TelegramQRCode({
     userId,
-    botUsername = 'ZaqBot',
+    botUsername = 'BoasContasBot',
     size = 200
 }: TelegramQRCodeProps) {
     // Generate a base64 encoded user ID for the start parameter
@@ -51,7 +51,7 @@ export function TelegramQRCode({
 /**
  * Generates the deep link URL for Telegram bot
  */
-export function generateTelegramDeepLink(userId: string, botUsername = 'ZaqBot'): string {
+export function generateTelegramDeepLink(userId: string, botUsername = 'BoasContasBot'): string {
     const startCode = btoa(userId).replace(/=/g, '').slice(0, 20);
     return `https://t.me/${botUsername}?start=${startCode}`;
 }
