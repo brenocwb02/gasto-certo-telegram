@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, DollarSign } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { BackButton } from '@/components/ui/back-button';
 
@@ -155,11 +155,9 @@ export default function Auth() {
       <div className="w-full max-w-md space-y-6">
         {/* Logo */}
         <div className="text-center">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <h1 className="text-2xl font-bold text-foreground">Boas Contas</h1>
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <img src="/logo-icon.png" alt="Boas Contas" className="w-12 h-12" />
+            <h1 className="text-2xl font-bold text-[#1a365d]">Boas Contas</h1>
           </div>
           <p className="text-muted-foreground">Seu controle financeiro pessoal</p>
         </div>
