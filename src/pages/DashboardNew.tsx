@@ -32,6 +32,8 @@ import {
     Sparkles
 } from "lucide-react";
 import { useLimits } from "@/hooks/useLimits";
+import { useCashFlowProjection } from "@/hooks/useCashFlowProjection";
+import { Calendar } from "lucide-react";
 
 const DashboardNew = () => {
     const { currentGroup } = useFamily();
@@ -41,6 +43,7 @@ const DashboardNew = () => {
     const { goals, loading: goalsLoading } = useGoals(currentGroup?.id);
     const { financialProfile, hasCompletedQuiz, getFinancialHealthLevel } = useFinancialProfile();
     const { isTransactionLimitReached } = useLimits();
+    const cashFlow = useCashFlowProjection();
     const currentMonth = new Date();
 
     // Insights IA Section (Clean Version)
@@ -337,6 +340,54 @@ const DashboardNew = () => {
 
                     {/* Health + Goals Combined */}
                     <HealthAndGoalsSection />
+
+                    {/* Cash Flow Projection */}
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="flex items-center gap-2 text-lg">
+                                <Calendar className="h-5 w-5 text-blue-500" />
+                                Projeção Fim do Mês
+                            </CardTitle>
+                            <CardDescription>
+                                Baseado em recorrências ({cashFlow.daysUntilEndOfMonth} dias restantes)
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            {cashFlow.loading ? (
+                                <div className="space-y-2">
+                                    <Skeleton className="h-8 w-full" />
+                                    <Skeleton className="h-4 w-3/4" />
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm text-muted-foreground">Saldo Atual</span>
+                                        <span className="font-medium">
+                                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cashFlow.currentBalance)}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-green-600">
+                                        <span className="text-sm">+ Receitas previstas</span>
+                                        <span className="font-medium">
+                                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cashFlow.projectedIncome)}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-red-500">
+                                        <span className="text-sm">- Despesas previstas</span>
+                                        <span className="font-medium">
+                                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cashFlow.projectedExpenses)}
+                                        </span>
+                                    </div>
+                                    <div className="border-t pt-3 flex justify-between items-center">
+                                        <span className="font-semibold">Saldo Projetado</span>
+                                        <span className={`text-xl font-bold ${cashFlow.projectedBalance >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cashFlow.projectedBalance)}
+                                        </span>
+                                    </div>
+                                </>
+                            )}
+                        </CardContent>
+                    </Card>
 
                     {/* Quick Actions */}
                     <QuickActions />
