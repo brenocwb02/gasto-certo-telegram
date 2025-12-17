@@ -3,7 +3,8 @@ import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
-import { Calendar, TrendingUp, TrendingDown, DollarSign, Activity } from "lucide-react";
+import { Calendar, TrendingUp, TrendingDown, DollarSign, Activity, ArrowUpRight, ArrowDownRight, PiggyBank, AlertTriangle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useTransactions, useCategories } from "@/hooks/useSupabaseData";
 
 import { useFamily } from "@/hooks/useFamily";
@@ -268,7 +269,7 @@ const Reports = () => {
   const categoryData = useMemo(() => getCategoryData(), [filteredTransactions, categories]);
   const totalCategoryExpenses = useMemo(() => categoryData.reduce((acc, item) => acc + item.value, 0), [categoryData]);
 
-  // Calculate summary statistics
+  // Calculate summary statistics with comparison to previous period
   const getSummaryStats = () => {
     const filteredTransactions = getFilteredTransactions();
 
@@ -283,7 +284,56 @@ const Reports = () => {
     const saldo = receitas - despesas;
     const totalTransactions = filteredTransactions.length;
 
-    return { receitas, despesas, saldo, totalTransactions };
+    // Calculate savings rate
+    const taxaPoupanca = receitas > 0 ? ((saldo / receitas) * 100) : 0;
+
+    // Get previous period for comparison
+    const now = new Date();
+    let prevStartDate: Date;
+    let prevEndDate: Date;
+
+    if (selectedPeriod === 'month') {
+      prevStartDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      prevEndDate = new Date(now.getFullYear(), now.getMonth(), 0);
+    } else if (selectedPeriod === 'quarter') {
+      prevStartDate = new Date(now.getFullYear(), now.getMonth() - 6, 1);
+      prevEndDate = new Date(now.getFullYear(), now.getMonth() - 3, 0);
+    } else {
+      prevStartDate = new Date(now.getFullYear() - 1, 0, 1);
+      prevEndDate = new Date(now.getFullYear() - 1, 11, 31);
+    }
+
+    const prevTransactions = transactions?.filter(t => {
+      const date = new Date(t.data_transacao);
+      return date >= prevStartDate && date <= prevEndDate;
+    }) || [];
+
+    const prevReceitas = prevTransactions
+      .filter(t => t.tipo === 'receita')
+      .reduce((sum, t) => sum + parseFloat(t.valor.toString()), 0);
+
+    const prevDespesas = prevTransactions
+      .filter(t => t.tipo === 'despesa')
+      .reduce((sum, t) => sum + parseFloat(t.valor.toString()), 0);
+
+    // Calculate variations
+    const variacaoReceitas = prevReceitas > 0 ? ((receitas - prevReceitas) / prevReceitas * 100) : 0;
+    const variacaoDespesas = prevDespesas > 0 ? ((despesas - prevDespesas) / prevDespesas * 100) : 0;
+    const prevSaldo = prevReceitas - prevDespesas;
+    const variacaoSaldo = prevSaldo !== 0 ? ((saldo - prevSaldo) / Math.abs(prevSaldo) * 100) : 0;
+
+    return {
+      receitas,
+      despesas,
+      saldo,
+      totalTransactions,
+      taxaPoupanca,
+      variacaoReceitas,
+      variacaoDespesas,
+      variacaoSaldo,
+      prevReceitas,
+      prevDespesas
+    };
   };
 
   const monthlyData = useMemo(() => getMonthlyData(), [filteredTransactions, selectedPeriod]);
@@ -312,7 +362,7 @@ const Reports = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Receitas</CardTitle>
@@ -322,6 +372,12 @@ const Reports = () => {
             <div className="text-2xl font-bold text-green-600">
               {formatCurrency(summaryStats.receitas)}
             </div>
+            {summaryStats.prevReceitas > 0 && (
+              <div className={`flex items-center text-xs mt-1 ${summaryStats.variacaoReceitas >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                {summaryStats.variacaoReceitas >= 0 ? <ArrowUpRight className="h-3 w-3 mr-1" /> : <ArrowDownRight className="h-3 w-3 mr-1" />}
+                {Math.abs(summaryStats.variacaoReceitas).toFixed(1)}% vs período anterior
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -334,17 +390,42 @@ const Reports = () => {
             <div className="text-2xl font-bold text-red-600">
               {formatCurrency(summaryStats.despesas)}
             </div>
+            {summaryStats.prevDespesas > 0 && (
+              <div className={`flex items-center text-xs mt-1 ${summaryStats.variacaoDespesas <= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                {summaryStats.variacaoDespesas >= 0 ? <ArrowUpRight className="h-3 w-3 mr-1" /> : <ArrowDownRight className="h-3 w-3 mr-1" />}
+                {Math.abs(summaryStats.variacaoDespesas).toFixed(1)}% vs período anterior
+                {summaryStats.variacaoDespesas > 10 && <AlertTriangle className="h-3 w-3 ml-1 text-orange-500" />}
+              </div>
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saldo</CardTitle>
+            <CardTitle className="text-sm font-medium">Saldo do Período</CardTitle>
             <DollarSign className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${summaryStats.saldo >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {formatCurrency(summaryStats.saldo)}
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              Receitas - Despesas
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className={summaryStats.taxaPoupanca >= 20 ? 'border-green-200 bg-green-50/50 dark:bg-green-950/20' : summaryStats.taxaPoupanca < 0 ? 'border-red-200 bg-red-50/50 dark:bg-red-950/20' : ''}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Taxa de Poupança</CardTitle>
+            <PiggyBank className={`h-4 w-4 ${summaryStats.taxaPoupanca >= 20 ? 'text-green-600' : summaryStats.taxaPoupanca < 0 ? 'text-red-500' : 'text-muted-foreground'}`} />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${summaryStats.taxaPoupanca >= 20 ? 'text-green-600' : summaryStats.taxaPoupanca < 0 ? 'text-red-500' : 'text-foreground'}`}>
+              {summaryStats.taxaPoupanca.toFixed(1)}%
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              {summaryStats.taxaPoupanca >= 20 ? '✅ Meta atingida (≥20%)' : summaryStats.taxaPoupanca >= 10 ? '🟡 Quase lá (meta: 20%)' : summaryStats.taxaPoupanca >= 0 ? '⚠️ Abaixo da meta' : '🔴 Gastando mais que ganha'}
             </div>
           </CardContent>
         </Card>
@@ -358,9 +439,53 @@ const Reports = () => {
             <div className="text-2xl font-bold">
               {summaryStats.totalTransactions}
             </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              no período selecionado
+            </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* DRE Simplificado */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5" />
+            DRE Simplificado
+          </CardTitle>
+          <CardDescription>Demonstrativo de Resultado do Período</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center py-2 border-b">
+              <span className="font-medium text-green-600">RECEITAS TOTAIS</span>
+              <span className="font-bold text-lg text-green-600">{formatCurrency(summaryStats.receitas)}</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b text-red-500">
+              <span className="font-medium">(-) Despesas Totais</span>
+              <span className="font-bold text-lg">{formatCurrency(summaryStats.despesas)}</span>
+            </div>
+            <div className="flex justify-between items-center py-3 bg-muted/50 rounded-lg px-3 -mx-3">
+              <span className="font-bold text-lg">= RESULTADO DO PERÍODO</span>
+              <span className={`font-bold text-2xl ${summaryStats.saldo >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {formatCurrency(summaryStats.saldo)}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-4 pt-2">
+              <div className="text-center p-3 bg-muted/30 rounded-lg">
+                <div className="text-sm text-muted-foreground">Taxa de Poupança</div>
+                <div className={`text-xl font-bold ${summaryStats.taxaPoupanca >= 20 ? 'text-green-600' : summaryStats.taxaPoupanca >= 0 ? 'text-yellow-600' : 'text-red-500'}`}>
+                  {summaryStats.taxaPoupanca.toFixed(1)}%
+                </div>
+              </div>
+              <div className="text-center p-3 bg-muted/30 rounded-lg">
+                <div className="text-sm text-muted-foreground">Meta Recomendada</div>
+                <div className="text-xl font-bold text-muted-foreground">20%</div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {loading ? (
         <div className="grid gap-6 md:grid-cols-2">
