@@ -3,8 +3,9 @@ import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
-import { Calendar, TrendingUp, TrendingDown, DollarSign, Activity, ArrowUpRight, ArrowDownRight, PiggyBank, AlertTriangle } from "lucide-react";
+import { Calendar, TrendingUp, TrendingDown, DollarSign, Activity, ArrowUpRight, ArrowDownRight, PiggyBank, AlertTriangle, ChevronRight, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useTransactions, useCategories } from "@/hooks/useSupabaseData";
 
 import { useFamily } from "@/hooks/useFamily";
@@ -42,6 +43,12 @@ const CustomTooltip = ({ active, payload }: any) => {
 const Reports = () => {
   const { currentGroup } = useFamily();
   const [selectedPeriod, setSelectedPeriod] = useState("month");
+  const [selectedCategory, setSelectedCategory] = useState<{
+    name: string;
+    value: number;
+    subcategories: Array<{ name: string; value: number }>;
+    color: string;
+  } | null>(null);
   const { transactions, loading } = useTransactions(currentGroup?.id);
   const { categories } = useCategories(currentGroup?.id);
 
@@ -571,19 +578,32 @@ const Reports = () => {
                   </ResponsiveContainer>
                 </div>
 
-                <div className="space-y-5">
+                <div className="space-y-3">
                   {categoryData.slice(0, 5).map((category, index) => (
-                    <div key={index} className="space-y-2">
+                    <div
+                      key={index}
+                      className={`space-y-2 p-2 -mx-2 rounded-lg cursor-pointer transition-all hover:bg-muted/50 ${selectedCategory?.name === category.name ? 'bg-muted ring-2 ring-primary/20' : ''}`}
+                      onClick={() => setSelectedCategory({
+                        ...category,
+                        color: colors[index % colors.length]
+                      })}
+                    >
                       <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2">
                           <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: colors[index % colors.length] }} />
                           <span className="font-medium text-foreground">{category.name}</span>
+                          {category.subcategories.length > 0 && (
+                            <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                              {category.subcategories.length} subcategorias
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-foreground">{formatCurrency(category.value)}</span>
                           <span className="text-xs text-muted-foreground w-12 text-right">
                             {totalCategoryExpenses > 0 ? ((category.value / totalCategoryExpenses) * 100).toFixed(1) : 0}%
                           </span>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
                         </div>
                       </div>
                       <div className="h-2.5 w-full bg-secondary/50 rounded-full overflow-hidden">
@@ -606,6 +626,109 @@ const Reports = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Subcategory Drill-Down */}
+          {selectedCategory && selectedCategory.subcategories.length > 0 && (
+            <Card className="md:col-span-2 border-2" style={{ borderColor: selectedCategory.color + '40' }}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-4 h-4 rounded-full" style={{ backgroundColor: selectedCategory.color }} />
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        Subcategorias de {selectedCategory.name}
+                      </CardTitle>
+                      <CardDescription>
+                        {selectedCategory.subcategories.length} subcategorias • Total: {formatCurrency(selectedCategory.value)}
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedCategory(null)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Mini Pie Chart for subcategories */}
+                  <div className="h-[200px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={selectedCategory.subcategories}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={40}
+                          outerRadius={70}
+                          paddingAngle={3}
+                          dataKey="value"
+                          nameKey="name"
+                        >
+                          {selectedCategory.subcategories.map((_entry, index) => (
+                            <Cell
+                              key={`subcell-${index}`}
+                              fill={`${selectedCategory.color}${Math.max(40, 100 - index * 20).toString(16)}`}
+                              strokeWidth={0}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Subcategory list */}
+                  <div className="space-y-3">
+                    {selectedCategory.subcategories.map((subcat, index) => {
+                      const percentage = selectedCategory.value > 0
+                        ? (subcat.value / selectedCategory.value * 100)
+                        : 0;
+                      return (
+                        <div key={index} className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="font-medium">{subcat.name}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold">{formatCurrency(subcat.value)}</span>
+                              <span className="text-xs text-muted-foreground w-10 text-right">
+                                {percentage.toFixed(1)}%
+                              </span>
+                            </div>
+                          </div>
+                          <div className="h-2 w-full bg-secondary/30 rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-300"
+                              style={{
+                                width: `${percentage}%`,
+                                backgroundColor: `${selectedCategory.color}${Math.max(60, 100 - index * 15).toString(16)}`
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Message when category has no subcategories */}
+          {selectedCategory && selectedCategory.subcategories.length === 0 && (
+            <Card className="md:col-span-2">
+              <CardContent className="py-8 text-center">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-8 h-8 rounded-full" style={{ backgroundColor: selectedCategory.color }} />
+                  <p className="font-medium">{selectedCategory.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Esta categoria não possui subcategorias cadastradas.
+                  </p>
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedCategory(null)} className="mt-2">
+                    <X className="h-4 w-4 mr-1" /> Fechar
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Monthly Comparison Bar Chart */}
           <Card className="md:col-span-2">
