@@ -7,6 +7,7 @@ import { Calendar, TrendingUp, TrendingDown, DollarSign, Activity, ArrowUpRight,
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useTransactions, useCategories } from "@/hooks/useSupabaseData";
+import { getCategoryColor, FALLBACK_COLORS } from "@/lib/categoryColors";
 
 import { useFamily } from "@/hooks/useFamily";
 
@@ -346,7 +347,10 @@ const Reports = () => {
   const monthlyData = useMemo(() => getMonthlyData(), [filteredTransactions, selectedPeriod]);
   const summaryStats = useMemo(() => getSummaryStats(), [filteredTransactions]);
 
-  const colors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#8dd1e1', '#d084d0'];
+  // Usa paleta semântica para cores baseadas no nome da categoria
+  const getColorForCategory = (categoryName: string, index: number): string => {
+    return getCategoryColor(categoryName, index);
+  };
 
   return (
     <>
@@ -569,8 +573,8 @@ const Reports = () => {
                         paddingAngle={2}
                         dataKey="value"
                       >
-                        {categoryData.map((_entry, index) => (
-                          <Cell key={`cell-${index}`} fill={colors[index % colors.length]} strokeWidth={0} />
+                        {categoryData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={getColorForCategory(entry.name, index)} strokeWidth={0} />
                         ))}
                       </Pie>
                       <Tooltip content={<CustomTooltip />} />
@@ -585,12 +589,12 @@ const Reports = () => {
                       className={`space-y-2 p-2 -mx-2 rounded-lg cursor-pointer transition-all hover:bg-muted/50 ${selectedCategory?.name === category.name ? 'bg-muted ring-2 ring-primary/20' : ''}`}
                       onClick={() => setSelectedCategory({
                         ...category,
-                        color: colors[index % colors.length]
+                        color: getColorForCategory(category.name, index)
                       })}
                     >
                       <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: colors[index % colors.length] }} />
+                          <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: getColorForCategory(category.name, index) }} />
                           <span className="font-medium text-foreground">{category.name}</span>
                           {category.subcategories.length > 0 && (
                             <Badge variant="secondary" className="text-xs px-1.5 py-0">
@@ -611,7 +615,7 @@ const Reports = () => {
                           className="h-full rounded-full transition-all duration-500 ease-out"
                           style={{
                             width: `${totalCategoryExpenses > 0 ? (category.value / totalCategoryExpenses * 100) : 0}%`,
-                            backgroundColor: colors[index % colors.length]
+                            backgroundColor: getColorForCategory(category.name, index)
                           }}
                         />
                       </div>
