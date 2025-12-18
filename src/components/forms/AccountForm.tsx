@@ -57,19 +57,26 @@ export function AccountForm({ account, onSuccess, groupId }: AccountFormProps) {
   useEffect(() => {
     if (accountType === 'cartao' && user) {
       const fetchParentCards = async () => {
-        const { data } = await supabase
+        let query = supabase
           .from('accounts')
           .select('id, nome')
-          .eq('user_id', user.id)
           .eq('tipo', 'cartao')
           .is('parent_account_id', null) // Only main cards can be parents
           .neq('id', account?.id || ''); // Exclude self
 
+        // Se tiver groupId, busca cartões do grupo, senão busca do usuário
+        if (groupId) {
+          query = query.eq('group_id', groupId);
+        } else {
+          query = query.eq('user_id', user.id);
+        }
+
+        const { data } = await query;
         if (data) setParentCards(data);
       };
       fetchParentCards();
     }
-  }, [accountType, user, account]);
+  }, [accountType, user, account, groupId]);
 
   const onSubmit = async (values: z.infer<typeof accountSchema>) => {
     if (!user) return;
