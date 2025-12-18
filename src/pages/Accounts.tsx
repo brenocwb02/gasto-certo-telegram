@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const Accounts = () => {
   const { currentGroup } = useFamily();
-  const { accounts, loading, error, getTotalBalance, deleteAccount } = useAccounts(currentGroup?.id);
+  const { accounts, loading, error, getTotalBalance, deleteAccount, refetchAccounts } = useAccounts(currentGroup?.id);
   const { plan } = useLimits();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -76,6 +76,8 @@ const Accounts = () => {
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setEditingAccount(null);
+    // Força atualização da lista após criar/editar conta
+    refetchAccounts();
   };
 
   return (
@@ -205,7 +207,7 @@ const Accounts = () => {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Excluir conta</AlertDialogTitle>
                         <AlertDialogDescription>
-                          Tem certeza que deseja excluir a conta "{account.nome}"? 
+                          Tem certeza que deseja excluir a conta "{account.nome}"?
                           Esta ação irá desativar a conta, mas suas transações serão mantidas.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
