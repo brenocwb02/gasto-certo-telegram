@@ -811,7 +811,7 @@ export default function FamilySettings() {
 
       {/* Dialog para mostrar código gerado */}
       <Dialog open={showGeneratedCode} onOpenChange={setShowGeneratedCode}>
-        <DialogContent>
+        <DialogContent onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Convite Criado com Sucesso! 🎉</DialogTitle>
             <DialogDescription>
@@ -861,7 +861,7 @@ export default function FamilySettings() {
                 className="flex-1 border-green-500 text-green-600 hover:bg-green-50 p-2 h-auto flex flex-col items-center justify-center gap-1"
                 onClick={() => {
                   const text = `Olá! Entre no meu grupo do Boas Contas com este código: ${generatedCode}`;
-                  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+                  window.open(`https://web.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
                 }}
               >
                 <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" className="w-6 h-6" alt="WhatsApp" />
@@ -872,7 +872,7 @@ export default function FamilySettings() {
                 variant="outline"
                 className="flex-1 border-blue-400 text-blue-500 hover:bg-blue-50 p-2 h-auto flex flex-col items-center justify-center gap-1"
                 onClick={() => {
-                  const text = `Olá! Entre no meu grupo do Boas Contas com este código: ${generatedCode}`;
+                  const text = `Olá! Entre no meu grupo do Boas Contas.\n\nEnvie este comando para o bot:\n/entrar ${generatedCode}\n\nOu acesse: https://boascontas.app.br`;
                   window.open(`https://t.me/share/url?url=${encodeURIComponent('https://boascontas.app.br')}&text=${encodeURIComponent(text)}`, '_blank');
                 }}
               >
