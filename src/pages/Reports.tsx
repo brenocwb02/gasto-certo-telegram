@@ -3,11 +3,18 @@ import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
-import { Calendar, TrendingUp, TrendingDown, DollarSign, Activity, ArrowUpRight, ArrowDownRight, PiggyBank, AlertTriangle, ChevronRight, X } from "lucide-react";
+import { Calendar, TrendingUp, TrendingDown, DollarSign, Activity, ArrowUpRight, ArrowDownRight, PiggyBank, AlertTriangle, ChevronRight, X, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useTransactions, useCategories } from "@/hooks/useSupabaseData";
 import { getCategoryColor, FALLBACK_COLORS } from "@/lib/categoryColors";
+import { exportTransactionsToCSV, exportDREToCSV, exportToPDF } from "@/lib/exportUtils";
 
 import { useFamily } from "@/hooks/useFamily";
 
@@ -370,6 +377,76 @@ const Reports = () => {
             <SelectItem value="year">Este ano</SelectItem>
           </SelectContent>
         </Select>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-2">
+              <Download className="h-4 w-4" />
+              Exportar
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={() => {
+                const transactionsForExport = filteredTransactions.map(t => ({
+                  data_transacao: t.data_transacao,
+                  descricao: t.descricao || '',
+                  categoria: categories.find(c => c.id === t.categoria_id)?.nome || 'Sem categoria',
+                  valor: Number(t.valor),
+                  tipo: t.tipo as 'receita' | 'despesa'
+                }));
+                exportTransactionsToCSV(transactionsForExport, 'transacoes');
+              }}
+            >
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Exportar Transações (CSV)
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                const periodLabel = selectedPeriod === 'week' ? 'Última Semana' :
+                  selectedPeriod === 'month' ? 'Este Mês' :
+                    selectedPeriod === 'quarter' ? 'Últimos 3 Meses' : 'Este Ano';
+                exportDREToCSV({
+                  periodo: periodLabel,
+                  totalReceitas: summaryStats.receitas,
+                  totalDespesas: summaryStats.despesas,
+                  saldo: summaryStats.saldo,
+                  taxaPoupanca: summaryStats.taxaPoupanca,
+                  categorias: categoryData.map(c => ({
+                    nome: c.name,
+                    valor: c.value,
+                    percentual: totalCategoryExpenses > 0 ? (c.value / totalCategoryExpenses * 100) : 0
+                  }))
+                });
+              }}
+            >
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Exportar DRE (CSV)
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                const periodLabel = selectedPeriod === 'week' ? 'Última Semana' :
+                  selectedPeriod === 'month' ? 'Este Mês' :
+                    selectedPeriod === 'quarter' ? 'Últimos 3 Meses' : 'Este Ano';
+                exportToPDF({
+                  periodo: periodLabel,
+                  totalReceitas: summaryStats.receitas,
+                  totalDespesas: summaryStats.despesas,
+                  saldo: summaryStats.saldo,
+                  taxaPoupanca: summaryStats.taxaPoupanca,
+                  categorias: categoryData.map(c => ({
+                    nome: c.name,
+                    valor: c.value,
+                    percentual: totalCategoryExpenses > 0 ? (c.value / totalCategoryExpenses * 100) : 0
+                  }))
+                });
+              }}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Exportar Relatório (PDF)
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Summary Cards */}
