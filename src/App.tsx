@@ -32,6 +32,7 @@ const RecurringTransactions = lazy(() => import("@/pages/RecurringTransactions")
 const Planos = lazy(() => import("@/pages/Planos"));
 const CheckoutSuccess = lazy(() => import("@/pages/CheckoutSuccess"));
 const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
+const UpdatePassword = lazy(() => import("@/pages/UpdatePassword"));
 
 const queryClient = new QueryClient();
 
@@ -81,6 +82,7 @@ const AppRoutes = () => {
         />
         <Route path="/quiz-financeiro" element={<QuizFinanceiro />} />
         <Route path="/checkout/success" element={<CheckoutSuccess />} />
+        <Route path="/update-password" element={<UpdatePassword />} />
 
         {/* Rotas Protegidas com Layout */}
         <Route
