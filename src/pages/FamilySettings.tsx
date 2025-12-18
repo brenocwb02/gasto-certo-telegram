@@ -849,84 +849,86 @@ export default function FamilySettings() {
                       description: "Código copiado para a área de transferência",
                     });
                   }}
+                >
+                  <Copy className="h-4 w-4" />
                 </Button>
+              </div>
             </div>
+
+            <div className="flex gap-2 w-full">
+              <Button
+                variant="outline"
+                className="flex-1 border-green-500 text-green-600 hover:bg-green-50 p-2 h-auto flex flex-col items-center justify-center gap-1"
+                onClick={() => {
+                  const text = `Olá! Entre no meu grupo do Boas Contas com este código: ${generatedCode}`;
+                  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+                }}
+              >
+                <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" className="w-6 h-6" alt="WhatsApp" />
+                <span className="text-xs">WhatsApp</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                className="flex-1 border-blue-400 text-blue-500 hover:bg-blue-50 p-2 h-auto flex flex-col items-center justify-center gap-1"
+                onClick={() => {
+                  const text = `Olá! Entre no meu grupo do Boas Contas com este código: ${generatedCode}`;
+                  window.open(`https://t.me/share/url?url=${encodeURIComponent('https://boascontas.app.br')}&text=${encodeURIComponent(text)}`, '_blank');
+                }}
+              >
+                <img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg" className="w-6 h-6" alt="Telegram" />
+                <span className="text-xs">Telegram</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                className="flex-1 p-2 h-auto flex flex-col items-center justify-center gap-1"
+                onClick={() => {
+                  const subject = "Convite para o Boas Contas";
+                  const body = `Olá!\n\nEstou te convidando para participar do meu controle financeiro familiar no app Boas Contas.\n\nUse este código para entrar: ${generatedCode}\n\nAcesse: https://boascontas.app.br`;
+                  window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+                }}
+              >
+                <Mail className="w-6 h-6" />
+                <span className="text-xs">E-mail</span>
+              </Button>
+            </div>
+
+            <Button
+              variant="secondary"
+              className="w-full mt-2"
+              onClick={() => {
+                navigator.clipboard.writeText(generatedCode);
+                toast({
+                  title: "Copiado!",
+                  description: "Código copiado para a área de transferência",
+                });
+              }}
+            >
+              <Copy className="h-4 w-4 mr-2" />
+              Copiar Código Manualmente
+            </Button>
+            <Alert>
+              <QrCode className="h-4 w-4" />
+              <AlertTitle>Como compartilhar</AlertTitle>
+              <AlertDescription className="space-y-2 mt-2">
+                <p>• Envie este código via WhatsApp, Telegram ou qualquer outro meio</p>
+                <p>• Seu familiar pode aceitar na página Família ou no bot do Telegram</p>
+                <p>• No Telegram, use: <code className="bg-background px-2 py-1 rounded font-mono">/entrar {generatedCode}</code></p>
+                <p className="text-muted-foreground">Válido por 30 dias</p>
+              </AlertDescription>
+            </Alert>
           </div>
-
-          <div className="flex gap-2 w-full">
-            <Button
-              variant="outline"
-              className="flex-1 border-green-500 text-green-600 hover:bg-green-50 p-2 h-auto flex flex-col items-center justify-center gap-1"
-              onClick={() => {
-                const text = `Olá! Entre no meu grupo do Boas Contas com este código: ${generatedCode}`;
-                window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-              }}
-            >
-              <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" className="w-6 h-6" alt="WhatsApp" />
-              <span className="text-xs">WhatsApp</span>
-            </Button>
-
-            <Button
-              variant="outline"
-              className="flex-1 border-blue-400 text-blue-500 hover:bg-blue-50 p-2 h-auto flex flex-col items-center justify-center gap-1"
-              onClick={() => {
-                const text = `Olá! Entre no meu grupo do Boas Contas com este código: ${generatedCode}`;
-                window.open(`https://t.me/share/url?url=${encodeURIComponent('https://boascontas.app.br')}&text=${encodeURIComponent(text)}`, '_blank');
-              }}
-            >
-              <img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg" className="w-6 h-6" alt="Telegram" />
-              <span className="text-xs">Telegram</span>
-            </Button>
-
-            <Button
-              variant="outline"
-              className="flex-1 p-2 h-auto flex flex-col items-center justify-center gap-1"
-              onClick={() => {
-                const subject = "Convite para o Boas Contas";
-                const body = `Olá!\n\nEstou te convidando para participar do meu controle financeiro familiar no app Boas Contas.\n\nUse este código para entrar: ${generatedCode}\n\nAcesse: https://boascontas.app.br`;
-                window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
-              }}
-            >
-              <Mail className="w-6 h-6" />
-              <span className="text-xs">E-mail</span>
+          <div className="flex justify-end">
+            <Button onClick={() => setShowGeneratedCode(false)}>
+              Entendi
             </Button>
           </div>
+        </DialogContent>
+      </Dialog >
 
-          <Button
-            variant="secondary"
-            className="w-full mt-2"
-            onClick={() => {
-              navigator.clipboard.writeText(generatedCode);
-              toast({
-                title: "Copiado!",
-                description: "Código copiado para a área de transferência",
-              });
-            }}
-          >
-            <Copy className="h-4 w-4 mr-2" />
-            Copiar Código Manualmente
-          </Button>
-          <Alert>
-            <QrCode className="h-4 w-4" />
-            <AlertTitle>Como compartilhar</AlertTitle>
-            <AlertDescription className="space-y-2 mt-2">
-              <p>• Envie este código via WhatsApp, Telegram ou qualquer outro meio</p>
-              <p>• Seu familiar pode aceitar na página Família ou no bot do Telegram</p>
-              <p>• No Telegram, use: <code className="bg-background px-2 py-1 rounded font-mono">/entrar {generatedCode}</code></p>
-              <p className="text-muted-foreground">Válido por 30 dias</p>
-            </AlertDescription>
-          </Alert>
-        </div>
-        <div className="flex justify-end">
-          <Button onClick={() => setShowGeneratedCode(false)}>
-            Entendi
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog >
-
-      {/* Dialog para migrar dados pessoais */ }
-      < Dialog open = { showMigrateData } onOpenChange = { setShowMigrateData } >
+      {/* Dialog para migrar dados pessoais */}
+      < Dialog open={showMigrateData} onOpenChange={setShowMigrateData} >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Importar dados pessoais? 📦</DialogTitle>
