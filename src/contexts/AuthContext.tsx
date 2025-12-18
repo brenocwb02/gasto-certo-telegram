@@ -16,6 +16,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   profile: Profile | null;
+  supabase: typeof supabase;
   signUp: (email: string, password: string, nome?: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -37,7 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
-        
+
         // If user signed in, fetch profile
         if (event === 'SIGNED_IN' && session?.user) {
           fetchProfile(session.user.id);
@@ -52,7 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-      
+
       if (session?.user) {
         fetchProfile(session.user.id);
       }
@@ -90,7 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('user_id', user.id);
 
       if (error) throw error;
-      
+
       setProfile(prev => prev ? { ...prev, onboarding_completed: completed } : null);
     } catch (err) {
       console.error('Error updating onboarding:', err);
@@ -100,7 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, nome?: string) => {
     const redirectUrl = `${window.location.origin}/`;
-    
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -109,7 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data: nome ? { nome } : undefined
       }
     });
-    
+
     return { error };
   };
 
@@ -118,7 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email,
       password,
     });
-    
+
     return { error };
   };
 
@@ -137,6 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session,
     loading,
     profile,
+    supabase,
     signUp,
     signIn,
     signOut,
