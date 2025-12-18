@@ -16,9 +16,10 @@ export const useSubscription = () => {
   const { user, session } = useAuth();
 
   const checkSubscription = useCallback(async (silent = false) => {
-    // Only check if we have both user AND session
-    if (!user || !session) {
-      setSubscriptionInfo(null);
+    // Only check if we have both user AND session with access token
+    if (!user || !session?.access_token) {
+      console.log('[useSubscription] No user or session, skipping check');
+      setSubscriptionInfo({ subscribed: false });
       setLoading(false);
       return;
     }
@@ -29,12 +30,18 @@ export const useSubscription = () => {
       }
       setError(null);
 
-      const { data, error: functionError } = await supabase.functions.invoke('check-subscription');
+      console.log('[useSubscription] Calling check-subscription...');
+      const { data, error: functionError } = await supabase.functions.invoke('check-subscription', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
+      });
 
-      // Handle 401 gracefully - user might not have subscription
+      // Handle function errors
       if (functionError) {
-        // Check if it's an auth error - don't throw, just set as not subscribed
-        if (data?.error?.includes('Auth') || data?.error?.includes('session')) {
+        // Auth errors - treat as not subscribed
+        const errorString = JSON.stringify(functionError);
+        if (errorString.includes('Auth') || errorString.includes('session') || errorString.includes('401')) {
           console.log('[useSubscription] Auth error, treating as not subscribed');
           setSubscriptionInfo({ subscribed: false });
           return;
@@ -43,14 +50,14 @@ export const useSubscription = () => {
       }
 
       console.log('[useSubscription] Response from check-subscription:', data);
-      
-      // Handle error response from function
+
+      // Handle error response from function (e.g., { error: "..." })
       if (data?.error) {
         console.log('[useSubscription] Function returned error:', data.error);
         setSubscriptionInfo({ subscribed: false });
         return;
       }
-      
+
       setSubscriptionInfo(data);
     } catch (err) {
       console.error('Error checking subscription:', err);
@@ -116,7 +123,7 @@ export const useSubscription = () => {
   // Auto-refresh subscription status every 5 minutes (silently)
   useEffect(() => {
     if (!user || !session) return;
-    
+
     const interval = setInterval(() => {
       checkSubscription(true);
     }, 300000);
