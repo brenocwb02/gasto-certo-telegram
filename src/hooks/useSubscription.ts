@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -14,6 +14,9 @@ export const useSubscription = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user, session } = useAuth();
+
+  // Ref to track if we already have data to avoid flashing loading state on session refresh
+  const hasDataRef = useRef(false);
 
   const checkSubscription = useCallback(async (silent = false) => {
     // Only check if we have both user AND session with access token
@@ -59,6 +62,7 @@ export const useSubscription = () => {
       }
 
       setSubscriptionInfo(data);
+      hasDataRef.current = true;
     } catch (err) {
       console.error('Error checking subscription:', err);
       setError(err instanceof Error ? err.message : 'Failed to check subscription');
@@ -115,7 +119,8 @@ export const useSubscription = () => {
   useEffect(() => {
     // Add small delay to ensure session is fully established
     const timer = setTimeout(() => {
-      checkSubscription();
+      // If we already have data, perform a silent check (no loading screen)
+      checkSubscription(hasDataRef.current);
     }, 100);
     return () => clearTimeout(timer);
   }, [user, session, checkSubscription]);
