@@ -814,6 +814,7 @@ export default function FamilySettings() {
         <DialogContent
           onInteractOutside={(e) => e.preventDefault()}
           onPointerDownOutside={(e) => e.preventDefault()}
+          onFocusOutside={(e) => e.preventDefault()}
         >
           <DialogHeader>
             <DialogTitle>Convite Criado com Sucesso! 🎉</DialogTitle>
