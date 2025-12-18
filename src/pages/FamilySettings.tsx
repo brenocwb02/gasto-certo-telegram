@@ -811,7 +811,10 @@ export default function FamilySettings() {
 
       {/* Dialog para mostrar código gerado */}
       <Dialog open={showGeneratedCode} onOpenChange={setShowGeneratedCode}>
-        <DialogContent onInteractOutside={(e) => e.preventDefault()}>
+        <DialogContent
+          onInteractOutside={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>Convite Criado com Sucesso! 🎉</DialogTitle>
             <DialogDescription>
@@ -861,7 +864,7 @@ export default function FamilySettings() {
                 className="flex-1 border-green-500 text-green-600 hover:bg-green-50 p-2 h-auto flex flex-col items-center justify-center gap-1"
                 onClick={() => {
                   const text = `Olá! Entre no meu grupo do Boas Contas com este código: ${generatedCode}`;
-                  window.open(`https://web.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+                  window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
                 }}
               >
                 <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" className="w-6 h-6" alt="WhatsApp" />
