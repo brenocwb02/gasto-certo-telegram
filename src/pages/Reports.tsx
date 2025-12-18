@@ -3,7 +3,7 @@ import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
-import { Calendar, TrendingUp, TrendingDown, DollarSign, Activity, ArrowUpRight, ArrowDownRight, PiggyBank, AlertTriangle, ChevronRight, X, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { Calendar, TrendingUp, TrendingDown, DollarSign, Activity, ArrowUpRight, ArrowDownRight, PiggyBank, AlertTriangle, ChevronRight, X, Download, FileSpreadsheet, FileText, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,7 +49,7 @@ const CustomTooltip = ({ active, payload }: any) => {
 };
 
 const Reports = () => {
-  const { currentGroup } = useFamily();
+  const { currentGroup, members } = useFamily();
   const [selectedPeriod, setSelectedPeriod] = useState("month");
   const [selectedCategory, setSelectedCategory] = useState<{
     name: string;
@@ -358,6 +358,46 @@ const Reports = () => {
   const getColorForCategory = (categoryName: string, index: number): string => {
     return getCategoryColor(categoryName, index);
   };
+
+  // Calcula gastos por membro da família
+  const getMemberSpendingData = useMemo(() => {
+    if (!members || members.length === 0) return [];
+
+    const memberSpending = new Map<string, { name: string; value: number; avatar?: string }>();
+
+    // Inicializa todos os membros ativos
+    members.filter(m => m.status === 'active').forEach(member => {
+      memberSpending.set(member.member_id, {
+        name: member.profile?.nome || 'Membro',
+        value: 0,
+        avatar: member.profile?.avatar_url
+      });
+    });
+
+    // Soma despesas por user_id
+    filteredTransactions
+      .filter(t => t.tipo === 'despesa')
+      .forEach(t => {
+        const userId = (t as any).user_id;
+        if (userId && memberSpending.has(userId)) {
+          const member = memberSpending.get(userId)!;
+          member.value += parseFloat(t.valor.toString());
+        }
+      });
+
+    // Converte para array e ordena por valor
+    return Array.from(memberSpending.values())
+      .filter(m => m.value > 0)
+      .sort((a, b) => b.value - a.value);
+  }, [filteredTransactions, members]);
+
+  const totalMemberExpenses = useMemo(() =>
+    getMemberSpendingData.reduce((acc, m) => acc + m.value, 0),
+    [getMemberSpendingData]
+  );
+
+  // Cores para membros
+  const memberColors = ['#3b82f6', '#8b5cf6', '#ec4899', '#f97316', '#10b981', '#6366f1'];
 
   return (
     <>
@@ -707,6 +747,91 @@ const Reports = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Gastos por Membro da Família */}
+          {getMemberSpendingData.length > 0 && members.length > 1 && (
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  Gastos por Membro da Família
+                </CardTitle>
+                <CardDescription>
+                  Distribuição de despesas entre os membros do grupo
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                  <div className="h-[250px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={getMemberSpendingData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={50}
+                          outerRadius={80}
+                          paddingAngle={3}
+                          dataKey="value"
+                          nameKey="name"
+                        >
+                          {getMemberSpendingData.map((_entry, index) => (
+                            <Cell key={`member-${index}`} fill={memberColors[index % memberColors.length]} strokeWidth={0} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  <div className="space-y-4">
+                    {getMemberSpendingData.map((member, index) => {
+                      const percentage = totalMemberExpenses > 0
+                        ? (member.value / totalMemberExpenses * 100)
+                        : 0;
+                      return (
+                        <div key={index} className="space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm"
+                                style={{ backgroundColor: memberColors[index % memberColors.length] }}
+                              >
+                                {member.name.charAt(0).toUpperCase()}
+                              </div>
+                              <span className="font-medium text-foreground">{member.name}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-foreground">{formatCurrency(member.value)}</span>
+                              <Badge variant="secondary" className="text-xs">
+                                {percentage.toFixed(1)}%
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="h-2 w-full bg-secondary/50 rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-500 ease-out"
+                              style={{
+                                width: `${percentage}%`,
+                                backgroundColor: memberColors[index % memberColors.length]
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    <div className="pt-2 border-t mt-4">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="font-medium text-muted-foreground">Total do Grupo</span>
+                        <span className="font-bold text-lg">{formatCurrency(totalMemberExpenses)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Subcategory Drill-Down */}
           {selectedCategory && selectedCategory.subcategories.length > 0 && (
