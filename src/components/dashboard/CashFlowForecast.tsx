@@ -175,7 +175,7 @@ export function CashFlowForecast({ groupId }: { groupId?: string }) {
                     </div>
                 </div>
             </CardHeader>
-            <CardContent className="h-[300px] w-full mt-4">
+            <CardContent className="h-[220px] w-full mt-4">
                 <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                         <defs>
