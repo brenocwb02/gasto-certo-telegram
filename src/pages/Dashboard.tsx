@@ -24,13 +24,10 @@ import {
   Award,
   ArrowRight,
   Lock,
-  LayoutDashboard
 } from "lucide-react";
 import { useLimits } from "@/hooks/useLimits";
-import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
-  const navigate = useNavigate();
   const { currentGroup } = useFamily();
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const { stats, loading: statsLoading } = useFinancialStats(currentGroup?.id);
@@ -166,10 +163,6 @@ const Dashboard = () => {
             </p>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            <Button variant="outline" className="hidden sm:flex" onClick={() => navigate('/dashboard-bento')}>
-                <LayoutDashboard className="mr-2 h-4 w-4" />
-                Testar Novo Layout
-            </Button>
             <PlanStatus />
             <Dialog open={showTransactionForm} onOpenChange={setShowTransactionForm}>
               <DialogTrigger asChild>
