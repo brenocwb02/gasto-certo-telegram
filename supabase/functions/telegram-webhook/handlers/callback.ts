@@ -480,7 +480,13 @@ export async function handleCallbackQuery(supabase: any, body: any): Promise<Res
     if (data.includes(':')) {
         const [action, sessionId] = data.split(':');
         if (action === 'confirm_transaction' || action === 'cancel_transaction') {
-            await handleConfirmTransactionCallback(supabase, chatId, userId, messageId, action, sessionId);
+            try {
+                await handleConfirmTransactionCallback(supabase, chatId, userId, messageId, action, sessionId);
+            } catch (error: any) {
+                console.error(`Erro ao processar callback ${action}:`, error);
+                const errorMsg = error.message || 'Erro desconhecido';
+                await editTelegramMessage(chatId, messageId, `❌ Erro ao confirmar: ${errorMsg}`);
+            }
             return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
         }
     }
