@@ -327,3 +327,44 @@ export async function handleStartUnlinkedCommand(chatId: number): Promise<void> 
 export async function sendUnlinkedMessage(chatId: number): Promise<void> {
     await sendTelegramMessage(chatId, '🔗 *Sua conta não está vinculada*\n\nUse:\n`/start SEU_CODIGO_DE_LICENCA`', { parse_mode: 'Markdown' });
 }
+
+/**
+ * Comando oculto para atualizar o menu de comandos do bot no Telegram
+ * /sys_update_menu
+ */
+export async function handleUpdateMenuCommand(chatId: number): Promise<void> {
+    const commands = [
+        { command: 'resumo', description: '📊 Visão Geral' },
+        { command: 'extrato', description: '📋 Últimas Transações' },
+        { command: 'novo', description: '📝 Novo Gasto (Manual)' },
+        { command: 'saldo', description: '💰 Saldos' },
+        { command: 'faturas', description: '💳 Cartões' },
+        { command: 'metas', description: '🎯 Metas' },
+        { command: 'previsao', description: '🔮 Previsão' },
+        { command: 'desfazer', description: '↩️ Desfazer Último' },
+        { command: 'ajuda', description: '❓ Menu Principal' }
+    ];
+
+    try {
+        const token = Deno.env.get("TELEGRAM_BOT_TOKEN");
+        if (!token) throw new Error("Token não configurado");
+
+        const response = await fetch(`https://api.telegram.org/bot${token}/setMyCommands`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ commands })
+        });
+
+        const result = await response.json();
+
+        if (result.ok) {
+            await sendTelegramMessage(chatId, '✅ Menu atualizado com sucesso!');
+        } else {
+            console.error('Erro Telegram API:', result);
+            await sendTelegramMessage(chatId, `❌ Erro Telegram: ${result.description}`);
+        }
+    } catch (e) {
+        console.error('Erro ao atualizar menu:', e);
+        await sendTelegramMessage(chatId, '❌ Erro interno ao atualizar menu.');
+    }
+}

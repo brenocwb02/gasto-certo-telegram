@@ -1,11 +1,11 @@
 
-import { handleAjudaCommand } from './admin.ts';
+import { handleAjudaCommand, handleUpdateMenuCommand } from './admin.ts';
 import { handleFaturaCommand, handlePagarCommand, handleConfigCartaoCommand } from '../handlers/credit-card.ts';
 import { handleSaldoCommand, handleExtratoCommand, handleResumoCommand, handlePrevisaoCommand, handleTopGastosCommand, handleCompararMesesCommand, handleOrcamentoCommand, handleDividasCommand } from './financial.ts';
 import { handleCategoriasCommand } from './categories.ts';
 import { handleRecorrenteNovaCommand, handleRecorrentesCommand, handlePausarRecorrenteCommand } from './recurring.ts';
 import { handleMeuPerfilCommand } from './profile.ts';
-import { handleEditarUltimaCommand } from './transactions.ts';
+import { handleEditarUltimaCommand, handleDesfazerCommand } from './transactions.ts';
 import { handleTutorialCommand } from './general.ts';
 import { handlePerguntarCommand } from './ai.ts';
 import { handleContextCommand, handlePersonalCommand, handleGroupCommand, handleConfigCommand } from '../utils/context.ts';
@@ -99,6 +99,12 @@ export async function handleCommand(supabase: any, command: string, userId: stri
         case '/editar_ultima':
         case '/editarultima':
             await handleEditarUltimaCommand(supabase, chatId, userId);
+            await handleEditarUltimaCommand(supabase, chatId, userId);
+            break;
+
+        case '/desfazer':
+        case '/d':
+            await handleDesfazerCommand(supabase, chatId, userId);
             break;
 
         case '/recorrente_nova':
@@ -138,6 +144,10 @@ export async function handleCommand(supabase: any, command: string, userId: stri
 
         case '/metas':
             await handleMetasCommand(supabase, chatId, userId);
+            break;
+
+        case '/sys_update_menu':
+            await handleUpdateMenuCommand(chatId);
             break;
 
         default:

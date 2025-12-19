@@ -60,3 +60,47 @@ export async function handleEditarUltimaCommand(supabase: any, chatId: number, u
         reply_markup: keyboard
     });
 }
+
+/**
+ * Comando /desfazer - Remove a última transação criada
+ */
+export async function handleDesfazerCommand(supabase: any, chatId: number, userId: string): Promise<void> {
+    // 1. Buscar última transação
+    const { data: lastTransaction } = await supabase
+        .from('transactions')
+        .select(`
+        *,
+        category:categories(nome),
+        account:accounts!transactions_conta_origem_id_fkey(nome)
+      `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+    if (!lastTransaction) {
+        await sendTelegramMessage(chatId, '📭 Nenhuma transação recente para desfazer.');
+        return;
+    }
+
+    // 2. Apagar transação
+    const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', lastTransaction.id);
+
+    if (error) {
+        console.error('Erro ao deletar transação:', error);
+        await sendTelegramMessage(chatId, '❌ Erro ao desfazer transação.');
+        return;
+    }
+
+    // 3. Confirmar para o usuário
+    const date = new Date(lastTransaction.data_transacao).toLocaleDateString('pt-BR');
+    const message = `🗑️ *Transação Desfeita!*\n\n` +
+        `Apaguei: ${lastTransaction.descricao}\n` +
+        `Valor: ${formatCurrency(parseFloat(lastTransaction.valor))}\n` +
+        `Conta: ${lastTransaction.account?.nome || '?'}`;
+
+    await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
+}
