@@ -24,9 +24,10 @@ interface CategoryFormProps {
   category?: any;
   parentCategories?: any[];
   onSuccess?: () => void;
+  groupId?: string;
 }
 
-export function CategoryForm({ category, parentCategories = [], onSuccess }: CategoryFormProps) {
+export function CategoryForm({ category, parentCategories = [], onSuccess, groupId }: CategoryFormProps) {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -61,6 +62,7 @@ export function CategoryForm({ category, parentCategories = [], onSuccess }: Cat
         cor: values.cor,
         icone: values.icone,
         user_id: user.id,
+        group_id: groupId || null,
         keywords: keywordsArray, // Já é um array
       };
 

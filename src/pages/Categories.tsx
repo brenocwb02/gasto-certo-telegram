@@ -318,6 +318,7 @@ export default function Categories() {
                 <CategoryForm
                   category={editingCategory}
                   parentCategories={getParentCategories()}
+                  groupId={currentGroup?.id}
                   onSuccess={() => {
                     setFormOpen(false);
                     setEditingCategory(null);
