@@ -252,12 +252,12 @@ const Dashboard = () => {
         {/* Main Column */}
         <div className="lg:col-span-2 space-y-6">
           <CashFlowForecast groupId={currentGroup?.id} />
-          <FinancialChart groupId={currentGroup?.id} />
           <RecentTransactions limit={5} groupId={currentGroup?.id} />
         </div>
 
         {/* Sidebar Column */}
         <div className="lg:col-span-1 space-y-6">
+          <FinancialChart groupId={currentGroup?.id} />
           <FinancialHealthSection />
           {/* Quick Actions - Hidden on mobile, shown on desktop */}
           <div className="hidden lg:block">
