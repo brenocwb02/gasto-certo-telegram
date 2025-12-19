@@ -13,7 +13,8 @@ import Landing from "@/pages/Landing";
 
 // Lazy load internal pages
 // Dashboard moved to DashboardNew
-const DashboardNew = lazy(() => import("@/pages/DashboardNew"));
+const DashboardNew = lazy(() => import("@/pages/Dashboard"));
+const DashboardBento = lazy(() => import("@/pages/DashboardBento"));
 const Auth = lazy(() => import("@/pages/Auth"));
 const Onboarding = lazy(() => import("@/pages/Onboarding"));
 const QuizFinanceiro = lazy(() => import("@/pages/QuizFinanceiro"));
@@ -94,6 +95,16 @@ const AppRoutes = () => {
                   <DashboardNew />
                 </AppLayout>
               </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard-bento"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <DashboardBento />
+              </AppLayout>
+            </ProtectedRoute>
           }
         />
         <Route
