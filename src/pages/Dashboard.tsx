@@ -243,21 +243,21 @@ const Dashboard = () => {
       </div>
 
       {/* Main Dashboard Grid - Mobile First */}
-      <div className="space-y-6 lg:space-y-0 lg:grid lg:grid-cols-3 lg:gap-6">
-        {/* Quick Actions - First on Mobile */}
-        <div className="lg:hidden">
-          <QuickActions />
-        </div>
+      {/* Charts Row - Split 50/50 for balance */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <CashFlowForecast groupId={currentGroup?.id} />
+        <FinancialChart groupId={currentGroup?.id} />
+      </div>
 
-        {/* Main Column */}
+      {/* Details Row - Main Content + Sidebar */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Column - Transactions */}
         <div className="lg:col-span-2 space-y-6">
-          <CashFlowForecast groupId={currentGroup?.id} />
           <RecentTransactions limit={5} groupId={currentGroup?.id} />
         </div>
 
-        {/* Sidebar Column */}
+        {/* Sidebar Column - Widgets */}
         <div className="lg:col-span-1 space-y-6">
-          <FinancialChart groupId={currentGroup?.id} />
           <FinancialHealthSection />
           {/* Quick Actions - Hidden on mobile, shown on desktop */}
           <div className="hidden lg:block">
