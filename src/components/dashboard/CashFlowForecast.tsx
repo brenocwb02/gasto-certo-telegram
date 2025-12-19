@@ -142,15 +142,15 @@ export function CashFlowForecast({ groupId }: { groupId?: string }) {
     if (loading) return null;
 
     return (
-        <Card className="financial-card h-full">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <div className="space-y-1">
-                    <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                        <TrendingUp className="h-5 w-5" />
-                        Fluxo de Caixa & Previsão Mensal
+        <Card className="financial-card">
+            <CardHeader className="flex flex-row items-center justify-between py-4">
+                <div className="space-y-0.5">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4" />
+                        Fluxo de Caixa
                     </CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                        Acompanhe seu saldo acumulado e a projeção até o fim do mês
+                    <p className="text-xs text-muted-foreground hidden sm:block">
+                        Projeção mensal
                     </p>
                 </div>
                 <div className="text-right">
@@ -175,7 +175,7 @@ export function CashFlowForecast({ groupId }: { groupId?: string }) {
                     </div>
                 </div>
             </CardHeader>
-            <CardContent className="h-[220px] w-full mt-4">
+            <CardContent className="h-[180px] w-full mt-2">
                 <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                         <defs>
