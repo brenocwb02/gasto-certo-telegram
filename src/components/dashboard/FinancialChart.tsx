@@ -139,7 +139,7 @@ export function FinancialChart({ groupId }: { groupId?: string }) {
 
   if (loading) {
     return (
-      <Card className="financial-card col-span-2">
+      <Card className="financial-card">
         <CardContent className="flex items-center justify-center h-64">
           <div className="text-sm text-muted-foreground">Carregando dados...</div>
         </CardContent>
@@ -148,7 +148,7 @@ export function FinancialChart({ groupId }: { groupId?: string }) {
   }
 
   return (
-    <Card className="financial-card col-span-2">
+    <Card className="financial-card">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-6">
         <div>
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
