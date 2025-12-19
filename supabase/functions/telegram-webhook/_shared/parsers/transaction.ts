@@ -503,9 +503,9 @@ export function gerarTecladoContas(contas: AccountData[]): any {
     // Adicionar cartões primeiro (2 por linha)
     for (let i = 0; i < cartoes.length; i += 2) {
         const row = [];
-        row.push({ text: `💳 ${cartoes[i].nome}`, callback_data: `account_${cartoes[i].id}` });
+        row.push({ text: `💳 ${cartoes[i].nome}`, callback_data: `select_account_${cartoes[i].id}` });
         if (cartoes[i + 1]) {
-            row.push({ text: `💳 ${cartoes[i + 1].nome}`, callback_data: `account_${cartoes[i + 1].id}` });
+            row.push({ text: `💳 ${cartoes[i + 1].nome}`, callback_data: `select_account_${cartoes[i + 1].id}` });
         }
         keyboard.inline_keyboard.push(row);
     }
@@ -513,9 +513,9 @@ export function gerarTecladoContas(contas: AccountData[]): any {
     // Adicionar contas bancárias
     for (let i = 0; i < contasBancarias.length; i += 2) {
         const row = [];
-        row.push({ text: `🏦 ${contasBancarias[i].nome}`, callback_data: `account_${contasBancarias[i].id}` });
+        row.push({ text: `🏦 ${contasBancarias[i].nome}`, callback_data: `select_account_${contasBancarias[i].id}` });
         if (contasBancarias[i + 1]) {
-            row.push({ text: `🏦 ${contasBancarias[i + 1].nome}`, callback_data: `account_${contasBancarias[i + 1].id}` });
+            row.push({ text: `🏦 ${contasBancarias[i + 1].nome}`, callback_data: `select_account_${contasBancarias[i + 1].id}` });
         }
         keyboard.inline_keyboard.push(row);
     }
@@ -523,7 +523,7 @@ export function gerarTecladoContas(contas: AccountData[]): any {
     // Adicionar outras contas
     for (const conta of outras) {
         keyboard.inline_keyboard.push([
-            { text: `💰 ${conta.nome}`, callback_data: `account_${conta.id}` }
+            { text: `💰 ${conta.nome}`, callback_data: `select_account_${conta.id}` }
         ]);
     }
 
