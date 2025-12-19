@@ -9,7 +9,10 @@ export function useFinancialStats(groupId?: string) {
         monthlyIncome: 0,
         monthlyExpenses: 0,
         monthlySavings: 0,
-        trend: 0
+        trend: 0,
+        incomeTrend: 0,
+        expenseTrend: 0,
+        savingsTrend: 0
     });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -69,14 +72,59 @@ export function useFinancialStats(groupId?: string) {
 
                 const monthlySavings = monthlyIncome - monthlyExpenses;
 
-                const trend = monthlySavings > 0 ? 12 : -5;
+                // Calculate Previous Month Data for Trends
+                const previousMonthDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
+                const firstDayOfPrevMonth = new Date(previousMonthDate.getFullYear(), previousMonthDate.getMonth(), 1);
+                const lastDayOfPrevMonth = new Date(previousMonthDate.getFullYear(), previousMonthDate.getMonth() + 1, 0);
+
+                // Re-create query for previous month to avoid filter pollution
+                let prevTransactionsQuery = supabase
+                    .from('transactions')
+                    .select('valor, tipo');
+
+                if (groupId) {
+                    prevTransactionsQuery = prevTransactionsQuery.eq('group_id', groupId);
+                } else {
+                    prevTransactionsQuery = prevTransactionsQuery.eq('user_id', user.id);
+                }
+
+                const { data: prevTransactions } = await prevTransactionsQuery
+                    .gte('data_transacao', firstDayOfPrevMonth.toISOString().split('T')[0])
+                    .lte('data_transacao', lastDayOfPrevMonth.toISOString().split('T')[0]);
+
+                const prevMonthlyIncome = prevTransactions
+                    ?.filter(t => t.tipo === 'receita')
+                    .reduce((sum, t) => sum + Number(t.valor), 0) || 0;
+
+                const prevMonthlyExpenses = prevTransactions
+                    ?.filter(t => t.tipo === 'despesa')
+                    .reduce((sum, t) => sum + Number(t.valor), 0) || 0;
+
+                const prevMonthlySavings = prevMonthlyIncome - prevMonthlyExpenses;
+
+                // Calculate Trends (Percentage Change)
+                const calculateTrend = (current: number, previous: number) => {
+                    if (previous === 0) return current > 0 ? 100 : 0;
+                    return ((current - previous) / Math.abs(previous)) * 100;
+                };
+
+                const incomeTrend = calculateTrend(monthlyIncome, prevMonthlyIncome);
+                const expenseTrend = calculateTrend(monthlyExpenses, prevMonthlyExpenses);
+                const savingsTrend = calculateTrend(monthlySavings, prevMonthlySavings);
+
+                // Balance Trend (Total Net Worth change is hard to track without history table, 
+                // typically we use Savings Trend as proxy or just keep it 0 for now unless we track daily balance history).
+                // Let's use Savings Trend for the main card for now, or just 0 if stable.
 
                 setStats({
                     totalBalance,
                     monthlyIncome,
                     monthlyExpenses,
                     monthlySavings,
-                    trend
+                    incomeTrend,
+                    expenseTrend,
+                    savingsTrend,
+                    trend: savingsTrend // Default trend legacy
                 });
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'Erro ao carregar estatísticas');

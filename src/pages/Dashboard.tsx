@@ -217,26 +217,26 @@ const Dashboard = () => {
             <StatsCard
               title="Receitas do Mês"
               value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthlyIncome)}
-              change="+5,2% vs mês anterior"
-              changeType="positive"
+              change={`${stats.incomeTrend > 0 ? '+' : ''}${stats.incomeTrend.toFixed(1)}% vs mês anterior`}
+              changeType={stats.incomeTrend >= 0 ? "positive" : "negative"}
               icon={TrendingUp}
-              trend={5}
+              trend={Math.abs(stats.incomeTrend)}
             />
             <StatsCard
               title="Despesas do Mês"
               value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthlyExpenses)}
-              change="-8,1% vs mês anterior"
-              changeType="positive"
+              change={`${stats.expenseTrend > 0 ? '+' : ''}${stats.expenseTrend.toFixed(1)}% vs mês anterior`}
+              changeType={stats.expenseTrend <= 0 ? "positive" : "negative"}
               icon={TrendingDown}
-              trend={8}
+              trend={Math.abs(stats.expenseTrend)}
             />
             <StatsCard
               title="Economia"
               value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthlySavings)}
-              change="Meta: 60% atingida"
-              changeType="neutral"
+              change={`${stats.savingsTrend > 0 ? '+' : ''}${stats.savingsTrend.toFixed(1)}% vs mês anterior`}
+              changeType={stats.savingsTrend >= 0 ? "positive" : "neutral"}
               icon={Target}
-              trend={60}
+              trend={Math.abs(stats.savingsTrend)}
             />
           </>
         )}
