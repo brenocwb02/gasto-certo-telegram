@@ -69,7 +69,7 @@ export const BudgetSummary = ({ month, groupId }: BudgetSummaryProps) => {
   const topBudgets = budgets.slice(0, 4);
 
   return (
-    <Card className="financial-card">
+    <Card className="financial-card h-full flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
         <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
           <Calculator className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
@@ -81,7 +81,7 @@ export const BudgetSummary = ({ month, groupId }: BudgetSummaryProps) => {
           </Button>
         </NavLink>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 flex-1">
         {topBudgets.map((budget) => {
           const percentage = Number(budget.amount) > 0
             ? (Number(budget.spent) / Number(budget.amount)) * 100

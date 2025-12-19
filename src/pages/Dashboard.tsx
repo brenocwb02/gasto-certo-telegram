@@ -37,10 +37,30 @@ const Dashboard = () => {
   const { isTransactionLimitReached } = useLimits();
   const currentMonth = new Date();
 
+  const [isHealthVisible, setIsHealthVisible] = useState(() => {
+    return localStorage.getItem('hideHealthWidget') !== 'true';
+  });
+
   const FinancialHealthSection = () => {
+    if (!isHealthVisible) return null;
+
+    const handleDismiss = () => {
+      setIsHealthVisible(false);
+      localStorage.setItem('hideHealthWidget', 'true');
+    };
+
     if (!hasCompletedQuiz) {
       return (
-        <Card className="financial-card">
+        <Card className="financial-card relative group">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={handleDismiss}
+          >
+            <span className="sr-only">Fechar</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+          </Button>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Heart className="h-5 w-5" />
@@ -51,24 +71,29 @@ const Dashboard = () => {
             <Award className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="font-semibold mb-2">Descubra sua Saúde Financeira</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Faça nosso quiz e receba um score personalizado com recomendações para melhorar suas finanças.
+              Faça nosso quiz e receba um score personalizado com recomendações.
             </p>
             <Button asChild className="w-full">
-              <a href="/quiz-financeiro">
-                Fazer Quiz
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </a>
+              <a href="/quiz-financeiro">Fazer Quiz <ArrowRight className="ml-2 h-4 w-4" /></a>
             </Button>
           </CardContent>
         </Card>
       );
     }
 
-    const score = financialProfile?.financial_health_score || 0;
-    const healthLevel = getFinancialHealthLevel(score);
+    const healthLevel = getFinancialHealthLevel(financialProfile?.financial_health_score || 0);
 
     return (
-      <Card className="financial-card">
+      <Card className="financial-card relative group">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={handleDismiss}
+        >
+          <span className="sr-only">Fechar</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+        </Button>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Heart className="h-5 w-5" />
@@ -95,11 +120,14 @@ const Dashboard = () => {
   };
 
   const GoalsSection = () => (
-    <Card className="financial-card">
+    <Card className="financial-card h-full flex flex-col">
       <CardHeader>
-        <CardTitle>Metas Atuais</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <Target className="h-5 w-5" />
+          Metas Atuais
+        </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 flex-1">
         {goalsLoading ? (
           Array.from({ length: 2 }).map((_, i) => (
             <div key={i} className="space-y-2">
@@ -112,31 +140,32 @@ const Dashboard = () => {
             </div>
           ))
         ) : goals.length === 0 ? (
-          <div className="text-center py-4">
-            <Target className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">Nenhuma meta criada.</p>
+          <div className="text-center py-6">
+            <Target className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground mb-3">
+              Nenhuma meta definida.
+            </p>
+            <Button variant="outline" size="sm" asChild>
+              <a href="/metas">Criar Meta</a>
+            </Button>
           </div>
         ) : (
           goals.slice(0, 3).map((goal) => {
             const percentage = Number(goal.valor_meta) > 0
               ? (Number(goal.valor_atual) / Number(goal.valor_meta)) * 100
               : 0;
-            const isOverTarget = percentage > 100;
-
+            const isOverTarget = percentage >= 100;
             return (
               <div key={goal.id} className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium flex items-center gap-2">
-                    <Target className="h-4 w-4 text-primary" />
-                    {goal.titulo}
-                  </span>
-                  <span className={`text-sm font-medium ${isOverTarget ? 'text-expense' : 'text-primary'}`}>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="font-medium truncate">{goal.titulo}</span>
+                  <span className="text-muted-foreground">
                     {percentage.toFixed(0)}%
                   </span>
                 </div>
                 <div className="w-full bg-muted rounded-full h-2">
                   <div
-                    className={`h-2 rounded-full transition-all duration-1000 ${isOverTarget ? 'bg-expense' : 'bg-primary'
+                    className={`h-2 rounded-full transition-all duration-1000 ${isOverTarget ? 'bg-success' : 'bg-primary'
                       }`}
                     style={{ width: `${Math.min(percentage, 100)}%` }}
                   ></div>
@@ -265,11 +294,12 @@ const Dashboard = () => {
 
         {/* Sidebar Column - Widgets */}
         <div className="lg:col-span-1 space-y-6 h-full flex flex-col">
-          <FinancialHealthSection />
-          {/* Quick Actions - Hidden on mobile, shown on desktop */}
+          {/* Quick Actions - Hidden on mobile, shown on desktop - Priority 1 */}
           <div className="hidden lg:block">
             <QuickActions />
           </div>
+
+          <FinancialHealthSection />
           {/* Removed Budget and Goals from here */}
         </div>
       </div>
