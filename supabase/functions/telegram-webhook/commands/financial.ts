@@ -43,20 +43,45 @@ export async function handleExtratoCommand(supabase: any, chatId: number, userId
     `)
         .eq('user_id', userId)
         .order('data_transacao', { ascending: false })
-        .limit(10);
+        .limit(15);
 
     if (!transactions || transactions.length === 0) {
         await sendTelegramMessage(chatId, '📭 Nenhuma transação encontrada.');
         return;
     }
 
-    const list = transactions.map((t: any) => {
-        const icon = t.tipo === 'receita' ? '💚' : '💸';
-        const date = new Date(t.data_transacao).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-        return `${icon} ${date} - ${t.descricao}\n  ${formatCurrency(parseFloat(t.valor))} • ${t.category?.nome || 'Sem categoria'}`;
-    }).join('\n\n');
+    let currentDate = '';
+    let list = '';
+    const today = new Date().toLocaleDateString('pt-BR');
+    const yesterday = new Date(Date.now() - 86400000).toLocaleDateString('pt-BR');
 
-    await sendTelegramMessage(chatId, `📋 *Últimas Transações*\n\n${list}`, { parse_mode: 'Markdown' });
+    for (const t of transactions) {
+        const dateRaw = new Date(t.data_transacao + 'T12:00:00'); // Fix TZ
+        const dateStr = dateRaw.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+        const fullDateStr = dateRaw.toLocaleDateString('pt-BR'); // Para comparação
+
+        // Cabeçalho de Data
+        if (fullDateStr !== currentDate) {
+            currentDate = fullDateStr;
+            let label = `📅 ${dateStr}`;
+            if (fullDateStr === today) label = '📅 Hoje';
+            if (fullDateStr === yesterday) label = '📅 Ontem';
+
+            list += `\n*${label}*\n`;
+        }
+
+        const icon = t.tipo === 'receita' ? '🟢' : '🔴';
+        const valorFmt = formatCurrency(parseFloat(t.valor));
+        const cat = t.category?.nome || 'Outros';
+        const conta = t.account?.nome || '';
+
+        // Formato Monospace para alinhar e destacar
+        // Ex: 🔴 R$ 50,00 - Mercado
+        list += `${icon} \`${valorFmt}\` • ${t.descricao}\n`;
+        list += `   _${cat} • ${conta}_\n`; // Detalhe menor
+    }
+
+    await sendTelegramMessage(chatId, `📋 *Extrato Recente*\n${list}`, { parse_mode: 'Markdown' });
 }
 
 /**
