@@ -27,9 +27,10 @@ const goalSchema = z.object({
 interface GoalFormProps {
   goal?: any;
   onSuccess?: () => void;
+  groupId?: string;
 }
 
-export function GoalForm({ goal, onSuccess }: GoalFormProps) {
+export function GoalForm({ goal, onSuccess, groupId }: GoalFormProps) {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -66,6 +67,7 @@ export function GoalForm({ goal, onSuccess }: GoalFormProps) {
         categoria_id: values.categoria_id || null,
         status: values.status,
         user_id: user.id,
+        group_id: groupId || null,
       };
 
       if (goal) {
@@ -132,9 +134,9 @@ export function GoalForm({ goal, onSuccess }: GoalFormProps) {
             <FormItem>
               <FormLabel>Descrição (Opcional)</FormLabel>
               <FormControl>
-                <Textarea 
+                <Textarea
                   placeholder="Descreva sua meta..."
-                  {...field} 
+                  {...field}
                 />
               </FormControl>
               <FormMessage />
@@ -150,11 +152,11 @@ export function GoalForm({ goal, onSuccess }: GoalFormProps) {
               <FormItem>
                 <FormLabel>Valor da Meta</FormLabel>
                 <FormControl>
-                  <Input 
-                    type="number" 
-                    step="0.01" 
-                    placeholder="0.00" 
-                    {...field} 
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    {...field}
                   />
                 </FormControl>
                 <FormMessage />
@@ -169,11 +171,11 @@ export function GoalForm({ goal, onSuccess }: GoalFormProps) {
               <FormItem>
                 <FormLabel>Valor Atual</FormLabel>
                 <FormControl>
-                  <Input 
-                    type="number" 
-                    step="0.01" 
-                    placeholder="0.00" 
-                    {...field} 
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    {...field}
                   />
                 </FormControl>
                 <FormMessage />

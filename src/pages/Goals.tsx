@@ -108,6 +108,7 @@ const Goals = () => {
             <GoalForm
               goal={editingGoal}
               onSuccess={handleSuccess}
+              groupId={currentGroup?.id}
             />
           </DialogContent>
         </Dialog>
@@ -148,7 +149,7 @@ const Goals = () => {
                 <DialogHeader>
                   <DialogTitle>Nova Meta</DialogTitle>
                 </DialogHeader>
-                <GoalForm onSuccess={handleSuccess} />
+                <GoalForm onSuccess={handleSuccess} groupId={currentGroup?.id} />
               </DialogContent>
             </Dialog>
           </CardContent>

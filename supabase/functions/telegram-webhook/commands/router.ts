@@ -11,6 +11,7 @@ import { handlePerguntarCommand } from './ai.ts';
 import { handleContextCommand, handlePersonalCommand, handleGroupCommand, handleConfigCommand } from '../utils/context.ts';
 import { sendTelegramMessage } from '../_shared/telegram-api.ts';
 import { unlinkUser } from '../utils/auth.ts';
+import { handleMetasCommand } from './goals.ts';
 
 /**
  * Roteador central de comandos
@@ -136,8 +137,7 @@ export async function handleCommand(supabase: any, command: string, userId: stri
             break;
 
         case '/metas':
-            // TODO: Implementar handler de metas se não existir
-            await sendTelegramMessage(chatId, '🎯 Funcionalidade de metas em desenvolvimento.');
+            await handleMetasCommand(supabase, chatId, userId);
             break;
 
         default:
