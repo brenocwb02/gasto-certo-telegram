@@ -462,16 +462,16 @@ const Landing = () => {
               a: "Sim! Sem fidelidade, sem burocracia. Cancele direto pelo app e seus dados ficam disponíveis no plano gratuito. Também oferecemos garantia de 14 dias com reembolso total."
             },
             {
-              q: "O Zaq funciona offline?",
-              a: "O Zaq precisa de internet para sincronizar, mas você pode usar o Telegram offline e as mensagens serão processadas quando reconectar."
+              q: "O Boas Contas funciona offline?",
+              a: "O Boas Contas precisa de internet para sincronizar, mas você pode usar o Telegram offline e as mensagens serão processadas quando reconectar."
             }
           ].map((faq, i) => (
-            <details key={i} className="group bg-background rounded-lg border shadow-sm">
-              <summary className="flex items-center justify-between cursor-pointer p-4 font-medium">
+            <details key={i} className="group bg-white rounded-lg border border-slate-200 shadow-sm">
+              <summary className="flex items-center justify-between cursor-pointer p-4 font-medium text-slate-800">
                 {faq.q}
-                <span className="ml-2 text-muted-foreground group-open:rotate-180 transition-transform">▼</span>
+                <span className="ml-2 text-slate-400 group-open:rotate-180 transition-transform">▼</span>
               </summary>
-              <div className="px-4 pb-4 text-muted-foreground text-sm">
+              <div className="px-4 pb-4 text-slate-500 text-sm">
                 {faq.a}
               </div>
             </details>
@@ -519,8 +519,8 @@ const Landing = () => {
           </div>
         </div>
 
-        <div className="border-t pt-8 text-center text-sm text-muted-foreground">
-          <p>© 2025 Zaq - Boas Contas. Todos os direitos reservados.</p>
+        <div className="border-t border-slate-200 pt-8 text-center text-sm text-slate-500">
+          <p>© 2025 Boas Contas. Todos os direitos reservados.</p>
           <p className="mt-2 text-xs">
             Feito com <Heart className="h-3 w-3 inline text-red-500 mx-1" /> para famílias que querem crescer juntas.
           </p>
