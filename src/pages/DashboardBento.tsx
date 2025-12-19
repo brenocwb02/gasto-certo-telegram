@@ -139,81 +139,64 @@ export default function DashboardBento() {
                 </Button>
             </div>
 
-            {/* BENTO GRID LAYOUT */}
-            {/* 
-          Mobile: Single Column
-          Tablet: 2 Columns
-          Desktop: 4 Columns
-       */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 auto-rows-[minmax(180px,auto)]">
+            {/* NEW LAYOUT: Header Stats Row + Content Grid */}
 
-                {/* BLOCK 1: MAIN CASH FLOW (Span 2x2 on Desktop) */}
-                <div className="col-span-1 md:col-span-2 xl:col-span-2 row-span-2">
-                    <div className="h-full flex flex-col gap-4">
-                        {/* Embedded Stats inside the main block logic or separate? Let's keep CashFlow huge */}
-                        <CashFlowForecast groupId={currentGroup?.id} />
-                        {/* Override the Card style of CashFlowForecast via CSS or just use it as is. 
-                    It currently returns a Card. Perfect. */}
+            {/* 1. STATUS ROW (Top) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatsCard
+                    title="Saldo Total"
+                    value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.totalBalance)}
+                    change={`${stats.trend > 0 ? '+' : ''}${stats.trend.toFixed(1)}%`}
+                    changeType={stats.trend > 0 ? "positive" : "negative"}
+                    icon={Wallet}
+                    trend={Math.abs(stats.trend)}
+                />
+                <StatsCard
+                    title="Receitas"
+                    value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthlyIncome)}
+                    change="Mês Atual"
+                    changeType="positive"
+                    icon={TrendingUp}
+                    trend={0}
+                />
+                <StatsCard
+                    title="Despesas"
+                    value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthlyExpenses)}
+                    change="Mês Atual"
+                    changeType="negative"
+                    icon={TrendingDown}
+                    trend={0}
+                />
+                <StatsCard
+                    title="Economia"
+                    value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthlySavings)}
+                    change="Reserva"
+                    changeType="neutral"
+                    icon={Target}
+                    trend={0}
+                />
+            </div>
+
+            {/* 2. MAIN CONTENT GRID */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+
+                {/* Left Column (Main Charts) - Spans 2 or 3 cols */}
+                <div className="lg:col-span-2 xl:col-span-3 space-y-4">
+                    {/* Forecast Chart */}
+                    <CashFlowForecast groupId={currentGroup?.id} />
+
+                    {/* Secondary Charts & Tables */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FinancialChart groupId={currentGroup?.id} />
+                        <RecentTransactions limit={5} groupId={currentGroup?.id} />
                     </div>
                 </div>
 
-                {/* BLOCK 2: STATS GRID (Span 1 width, split vertically?) */}
-                <div className="col-span-1 md:col-span-2 xl:col-span-2 grid grid-cols-2 gap-4">
-                    <StatsCard
-                        title="Saldo Total"
-                        value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.totalBalance)}
-                        change={`${stats.trend > 0 ? '+' : ''}${stats.trend.toFixed(1)}%`}
-                        changeType={stats.trend > 0 ? "positive" : "negative"}
-                        icon={Wallet}
-                        trend={Math.abs(stats.trend)}
-                    />
-                    <StatsCard
-                        title="Receitas"
-                        value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthlyIncome)}
-                        change="Mês Atual"
-                        changeType="positive"
-                        icon={TrendingUp}
-                        trend={0}
-                    />
-                    <StatsCard
-                        title="Despesas"
-                        value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthlyExpenses)}
-                        change="Mês Atual"
-                        changeType="negative"
-                        icon={TrendingDown}
-                        trend={0}
-                    />
-                    <StatsCard
-                        title="Economia"
-                        value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthlySavings)}
-                        change="Reserva"
-                        changeType="neutral"
-                        icon={Target}
-                        trend={0}
-                    />
-                </div>
-
-                {/* BLOCK 3: EXPENSE BREAKDOWN (Chart) - Tall */}
-                <div className="col-span-1 md:col-span-1 xl:col-span-2 row-span-2">
-                    <FinancialChart groupId={currentGroup?.id} />
-                </div>
-
-                {/* BLOCK 4: WIDGETS COLUMN */}
-                <div className="col-span-1 row-span-1">
+                {/* Right Column (Sidebar Widgets) - Spans 1 col */}
+                <div className="space-y-4">
                     <QuickActionsWidget />
-                </div>
-                <div className="col-span-1 row-span-1">
                     <HealthWidget />
-                </div>
-
-                {/* BLOCK 5: GOALS - Flexible height */}
-                <div className="col-span-1 md:col-span-1 xl:col-span-1 row-span-2">
                     <GoalsWidget />
-                </div>
-
-                {/* BLOCK 6: TRANSACTIONS - Wide bottom */}
-                <div className="col-span-1 md:col-span-2 xl:col-span-3">
-                    <RecentTransactions limit={5} groupId={currentGroup?.id} />
                 </div>
 
             </div>

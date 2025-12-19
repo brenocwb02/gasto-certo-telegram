@@ -142,7 +142,7 @@ export function CashFlowForecast({ groupId }: { groupId?: string }) {
     if (loading) return null;
 
     return (
-        <Card className="financial-card col-span-2 lg:col-span-3">
+        <Card className="financial-card h-full">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div className="space-y-1">
                     <CardTitle className="text-lg font-semibold flex items-center gap-2">
