@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -105,7 +105,25 @@ const Landing = () => {
     highlight: true
   }];
 
-  return <div className="min-h-screen bg-background">
+  // Force Light Mode on Mount
+  useEffect(() => {
+    // Save previous preference
+    const wasDark = document.documentElement.classList.contains('dark');
+
+    // Force Light
+    document.documentElement.classList.remove('dark');
+    document.documentElement.classList.add('light');
+
+    // Cleanup on unmount
+    return () => {
+      document.documentElement.classList.remove('light');
+      if (wasDark) {
+        document.documentElement.classList.add('dark');
+      }
+    };
+  }, []);
+
+  return <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-primary/20">
     {/* Header */}
     <header className="border-b sticky top-0 bg-background/95 backdrop-blur z-50">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -264,8 +282,8 @@ const Landing = () => {
         <h2 className="text-3xl font-bold mb-6">
           Mais que números, um <span className="text-primary">Propósito</span>
         </h2>
-        <p className="text-lg text-muted-foreground max-w-3xl mx-auto mb-12">
-          O nome <strong>Zaq</strong> vem de Zaqueu, um cobrador de impostos que transformou sua relação com o dinheiro ao encontrar um propósito maior.
+        <p className="text-lg text-slate-600 max-w-3xl mx-auto mb-12">
+          O nome <strong>Boas Contas</strong> reflete nosso compromisso com a integridade.
           Acreditamos na <strong>mordomia cristã</strong>: cuidar bem dos recursos que Deus nos confiou para abençoar nossa família e o próximo.
         </p>
 
