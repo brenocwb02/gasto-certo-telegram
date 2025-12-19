@@ -4,6 +4,7 @@ import { LimitsBanner } from "@/components/dashboard/LimitsBanner";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { FinancialChart } from "@/components/dashboard/FinancialChart";
+import { CashFlowForecast } from "@/components/dashboard/CashFlowForecast";
 import { BudgetSummary } from "@/components/dashboard/BudgetSummary";
 import { TransactionForm } from "@/components/forms/TransactionForm";
 import { Button } from "@/components/ui/button";
@@ -250,6 +251,7 @@ const Dashboard = () => {
 
         {/* Main Column */}
         <div className="lg:col-span-2 space-y-6">
+          <CashFlowForecast groupId={currentGroup?.id} />
           <FinancialChart groupId={currentGroup?.id} />
           <RecentTransactions limit={5} groupId={currentGroup?.id} />
         </div>
