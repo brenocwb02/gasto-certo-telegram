@@ -251,20 +251,26 @@ const Dashboard = () => {
 
       {/* Details Row - Main Content + Sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Column - Transactions */}
+        {/* Main Column - Transactions & Tracking */}
         <div className="lg:col-span-2 space-y-6">
+
+          {/* Tracking Grid (Budget & Goals) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <BudgetSummary month={currentMonth} groupId={currentGroup?.id} />
+            <GoalsSection />
+          </div>
+
           <RecentTransactions limit={5} groupId={currentGroup?.id} />
         </div>
 
         {/* Sidebar Column - Widgets */}
-        <div className="lg:col-span-1 space-y-6">
+        <div className="lg:col-span-1 space-y-6 h-full flex flex-col">
           <FinancialHealthSection />
           {/* Quick Actions - Hidden on mobile, shown on desktop */}
           <div className="hidden lg:block">
             <QuickActions />
           </div>
-          <BudgetSummary month={currentMonth} groupId={currentGroup?.id} />
-          <GoalsSection />
+          {/* Removed Budget and Goals from here */}
         </div>
       </div>
     </>
