@@ -244,7 +244,7 @@ export function GoalForm({ goal, onSuccess, groupId }: GoalFormProps) {
           name="categoria_id"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Categoria (Opcional)</FormLabel>
+              <FormLabel>Categoria para Auto-Atualização</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
@@ -259,6 +259,9 @@ export function GoalForm({ goal, onSuccess, groupId }: GoalFormProps) {
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-[0.8rem] text-muted-foreground mt-2">
+                Selecione a categoria onde você lança os aportes desta meta. O sistema irá somar automaticamente os novos lançamentos ao valor atual.
+              </p>
               <FormMessage />
             </FormItem>
           )}
