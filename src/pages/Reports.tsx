@@ -667,39 +667,14 @@ const Reports = () => {
               </CardContent>
             </Card>
 
-            {/* Category Distribution (Interactive Drill-Down) */}
-            <Card className="md:col-span-2 transition-all duration-300">
+            {/* Category Distribution (Main View) */}
+            <Card className="md:col-span-2">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    {selectedCategory ? (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="-ml-3 h-8 w-8 p-0"
-                          onClick={() => setSelectedCategory(null)}
-                        >
-                          <ChevronLeft className="h-5 w-5" />
-                        </Button>
-                        <span className="animate-in fade-in slide-in-from-left-2">
-                          {selectedCategory.name}
-                        </span>
-                      </>
-                    ) : (
-                      "Despesas por Categoria"
-                    )}
-                  </CardTitle>
-                  {selectedCategory && (
-                    <Badge variant="outline" className="animate-in fade-in">
-                      {formatCurrency(selectedCategory.value)}
-                    </Badge>
-                  )}
-                </div>
+                <CardTitle className="flex items-center gap-2">
+                  Despesas por Categoria
+                </CardTitle>
                 <CardDescription>
-                  {selectedCategory
-                    ? "Detalhamento por subcategorias (Drill-down)"
-                    : "Clique em uma fatia ou categoria para ver detalhes"}
+                  Clique em uma categoria para ver detalhes e subcategorias
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -709,52 +684,47 @@ const Reports = () => {
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
-                          data={selectedCategory ? selectedCategory.subcategories : categoryData}
+                          data={categoryData}
                           cx="50%"
                           cy="50%"
-                          innerRadius={selectedCategory ? 80 : 60} // Donut maior no detalhe
-                          outerRadius={selectedCategory ? 110 : 90}
+                          innerRadius={60}
+                          outerRadius={90}
                           paddingAngle={2}
                           dataKey="value"
                           className="cursor-pointer outline-none"
                         >
-                          {(selectedCategory ? selectedCategory.subcategories : categoryData).map((entry, index) => (
+                          {categoryData.map((entry, index) => (
                             <Cell
                               key={`cell-${index}`}
-                              fill={selectedCategory ? getColorForCategory(entry.name, index) : getColorForCategory(entry.name, index)}
-                              strokeWidth={0}
+                              fill={getColorForCategory(entry.name, index)}
+                              strokeWidth={selectedCategory?.name === entry.name ? 2 : 0}
+                              stroke={selectedCategory?.name === entry.name ? "var(--foreground)" : "none"}
                               className="transition-all duration-300 hover:opacity-80 active:scale-95"
-                              onClick={() => !selectedCategory && setSelectedCategory({
+                              onClick={() => setSelectedCategory({
                                 ...entry,
-                                subcategories: entry.subcategories || [], // Garante array
+                                subcategories: entry.subcategories || [],
                                 color: getColorForCategory(entry.name, index)
                               } as any)}
                             />
                           ))}
                         </Pie>
-                        <Tooltip content={selectedCategory ? undefined : <CustomTooltip />} formatter={selectedCategory ? (val: any) => formatCurrency(val) : undefined} />
-                        {selectedCategory && (
-                          <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground font-bold text-lg">
-                            {((selectedCategory.value / totalCategoryExpenses) * 100).toFixed(0)}%
-                          </text>
-                        )}
+                        <Tooltip formatter={(value: number | string) => formatCurrency(Number(value))} />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
 
                   {/* 2. LIST SECTION */}
                   <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                    {(selectedCategory ? selectedCategory.subcategories : categoryData.slice(0, 5)).map((item, index) => {
-                      // Se estivermos no drill-down, o total base é o valor da categoria pai
-                      const baseTotal = selectedCategory ? selectedCategory.value : totalCategoryExpenses;
-                      const percent = baseTotal > 0 ? (item.value / baseTotal) * 100 : 0;
-                      const color = selectedCategory ? getColorForCategory(item.name, index) : getColorForCategory(item.name, index);
+                    {categoryData.slice(0, 5).map((item, index) => {
+                      const percent = totalCategoryExpenses > 0 ? (item.value / totalCategoryExpenses) * 100 : 0;
+                      const color = getColorForCategory(item.name, index);
+                      const isSelected = selectedCategory?.name === item.name;
 
                       return (
                         <div
                           key={index}
-                          className={`space-y-2 p-2 -mx-2 rounded-lg transition-all hover:bg-muted/50 ${!selectedCategory ? 'cursor-pointer' : ''}`}
-                          onClick={() => !selectedCategory && setSelectedCategory({
+                          className={`space-y-2 p-2 -mx-2 rounded-lg transition-all hover:bg-muted/50 cursor-pointer ${isSelected ? 'bg-muted/50 ring-1 ring-ring' : ''}`}
+                          onClick={() => setSelectedCategory({
                             ...item,
                             subcategories: item.subcategories || [],
                             color: color
@@ -766,21 +736,15 @@ const Reports = () => {
                               <span className="font-medium text-foreground truncate max-w-[120px]" title={item.name}>
                                 {item.name}
                               </span>
-                              {!selectedCategory && item.subcategories?.length > 0 && (
-                                <Badge variant="secondary" className="text-[10px] px-1 h-5">
-                                  {item.subcategories.length}
-                                </Badge>
-                              )}
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="font-bold text-foreground">{formatCurrency(item.value)}</span>
                               <span className="text-xs text-muted-foreground w-10 text-right">
                                 {percent.toFixed(1)}%
                               </span>
-                              {!selectedCategory && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                              <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${isSelected ? 'rotate-90' : ''}`} />
                             </div>
                           </div>
-                          {/* Progress Bar */}
                           <div className="h-2 w-full bg-secondary/50 rounded-full overflow-hidden">
                             <div
                               className="h-full rounded-full transition-all duration-500 ease-out"
@@ -794,8 +758,7 @@ const Reports = () => {
                       );
                     })}
 
-                    {/* Empty State */}
-                    {!selectedCategory && categoryData.length === 0 && (
+                    {categoryData.length === 0 && (
                       <div className="h-[200px] flex flex-col items-center justify-center text-center p-4">
                         <div className="bg-muted p-3 rounded-full mb-3">
                           <DollarSign className="h-6 w-6 text-muted-foreground" />
@@ -807,23 +770,54 @@ const Reports = () => {
                       </div>
                     )}
 
-                    {/* Show expand text only on main view */}
-                    {!selectedCategory && categoryData.length > 5 && (
+                    {categoryData.length > 5 && (
                       <p className="text-xs text-center text-muted-foreground pt-2">
                         E mais {categoryData.length - 5} categorias menores...
                       </p>
-                    )}
-
-                    {/* Empty state for drill-down */}
-                    {selectedCategory && selectedCategory.subcategories.length === 0 && (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <p>Sem subcategorias registradas</p>
-                      </div>
                     )}
                   </div>
                 </div>
               </CardContent>
             </Card>
+
+            {/* Subcategory Drill-Down (Duplicate Panel Restored) */}
+            {selectedCategory && (
+              <Card className="md:col-span-2 animate-in fade-in slide-in-from-top-4 border-l-4" style={{ borderLeftColor: selectedCategory.color }}>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <div className="space-y-1">
+                    <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                      <span style={{ color: selectedCategory.color }}>{selectedCategory.name}</span>
+                    </CardTitle>
+                    <CardDescription>Detalhamento de gastos nesta categoria</CardDescription>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedCategory(null)}>
+                    <X className="h-4 w-4 mr-2" /> Fechar
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {selectedCategory.subcategories && selectedCategory.subcategories.length > 0 ? (
+                      selectedCategory.subcategories.map((sub, idx) => (
+                        <div key={idx} className="flex flex-col p-3 border rounded-lg bg-card/50 hover:bg-muted/30 transition-colors">
+                          <span className="text-sm text-muted-foreground truncate" title={sub.name}>{sub.name}</span>
+                          <span className="text-lg font-bold mt-1">{formatCurrency(sub.value)}</span>
+                          <div className="w-full bg-secondary h-1 mt-2 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-foreground/70"
+                              style={{ width: `${(sub.value / selectedCategory.value) * 100}%`, backgroundColor: selectedCategory.color }}
+                            />
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="col-span-3 text-center py-6 text-muted-foreground bg-muted/20 rounded-lg border-dashed border-2">
+                        <p>Nenhuma subcategoria registrada para este grupo de despesas.</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Gastos por Membro da Família */}
             {getMemberSpendingData.length > 0 && members.length > 1 && (
