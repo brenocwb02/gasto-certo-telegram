@@ -109,7 +109,7 @@ const Reports = () => {
         if (dateRange?.from && dateRange?.to) {
           return transactions.filter(t => {
             // Fix timezone issues by comparing timestamps or using date-fns isWithinInterval
-            const tDate = new Date(t.data);
+            const tDate = new Date(t.data_transacao);
             return isWithinInterval(tDate, {
               start: dateRange.from!,
               end: dateRange.to!
@@ -124,7 +124,7 @@ const Reports = () => {
     // Logic for standard periods
     if (selectedPeriod !== 'custom' && startDate) {
       return transactions.filter((t) => {
-        const tDate = new Date(t.data);
+        const tDate = new Date(t.data_transacao);
         return tDate >= startDate;
       });
     }
