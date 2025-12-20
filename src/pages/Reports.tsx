@@ -3,7 +3,7 @@ import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
-import { Calendar, TrendingUp, TrendingDown, DollarSign, Activity, ArrowUpRight, ArrowDownRight, PiggyBank, AlertTriangle, ChevronRight, X, Download, FileSpreadsheet, FileText, Users } from "lucide-react";
+import { Calendar, TrendingUp, TrendingDown, DollarSign, Activity, ArrowUpRight, ArrowDownRight, PiggyBank, AlertTriangle, ChevronRight, ChevronLeft, X, Download, FileSpreadsheet, FileText, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -670,78 +670,145 @@ const Reports = () => {
             </CardContent>
           </Card>
 
-          {/* Category Distribution */}
-          <Card className="md:col-span-2">
+          {/* Category Distribution (Interactive Drill-Down) */}
+          <Card className="md:col-span-2 transition-all duration-300">
             <CardHeader>
-              <CardTitle>Despesas por Categoria</CardTitle>
-              <CardDescription>Distribuição dos gastos por categoria</CardDescription>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  {selectedCategory ? (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="-ml-3 h-8 w-8 p-0"
+                        onClick={() => setSelectedCategory(null)}
+                      >
+                        <ChevronLeft className="h-5 w-5" />
+                      </Button>
+                      <span className="animate-in fade-in slide-in-from-left-2">
+                        {selectedCategory.name}
+                      </span>
+                    </>
+                  ) : (
+                    "Despesas por Categoria"
+                  )}
+                </CardTitle>
+                {selectedCategory && (
+                  <Badge variant="outline" className="animate-in fade-in">
+                    {formatCurrency(selectedCategory.value)}
+                  </Badge>
+                )}
+              </div>
+              <CardDescription>
+                {selectedCategory
+                  ? "Detalhamento por subcategorias (Drill-down)"
+                  : "Clique em uma fatia ou categoria para ver detalhes"}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                {/* 1. CHART SECTION */}
                 <div className="h-[300px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={categoryData}
+                        data={selectedCategory ? selectedCategory.subcategories : categoryData}
                         cx="50%"
                         cy="50%"
-                        innerRadius={60}
-                        outerRadius={90}
+                        innerRadius={selectedCategory ? 80 : 60} // Donut maior no detalhe
+                        outerRadius={selectedCategory ? 110 : 90}
                         paddingAngle={2}
                         dataKey="value"
+                        className="cursor-pointer outline-none"
                       >
-                        {categoryData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={getColorForCategory(entry.name, index)} strokeWidth={0} />
+                        {(selectedCategory ? selectedCategory.subcategories : categoryData).map((entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={selectedCategory ? getColorForCategory(entry.name, index) : getColorForCategory(entry.name, index)}
+                            strokeWidth={0}
+                            className="transition-all duration-300 hover:opacity-80 active:scale-95"
+                            onClick={() => !selectedCategory && setSelectedCategory({
+                              ...entry,
+                              subcategories: entry.subcategories || [], // Garante array
+                              color: getColorForCategory(entry.name, index)
+                            } as any)}
+                          />
                         ))}
                       </Pie>
-                      <Tooltip content={<CustomTooltip />} />
+                      <Tooltip content={selectedCategory ? undefined : <CustomTooltip />} formatter={selectedCategory ? (val: any) => formatCurrency(val) : undefined} />
+                      {selectedCategory && (
+                        <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground font-bold text-lg">
+                          {((selectedCategory.value / totalCategoryExpenses) * 100).toFixed(0)}%
+                        </text>
+                      )}
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
 
-                <div className="space-y-3">
-                  {categoryData.slice(0, 5).map((category, index) => (
-                    <div
-                      key={index}
-                      className={`space-y-2 p-2 -mx-2 rounded-lg cursor-pointer transition-all hover:bg-muted/50 ${selectedCategory?.name === category.name ? 'bg-muted ring-2 ring-primary/20' : ''}`}
-                      onClick={() => setSelectedCategory({
-                        ...category,
-                        color: getColorForCategory(category.name, index)
-                      })}
-                    >
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: getColorForCategory(category.name, index) }} />
-                          <span className="font-medium text-foreground">{category.name}</span>
-                          {category.subcategories.length > 0 && (
-                            <Badge variant="secondary" className="text-xs px-1.5 py-0">
-                              {category.subcategories.length} subcategorias
-                            </Badge>
-                          )}
+                {/* 2. LIST SECTION */}
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                  {(selectedCategory ? selectedCategory.subcategories : categoryData.slice(0, 5)).map((item, index) => {
+                    // Se estivermos no drill-down, o total base é o valor da categoria pai
+                    const baseTotal = selectedCategory ? selectedCategory.value : totalCategoryExpenses;
+                    const percent = baseTotal > 0 ? (item.value / baseTotal) * 100 : 0;
+                    const color = selectedCategory ? getColorForCategory(item.name, index) : getColorForCategory(item.name, index);
+
+                    return (
+                      <div
+                        key={index}
+                        className={`space-y-2 p-2 -mx-2 rounded-lg transition-all hover:bg-muted/50 ${!selectedCategory ? 'cursor-pointer' : ''}`}
+                        onClick={() => !selectedCategory && setSelectedCategory({
+                          ...item,
+                          subcategories: item.subcategories || [],
+                          color: color
+                        } as any)}
+                      >
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: color }} />
+                            <span className="font-medium text-foreground truncate max-w-[120px]" title={item.name}>
+                              {item.name}
+                            </span>
+                            {!selectedCategory && item.subcategories?.length > 0 && (
+                              <Badge variant="secondary" className="text-[10px] px-1 h-5">
+                                {item.subcategories.length}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-foreground">{formatCurrency(item.value)}</span>
+                            <span className="text-xs text-muted-foreground w-10 text-right">
+                              {percent.toFixed(1)}%
+                            </span>
+                            {!selectedCategory && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-foreground">{formatCurrency(category.value)}</span>
-                          <span className="text-xs text-muted-foreground w-12 text-right">
-                            {totalCategoryExpenses > 0 ? ((category.value / totalCategoryExpenses) * 100).toFixed(1) : 0}%
-                          </span>
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        {/* Progress Bar */}
+                        <div className="h-2 w-full bg-secondary/50 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-500 ease-out"
+                            style={{
+                              width: `${percent}%`,
+                              backgroundColor: color
+                            }}
+                          />
                         </div>
                       </div>
-                      <div className="h-2.5 w-full bg-secondary/50 rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-500 ease-out"
-                          style={{
-                            width: `${totalCategoryExpenses > 0 ? (category.value / totalCategoryExpenses * 100) : 0}%`,
-                            backgroundColor: getColorForCategory(category.name, index)
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                  {categoryData.length > 5 && (
+                    );
+                  })}
+
+                  {/* Show expand text only on main view */}
+                  {!selectedCategory && categoryData.length > 5 && (
                     <p className="text-xs text-center text-muted-foreground pt-2">
                       E mais {categoryData.length - 5} categorias menores...
                     </p>
+                  )}
+
+                  {/* Empty state for drill-down */}
+                  {selectedCategory && selectedCategory.subcategories.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>Sem subcategorias registradas</p>
+                    </div>
                   )}
                 </div>
               </div>

@@ -536,7 +536,60 @@ export async function handleTextMessage(supabase: any, chatId: number, message: 
             `);
             console.log('✅ Migração 6 aplicada: fix_family_rls');
 
-            await sendTelegramMessage(chatId, '✅ Todas as migrações (1-6) aplicadas com sucesso!');
+            // 7. Fix Goals Trigger (category_id -> categoria_id)
+            await client.queryObject(`
+                CREATE OR REPLACE FUNCTION public.update_goal_progress()
+                RETURNS TRIGGER AS $$
+                BEGIN
+                  -- Handle INSERT
+                  IF (TG_OP = 'INSERT') THEN
+                    IF (NEW.tipo = 'despesa' AND NEW.categoria_id IS NOT NULL) THEN
+                      UPDATE public.goals
+                      SET valor_atual = valor_atual + NEW.valor
+                      WHERE categoria_id = NEW.categoria_id
+                        AND status = 'ativa'
+                        AND NEW.data_transacao BETWEEN data_inicio AND data_fim;
+                    END IF;
+                  END IF;
+
+                  -- Handle DELETE
+                  IF (TG_OP = 'DELETE') THEN
+                    IF (OLD.tipo = 'despesa' AND OLD.categoria_id IS NOT NULL) THEN
+                      UPDATE public.goals
+                      SET valor_atual = valor_atual - OLD.valor
+                      WHERE categoria_id = OLD.categoria_id
+                        AND status = 'ativa'
+                        AND OLD.data_transacao BETWEEN data_inicio AND data_fim;
+                    END IF;
+                  END IF;
+
+                  -- Handle UPDATE
+                  IF (TG_OP = 'UPDATE') THEN
+                    -- Revert OLD
+                    IF (OLD.tipo = 'despesa' AND OLD.categoria_id IS NOT NULL) THEN
+                      UPDATE public.goals
+                      SET valor_atual = valor_atual - OLD.valor
+                      WHERE categoria_id = OLD.categoria_id
+                        AND status = 'ativa'
+                        AND OLD.data_transacao BETWEEN data_inicio AND data_fim;
+                    END IF;
+                    -- Apply NEW
+                    IF (NEW.tipo = 'despesa' AND NEW.categoria_id IS NOT NULL) THEN
+                      UPDATE public.goals
+                      SET valor_atual = valor_atual + NEW.valor
+                      WHERE categoria_id = NEW.categoria_id
+                        AND status = 'ativa'
+                        AND NEW.data_transacao BETWEEN data_inicio AND data_fim;
+                    END IF;
+                  END IF;
+
+                  RETURN NULL;
+                END;
+                $$ LANGUAGE plpgsql SECURITY DEFINER;
+            `);
+            console.log('✅ Migração 7 aplicada: fix_goals_trigger_column');
+
+            await sendTelegramMessage(chatId, '✅ Todas as migrações (1-7) aplicadas com sucesso!');
 
         } catch (e) {
             console.error('Erro ao rodar migrações:', e);

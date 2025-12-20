@@ -12,6 +12,7 @@ import { handleContextCommand, handlePersonalCommand, handleGroupCommand, handle
 import { sendTelegramMessage } from '../_shared/telegram-api.ts';
 import { unlinkUser } from '../utils/auth.ts';
 import { handleMetasCommand } from './goals.ts';
+import { handleOnboardingStart } from './onboarding.ts';
 
 /**
  * Roteador central de comandos
@@ -22,6 +23,9 @@ export async function handleCommand(supabase: any, command: string, userId: stri
 
     switch (cmd.toLowerCase()) {
         case '/start':
+            // Verificar fluxo de onboarding para novos usuários
+            await handleOnboardingStart(supabase, chatId, userId);
+            break;
         case '/ajuda':
         case '/help':
             await handleAjudaCommand(chatId);

@@ -5,6 +5,7 @@ import { getRandomSuccessMessage, getCategoryComment, getEmojiForCategory } from
 import { processCelebrations } from '../_shared/sticker-helper.ts';
 import { handleCommand } from '../commands/router.ts';
 import { handleMenuCallback } from '../commands/admin.ts';
+import { handleOnboardingCallback } from '../commands/onboarding.ts';
 import { confirmInvoicePayment, handlePaymentCardSelection, handleCardConfigCallback, toggleCardAutoPayment, toggleCardReminder } from './credit-card.ts';
 import { getUserTelegramContext, setUserTelegramContext } from '../utils/context.ts';
 import { handleConfigCartaoCommand } from './credit-card.ts';
@@ -49,6 +50,15 @@ export async function handleCallbackQuery(supabase: any, body: any): Promise<Res
         await handleMenuCallback(chatId, messageId, menuType);
         await answerCallbackQuery(callbackQuery.id);
         console.log(`[Menu Handler] Menu ${menuType} exibido com sucesso`);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+
+
+    // Onboarding Handler
+    if (data.startsWith('onboarding_')) {
+        await handleOnboardingCallback(supabase, chatId, userId, messageId, data);
+        await answerCallbackQuery(callbackQuery.id);
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
