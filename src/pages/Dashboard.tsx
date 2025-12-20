@@ -146,8 +146,19 @@ const Dashboard = () => {
       });
     }
 
-    // Logic 2: Negative Balance (Expenses > Income)
-    if (stats.monthlyExpenses > stats.monthlyIncome && stats.monthlyIncome > 0) {
+    // Logic 2: High Expenses (Expenses > Income)
+    const isNegativeMonth = stats.monthlyExpenses > stats.monthlyIncome;
+    const isNegativeBalance = stats.currentBalance < 0;
+
+    if (isNegativeBalance) {
+      insights.push({
+        icon: AlertTriangle,
+        type: "warning",
+        title: "Saldo Negativo",
+        message: "Seu saldo total está negativo. É importante priorizar o pagamento de dívidas.",
+        borderColor: "border-l-red-500"
+      });
+    } else if (isNegativeMonth) {
       insights.push({
         icon: AlertTriangle,
         type: "warning",
