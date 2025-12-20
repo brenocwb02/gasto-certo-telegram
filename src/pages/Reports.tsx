@@ -794,6 +794,19 @@ const Reports = () => {
                       );
                     })}
 
+                    {/* Empty State */}
+                    {!selectedCategory && categoryData.length === 0 && (
+                      <div className="h-[200px] flex flex-col items-center justify-center text-center p-4">
+                        <div className="bg-muted p-3 rounded-full mb-3">
+                          <DollarSign className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                        <p className="font-medium">Nenhuma despesa encontrada</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Não há registros para o período selecionado.
+                        </p>
+                      </div>
+                    )}
+
                     {/* Show expand text only on main view */}
                     {!selectedCategory && categoryData.length > 5 && (
                       <p className="text-xs text-center text-muted-foreground pt-2">
