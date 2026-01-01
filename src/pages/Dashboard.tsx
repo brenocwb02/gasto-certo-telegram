@@ -148,7 +148,7 @@ const Dashboard = () => {
 
     // Logic 2: High Expenses (Expenses > Income)
     const isNegativeMonth = stats.monthlyExpenses > stats.monthlyIncome;
-    const isNegativeBalance = stats.currentBalance < 0;
+    const isNegativeBalance = stats.totalBalance < 0;
 
     if (isNegativeBalance) {
       insights.push({

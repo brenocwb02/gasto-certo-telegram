@@ -645,7 +645,7 @@ export async function handleTextMessage(supabase: any, chatId: number, message: 
         }, { onConflict: 'telegram_id' });
 
         await sendTelegramMessage(chatId,
-            `💳 *Em qual conta foi esse gasto de ${formatCurrency(parsed.valor)}?*\n\n📝 ${parsed.descricao}`,
+            `💳 *Em qual conta foi esse gasto de ${formatCurrency(parsed.valor || 0)}?*\n\n📝 ${parsed.descricao}`,
             { reply_markup: keyboard }
         );
         return new Response('OK', { headers: corsHeaders });

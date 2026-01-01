@@ -53,9 +53,9 @@ export function useCashFlowProjection(): CashFlowProjection {
                 // 2. Buscar transações recorrentes ativas
                 const { data: recurrences, error: recError } = await supabase
                     .from('recurring_transactions')
-                    .select('tipo, valor, dia_vencimento')
+                    .select('type, amount, day_of_month')
                     .eq('user_id', user.id)
-                    .eq('ativa', true);
+                    .eq('is_active', true);
 
                 if (recError) throw recError;
 
@@ -64,15 +64,15 @@ export function useCashFlowProjection(): CashFlowProjection {
 
                 // 3. Calcular valores a receber/pagar até fim do mês
                 if (recurrences) {
-                    recurrences.forEach(rec => {
-                        const dueDay = rec.dia_vencimento || 1;
+                    recurrences.forEach((rec: { type: string; amount: number; day_of_month: number | null }) => {
+                        const dueDay = rec.day_of_month || 1;
 
                         // Só considerar se vencimento é no futuro (ou hoje)
                         if (dueDay >= currentDay && dueDay <= lastDay) {
-                            const valor = Number(rec.valor || 0);
-                            if (rec.tipo === 'receita') {
+                            const valor = Number(rec.amount || 0);
+                            if (rec.type === 'receita') {
                                 projectedIncome += valor;
-                            } else if (rec.tipo === 'despesa') {
+                            } else if (rec.type === 'despesa') {
                                 projectedExpenses += valor;
                             }
                         }

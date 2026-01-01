@@ -126,7 +126,7 @@ export async function handlePagarCommand(userId: string, chatId: number): Promis
   try {
     const { data: cards, error } = await supabase
       .from('accounts')
-      .select('id, nome, saldo_atual, dia_vencimento')
+      .select('id, nome, saldo_atual, dia_fechamento, dia_vencimento')
       .eq('user_id', userId)
       .eq('tipo', 'cartao')
       .eq('ativo', true)
@@ -143,7 +143,7 @@ export async function handlePagarCommand(userId: string, chatId: number): Promis
     }
 
     // Criar botões para cada cartão com fatura
-    const buttons = cards.map((card: CreditCardAccount) => [{
+    const buttons = (cards as CreditCardAccount[]).map((card) => [{
       text: `💳 ${card.nome} - ${formatCurrency(Math.abs(card.saldo_atual))}`,
       callback_data: `pay_${card.id}`
     }]);

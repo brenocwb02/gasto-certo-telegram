@@ -8,7 +8,6 @@ import {
   Users,
   Check,
   Star,
-  Crown,
   MessageCircle,
   BrainCircuit,
   TrendingUp,

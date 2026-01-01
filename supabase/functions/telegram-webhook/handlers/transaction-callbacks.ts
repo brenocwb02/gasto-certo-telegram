@@ -81,7 +81,6 @@ export async function handleSelectAccountCallback(
         // Preparar transação completa
         const transactionData = {
             user_id: userId,
-            user_id: userId,
             group_id: contextGroupId,
             valor: pending.valor,
             descricao: pending.descricao,

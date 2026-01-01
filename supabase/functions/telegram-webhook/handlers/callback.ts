@@ -91,7 +91,7 @@ export async function handleCallbackQuery(supabase: any, body: any): Promise<Res
         if (command) {
             // Responder callback primeiro
             console.log(`[Action Handler] Executando comando: ${command}`);
-            await answerCallbackQuery(callbackQuery.id, { text: `Executando ${command}...` });
+            await answerCallbackQuery(callbackQuery.id, `Executando ${command}...`);
 
             // Executar comando
             await handleCommand(supabase, command, userId, chatId);
@@ -122,7 +122,7 @@ export async function handleCallbackQuery(supabase: any, body: any): Promise<Res
             .single();
 
         if (!card) {
-            await answerCallbackQuery(callbackQuery.id, { text: 'Cartão não encontrado' });
+            await answerCallbackQuery(callbackQuery.id, 'Cartão não encontrado');
             return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
         }
 
@@ -133,9 +133,9 @@ export async function handleCallbackQuery(supabase: any, body: any): Promise<Res
             .update({ auto_pagamento_ativo: novoStatus })
             .eq('id', cardId);
 
-        await answerCallbackQuery(callbackQuery.id, {
-            text: novoStatus ? '✅ Pagamento automático ativado!' : '❌ Pagamento automático desativado!'
-        });
+        await answerCallbackQuery(callbackQuery.id, 
+            novoStatus ? '✅ Pagamento automático ativado!' : '❌ Pagamento automático desativado!'
+        );
 
         // Retornar à tela de configuração atualizada
         await answerCallbackQuery(callbackQuery.id);

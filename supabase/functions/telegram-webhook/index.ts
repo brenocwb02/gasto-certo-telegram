@@ -58,13 +58,7 @@ serve(async (req) => {
       const isBlocked = rateLimitCheck && Array.isArray(rateLimitCheck) && rateLimitCheck[0] && !rateLimitCheck[0].allowed;
       if (isBlocked) {
         console.warn(`[Rate Limit] Bloqueado: ${telegramId}`);
-        // Send friendly message to user
-        const resetAt = rateLimitCheck[0].reset_at;
-        const waitSeconds = Math.max(1, Math.ceil((new Date(resetAt).getTime() - Date.now()) / 1000));
-        await sendMessage(
-          body.message?.chat?.id || body.callback_query?.message?.chat?.id,
-          `⏳ *Muitas mensagens!*\n\nAguarde ${waitSeconds} segundos antes de enviar mais mensagens.\n\n💡 _Dica: Use comandos como /saldo ou /extrato para consultas rápidas._`
-        );
+        // Send friendly message to user - rate limited, just return OK
         return new Response('OK', { status: 200, headers: corsHeaders });
       }
     }

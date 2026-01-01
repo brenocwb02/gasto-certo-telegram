@@ -3,53 +3,17 @@ import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
-import { Calendar, TrendingUp, TrendingDown, DollarSign, Activity, ArrowUpRight, ArrowDownRight, PiggyBank, AlertTriangle, ChevronRight, ChevronLeft, X, Download, FileSpreadsheet, FileText, Users } from "lucide-react";
+import { Calendar, TrendingUp, TrendingDown, DollarSign, Activity, ArrowUpRight, ArrowDownRight, PiggyBank, AlertTriangle, ChevronRight, X, Download, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useTransactions, useCategories } from "@/hooks/useSupabaseData";
-import { getCategoryColor, FALLBACK_COLORS } from "@/lib/categoryColors";
-import { exportTransactionsToCSV, exportDREToCSV, exportToPDF } from "@/lib/exportUtils";
+import { getCategoryColor } from "@/lib/categoryColors";
+import { exportTransactionsToCSV } from "@/lib/exportUtils";
 
 import { useFamily } from "@/hooks/useFamily";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { DateRange } from "react-day-picker";
-import { addDays, startOfMonth, endOfMonth, subMonths, isWithinInterval } from "date-fns";
-
-const CustomTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length) {
-    const data = payload[0]?.payload;
-    if (!data) return null;
-    return (
-      <div className="bg-popover border text-popover-foreground rounded-lg p-3 shadow-xl max-w-[250px] z-50">
-        <p className="font-bold text-sm mb-1">{data.name}</p>
-        <p className="text-lg font-bold text-primary mb-2">
-          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(data.value)}
-        </p>
-
-        {data.subcategories && data.subcategories.length > 0 && (
-          <div className="space-y-1 border-t pt-2 mt-1">
-            <p className="text-xs text-muted-foreground font-semibold mb-1 uppercase tracking-wider">Detalhamento</p>
-            {data.subcategories.map((sub: any, index: number) => (
-              <div key={index} className="flex justify-between items-center text-xs">
-                <span className="text-muted-foreground truncate mr-2 flex-1">{sub.name}</span>
-                <span className="font-medium whitespace-nowrap">
-                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(sub.value)}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-  return null;
-};
+import { startOfMonth, endOfMonth, subMonths, isWithinInterval } from "date-fns";
 
 const Reports = () => {
   const { currentGroup, members } = useFamily();
@@ -152,7 +116,6 @@ const Reports = () => {
     // Determine start and end dates based on selection
     const now = new Date();
     let startDate = new Date();
-    let endDate = new Date();
     let granularity: 'day' | 'month' = 'month';
 
     if (selectedPeriod === 'week') {
@@ -160,7 +123,6 @@ const Reports = () => {
       granularity = 'day';
     } else if (selectedPeriod === 'month') {
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
       granularity = 'day';
     } else if (selectedPeriod === 'quarter') {
       startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1); // Last 3 months including current
@@ -467,12 +429,13 @@ const Reports = () => {
           </Select>
 
           <Button variant="outline" size="icon" onClick={() => {
-            const csv = exportTransactionsToCSV(getFilteredTransactions());
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `relatorio_${selectedPeriod}.csv`;
-            link.click();
+            const transactionsForExport = getFilteredTransactions().map(t => ({
+              data_transacao: t.data_transacao,
+              descricao: t.descricao,
+              valor: t.valor,
+              tipo: t.tipo as 'receita' | 'despesa'
+            }));
+            exportTransactionsToCSV(transactionsForExport, `relatorio_${selectedPeriod}`);
           }} title="Exportar CSV">
             <Download className="h-4 w-4" />
           </Button>

@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Rocket, PenTool, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -50,7 +49,7 @@ export function WelcomeWizard({ onComplete }: WelcomeWizardProps) {
         if (!user) return;
         setLoading(true);
         try {
-            const { data, error } = await (supabase as any)
+            const { error } = await (supabase as any)
                 .rpc('seed_default_categories', { p_user_id: user.id });
 
             if (error) throw error;
