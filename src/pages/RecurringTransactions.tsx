@@ -31,10 +31,14 @@ import {
 import { useRecurringTransactions } from "@/hooks/useRecurringTransactions";
 import { useFamily } from "@/hooks/useFamily";
 import { useToast } from "@/hooks/use-toast";
+import { useCategories } from "@/hooks/useCategories";
+import { useAccounts } from "@/hooks/useAccounts";
 
 export default function RecurringTransactions() {
   const { toast } = useToast();
   const { currentGroup } = useFamily();
+  const { categories } = useCategories();
+  const { accounts } = useAccounts();
   const {
     recurringTransactions,
     generationLogs,
@@ -69,31 +73,8 @@ export default function RecurringTransactions() {
     day_of_week: ""
   });
 
-  // Estados para categorias e contas
-  const [categories, setCategories] = useState<any[]>([]);
-  const [accounts, setAccounts] = useState<any[]>([]);
-
   useEffect(() => {
     document.title = "Contas Recorrentes | Boas Contas";
-  }, []);
-
-  // Carregar categorias e contas
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [categoriesRes, accountsRes] = await Promise.all([
-          fetch('/api/categories').then(res => res.json()),
-          fetch('/api/accounts').then(res => res.json())
-        ]);
-
-        setCategories(categoriesRes || []);
-        setAccounts(accountsRes || []);
-      } catch (err) {
-        console.error('Erro ao carregar dados:', err);
-      }
-    };
-
-    loadData();
   }, []);
 
   // Criar transação recorrente
