@@ -14,7 +14,7 @@ import { useFamily } from "@/hooks/useFamily";
 
 const Budget = () => {
   const { currentGroup } = useFamily();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  useState(true); // sidebar state - kept for future use
   const [currentMonth] = useState(new Date());
   const { budgets, loading, refetchBudgets } = useBudgets(currentMonth, currentGroup?.id);
   const [dialogOpen, setDialogOpen] = useState(false);

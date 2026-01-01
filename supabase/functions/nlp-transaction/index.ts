@@ -12,7 +12,7 @@ interface CategoryData {
   tipo: string;
   parent_id: string | null;
   keywords: string[] | null;
-  parent: { nome: string } | null;
+  parent: { nome: string } | { nome: string }[] | null;
 }
 
 interface AccountData {

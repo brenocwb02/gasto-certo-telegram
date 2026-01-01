@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, Info } from "lucide-react";
+import { TrendingUp, Info } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -109,8 +109,8 @@ export function CashFlowForecast({ groupId }: { groupId?: string }) {
                         // Let's subtract avgDailyExpense.
 
                         // Connect the line: The first projection point should start from last actual
-                        const prevBalance = i === today + 1 ? currentDayBalance : chartData[i - 2].projected;
-                        const projectedBalance = (prevBalance || 0) - avgDailyExpense;
+                        const prevBalance: number = i === today + 1 ? currentDayBalance : (chartData[i - 2]?.projected || 0);
+                        const projectedBalance: number = (prevBalance || 0) - avgDailyExpense;
 
                         chartData.push({
                             day: i,
