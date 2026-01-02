@@ -366,10 +366,10 @@ export async function handleOrcamentoCommand(supabase: any, chatId: number, user
         firstDay.setDate(1);
         const month = firstDay.toISOString().split('T')[0];
 
-        const { data: budgets } = await supabase.rpc('get_budgets_with_spent', { p_month: month });
+        const { data: budgets } = await supabase.rpc('get_budgets_with_defaults', { p_month: month });
 
         if (!budgets || budgets.length === 0) {
-            await sendTelegramMessage(chatId, '📊 *Orçamento do Mês*\n\n📭 Você ainda não definiu orçamentos.\n\n💡 Acesse o app para criar seus orçamentos: https://app.boascontas.com/orcamento');
+            await sendTelegramMessage(chatId, '📊 *Orçamento do Mês*\n\n📭 Você ainda não definiu orçamentos padrão.\n\n💡 Acesse o app para criar seus orçamentos: https://app.boascontas.com/orcamento');
             return;
         }
 
@@ -387,8 +387,9 @@ export async function handleOrcamentoCommand(supabase: any, chatId: number, user
 
             const icon = spent > budget ? '🔴' : spent > budget * 0.8 ? '🟡' : '🟢';
             const bar = '█'.repeat(Math.min(10, Math.floor((spent / budget) * 10))) + '░'.repeat(Math.max(0, 10 - Math.floor((spent / budget) * 10)));
+            const typeIndicator = b.is_default ? '📋' : '✏️';
 
-            return `${icon} *${b.category_name}*\n${bar} ${percent}%\n${formatCurrency(spent)} / ${formatCurrency(budget)}\n${remaining >= 0 ? '✅' : '⚠️'} Restante: ${formatCurrency(Math.abs(remaining))}`;
+            return `${icon} *${b.category_name}* ${typeIndicator}\n${bar} ${percent}%\n${formatCurrency(spent)} / ${formatCurrency(budget)}\n${remaining >= 0 ? '✅' : '⚠️'} Restante: ${formatCurrency(Math.abs(remaining))}`;
         }).join('\n\n');
 
         const totalPercent = totalBudget > 0 ? ((totalSpent / totalBudget) * 100).toFixed(0) : '0';
