@@ -364,6 +364,51 @@ export type Database = {
         }
         Relationships: []
       }
+      default_budgets: {
+        Row: {
+          amount: number
+          category_id: string
+          created_at: string
+          group_id: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          category_id: string
+          created_at?: string
+          group_id?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category_id?: string
+          created_at?: string
+          group_id?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "default_budgets_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "default_budgets_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "family_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       family_groups: {
         Row: {
           created_at: string
@@ -1357,6 +1402,23 @@ export type Database = {
           action: string
           count: number
           last_occurrence: string
+        }[]
+      }
+      get_budgets_with_defaults: {
+        Args: { p_group_id?: string; p_month: string }
+        Returns: {
+          amount: number
+          category_color: string
+          category_id: string
+          category_name: string
+          created_at: string
+          default_amount: number
+          id: string
+          is_default: boolean
+          month: string
+          spent: number
+          updated_at: string
+          user_id: string
         }[]
       }
       get_budgets_with_spent:

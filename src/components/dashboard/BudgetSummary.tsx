@@ -2,8 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useBudgets } from "@/hooks/useSupabaseData";
-import { Calculator, Plus, AlertTriangle } from "lucide-react";
+import { useBudgets } from "@/hooks/useBudgets";
+import { Calculator, Plus, AlertTriangle, Sparkles } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 interface BudgetSummaryProps {
@@ -90,10 +90,13 @@ export const BudgetSummary = ({ month, groupId }: BudgetSummaryProps) => {
           const isNearLimit = percentage > 80 && percentage <= 100;
 
           return (
-            <div key={budget.id} className="space-y-2">
+            <div key={budget.category_id} className="space-y-2">
               <div className="flex justify-between items-start sm:items-center gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="text-xs sm:text-sm font-medium truncate">{budget.category_name}</span>
+                  {budget.is_default && (
+                    <Sparkles className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                  )}
                   {isOverBudget && (
                     <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 text-expense flex-shrink-0" />
                   )}

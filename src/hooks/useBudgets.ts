@@ -2,9 +2,24 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
+export interface BudgetWithDefaults {
+    id: string;
+    user_id: string;
+    category_id: string;
+    amount: number;
+    month: string;
+    created_at: string;
+    updated_at: string;
+    category_name: string;
+    category_color: string;
+    spent: number;
+    is_default: boolean;
+    default_amount: number | null;
+}
+
 export function useBudgets(month: Date, groupId?: string) {
     const { user } = useAuth();
-    const [budgets, setBudgets] = useState<any[]>([]);
+    const [budgets, setBudgets] = useState<BudgetWithDefaults[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -21,8 +36,9 @@ export function useBudgets(month: Date, groupId?: string) {
             setLoading(true);
             const monthDate = `${monthString}-01`;
 
+            // Usa a nova RPC que combina orçamentos padrão com overrides mensais
             const { data: budgetsData, error: budgetsError } = await supabase
-                .rpc('get_budgets_with_spent', {
+                .rpc('get_budgets_with_defaults', {
                     p_month: monthDate,
                     p_group_id: groupId ?? undefined
                 });
