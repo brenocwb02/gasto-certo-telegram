@@ -37,8 +37,8 @@ import { useAccounts } from "@/hooks/useAccounts";
 export default function RecurringTransactions() {
   const { toast } = useToast();
   const { currentGroup } = useFamily();
-  const { categories } = useCategories();
-  const { accounts } = useAccounts();
+  const { categories } = useCategories(currentGroup?.id);
+  const { accounts } = useAccounts(currentGroup?.id);
   const {
     recurringTransactions,
     generationLogs,
