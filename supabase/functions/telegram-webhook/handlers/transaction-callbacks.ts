@@ -170,10 +170,19 @@ export async function handleConfirmTransactionCallback(
     if (action === 'confirm_transaction') {
         const transactionData = session.contexto;
 
-        // Limpar campos que não existem na tabela transactions (caso existam metadados)
-        const dbData = { ...transactionData };
-        delete dbData.categoria_nome; // Garantia
-        delete dbData.conta_nome; // Garantia
+        // Limpar campos que não existem na tabela transactions (evitar erro "column does not exist")
+        const dbData = {
+            user_id: transactionData.user_id,
+            group_id: transactionData.group_id || null,
+            valor: transactionData.valor,
+            descricao: transactionData.descricao,
+            tipo: transactionData.tipo,
+            categoria_id: transactionData.categoria_id || null,
+            conta_origem_id: transactionData.conta_origem_id || null,
+            conta_destino_id: transactionData.conta_destino_id || null,
+            origem: transactionData.origem || 'telegram',
+            data_transacao: transactionData.data_transacao || new Date().toISOString().split('T')[0],
+        };
 
         const { error: transactionError } = await supabase.from('transactions').insert(dbData);
 
