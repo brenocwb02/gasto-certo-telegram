@@ -381,7 +381,7 @@ export async function handleTextMessage(supabase: any, chatId: number, message: 
                     v_start_of_month := date_trunc('month', now());
                     IF p_resource_type = 'transaction' THEN
                         v_limit := 30;
-                        SELECT count(*) INTO v_count FROM public.transactions WHERE user_id = p_user_id AND date >= v_start_of_month::date;
+                        SELECT count(*) INTO v_count FROM public.transactions WHERE user_id = p_user_id AND data_transacao >= v_start_of_month::date;
                         IF v_count >= v_limit THEN RETURN jsonb_build_object('allowed', false, 'message', 'Limite mensal de 30 transações atingido no Plano Gratuito.'); END IF;
                     ELSIF p_resource_type = 'account' THEN
                         v_limit := 1;
