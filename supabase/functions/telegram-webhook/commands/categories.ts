@@ -40,7 +40,7 @@ export async function handleCategoriasCommand(supabase: any, userId: string, cha
             // Finanças e Investimentos
             'trending-up': '📈', 'trending-down': '📉', 'banknote': '💵', 'wallet': '👛', 'credit-card': '💳', 'piggy-bank': '🐷', 'coins': '🪙', 'dollar-sign': '💲',
             // Saúde
-            'heart': '❤️', 'heart-pulse': '💓', 'stethoscope': '🩺', 'pill': '💊', 'activity': '🏃', 'apple': '🍎', 'dumbbell': '🏋️',
+            'heart': '❤️', 'heart-pulse': '💓', 'stethoscope': '🩺', 'pill': '💊', 'activity': '🏃', 'dumbbell': '🏋️',
             // Trabalho
             'laptop': '💻', 'briefcase': '💼', 'building': '🏢', 'calculator': '🧮', 'tie': '👔',
             // Casa / Moradia
