@@ -33,6 +33,7 @@ const Planos = lazy(() => import("@/pages/Planos"));
 const CheckoutSuccess = lazy(() => import("@/pages/CheckoutSuccess"));
 const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
 const UpdatePassword = lazy(() => import("@/pages/UpdatePassword"));
+const Admin = lazy(() => import("@/pages/Admin"));
 
 const queryClient = new QueryClient();
 
@@ -214,6 +215,14 @@ const AppRoutes = () => {
               <AppLayout>
                 <Planos />
               </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <Admin />
             </ProtectedRoute>
           }
         />
