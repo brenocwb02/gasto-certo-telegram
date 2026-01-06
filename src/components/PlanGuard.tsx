@@ -3,7 +3,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, ShieldAlert, ShieldCheck } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface PlanGuardProps {
   children: React.ReactNode;
@@ -35,12 +34,12 @@ export function PlanGuard({ children, fallback, requirePremium = false }: PlanGu
   // Se erro ao carregar assinatura
   if (error) {
     return (
-      <Alert variant="destructive">
-        <ShieldAlert className="h-4 w-4" />
-        <AlertDescription>
-          Erro ao verificar assinatura: {error}
-        </AlertDescription>
-      </Alert>
+      <Card className="border-destructive bg-destructive/5">
+        <CardContent className="flex items-center gap-2 pt-4">
+          <ShieldAlert className="h-4 w-4 text-destructive" />
+          <span className="text-sm text-destructive">Erro ao verificar assinatura: {error}</span>
+        </CardContent>
+      </Card>
     );
   }
 
