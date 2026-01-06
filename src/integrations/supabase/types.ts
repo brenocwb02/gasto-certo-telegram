@@ -1374,6 +1374,16 @@ export type Database = {
       accept_family_invite:
         | { Args: { invite_token: string; p_user_id?: string }; Returns: Json }
         | { Args: { p_invite_code: string }; Returns: string }
+      admin_update_license: {
+        Args: {
+          p_data_expiracao?: string
+          p_plano: string
+          p_status?: string
+          p_tipo?: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       auto_learn_category: {
         Args: {
           p_category_id: string
@@ -1451,6 +1461,20 @@ export type Database = {
       dissolve_family_group: { Args: { p_group_id: string }; Returns: Json }
       generate_activation_code: { Args: { user_uuid: string }; Returns: string }
       get_admin_stats: { Args: never; Returns: Json }
+      get_admin_users: {
+        Args: { p_limit?: number; p_offset?: number; p_search?: string }
+        Returns: {
+          created_at: string
+          email: string
+          license_expiracao: string
+          license_plano: string
+          license_status: string
+          license_tipo: string
+          nome: string
+          telegram_connected: boolean
+          user_id: string
+        }[]
+      }
       get_audit_summary: {
         Args: { p_days_back?: number }
         Returns: {
