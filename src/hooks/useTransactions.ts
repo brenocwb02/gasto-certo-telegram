@@ -29,12 +29,39 @@ export function useTransactions(groupId?: string) {
                 query = query.eq('user_id', user.id);
             }
 
-            const { data, error } = await query
+            const { data: transactionsData, error: transactionsError } = await query
                 .order('data_transacao', { ascending: false })
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
-            setTransactions(data || []);
+            if (transactionsError) throw transactionsError;
+
+            if (transactionsData && transactionsData.length > 0) {
+                // Get unique user IDs
+                const userIds = [...new Set(transactionsData.map(t => t.user_id))];
+
+                // Fetch profiles - linking by user_id which is the foreign key to auth.users
+                const { data: profilesData, error: profilesError } = await supabase
+                    .from('profiles')
+                    .select('user_id, nome, avatar_url')
+                    .in('user_id', userIds);
+
+                if (!profilesError && profilesData) {
+                    // Create a map of user profiles indexed by user_id
+                    const profilesMap = new Map(profilesData.map(p => [p.user_id, p]));
+
+                    // Attach profile to transaction object
+                    const transactionsWithProfile = transactionsData.map(t => ({
+                        ...t,
+                        created_by_profile: profilesMap.get(t.user_id) || null
+                    }));
+
+                    setTransactions(transactionsWithProfile as any);
+                    setLoading(false);
+                    return;
+                }
+            }
+
+            setTransactions(transactionsData || []);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Erro ao carregar transações');
         } finally {
@@ -66,7 +93,7 @@ export function useTransactions(groupId?: string) {
         };
     }, [user, groupId, fetchTransactions]);
 
-    const addTransaction = async (transaction: Omit<Transaction, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => {
+    const addTransaction = async (transaction: Omit<Transaction, 'id' | 'created_at' | 'updated_at' | 'user_id'> & { efetivada?: boolean }) => {
         if (!user) return;
         try {
             const transactionData = { ...transaction, user_id: user.id };
@@ -76,7 +103,7 @@ export function useTransactions(groupId?: string) {
 
             const { data, error } = await supabase
                 .from('transactions')
-                .insert([transactionData])
+                .insert([transactionData as any]) // Cast to any to bypass strict type check for now until types.ts is updated
                 .select()
                 .single();
             if (error) throw error;
@@ -123,5 +150,24 @@ export function useTransactions(groupId?: string) {
         }
     };
 
-    return { transactions, loading, error, addTransaction, updateTransaction, deleteTransaction, refetchTransactions: fetchTransactions };
+    const deleteTransactionsByTag = async (tag: string) => {
+        if (!user) return;
+        try {
+            // Using contains for array column 'tags'
+            const { error } = await supabase
+                .from('transactions')
+                .delete()
+                .contains('tags', [tag]);
+
+            if (error) throw error;
+
+            // Refetch to ensure local state acts correctly with multiple deletions
+            fetchTransactions();
+            return true;
+        } catch (err) {
+            throw new Error(err instanceof Error ? err.message : 'Erro ao excluir transações em lote');
+        }
+    };
+
+    return { transactions, loading, error, addTransaction, updateTransaction, deleteTransaction, deleteTransactionsByTag, refetchTransactions: fetchTransactions };
 }

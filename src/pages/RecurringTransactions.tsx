@@ -33,6 +33,7 @@ import { useFamily } from "@/hooks/useFamily";
 import { useToast } from "@/hooks/use-toast";
 import { useCategories } from "@/hooks/useCategories";
 import { useAccounts } from "@/hooks/useAccounts";
+import { parseLocalDate } from "@/lib/utils";
 
 export default function RecurringTransactions() {
   const { toast } = useToast();
@@ -222,10 +223,7 @@ export default function RecurringTransactions() {
         </div>
 
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setShowStats(true)}>
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Estatísticas
-          </Button>
+
 
           <Button variant="outline" onClick={handleGenerateRecurring}>
             <RefreshCw className="h-4 w-4 mr-2" />
@@ -416,6 +414,73 @@ export default function RecurringTransactions() {
         </Alert>
       )}
 
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+        <Card>
+          <CardContent className="p-4 flex flex-col justify-between h-full">
+            <div className="flex items-center justify-between space-y-0 pb-2">
+              <span className="text-sm font-medium text-muted-foreground">Total Recorrências</span>
+              <Repeat className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="text-2xl font-bold">{stats.total}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 flex flex-col justify-between h-full">
+            <div className="flex items-center justify-between space-y-0 pb-2">
+              <span className="text-sm font-medium text-muted-foreground">Ativas vs Pausadas</span>
+              <div className="flex gap-1">
+                <div className="h-2 w-2 rounded-full bg-green-500" title="Ativas" />
+                <div className="h-2 w-2 rounded-full bg-orange-500" title="Pausadas" />
+              </div>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-green-600">{stats.active}</span>
+              <span className="text-sm text-muted-foreground">/ {stats.paused}</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 flex flex-col justify-between h-full">
+            <div className="flex items-center justify-between space-y-0 pb-2">
+              <span className="text-sm font-medium text-muted-foreground">Custo Mensal Estimado</span>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className={`text-2xl font-bold ${stats.totalAmount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              R$ {Math.abs(stats.totalAmount).toFixed(2)}
+            </div>
+          </CardContent>
+        </Card>
+
+        {stats.nextDue ? (
+          <Card className="border-l-4 border-l-primary">
+            <CardContent className="p-4 flex flex-col justify-between h-full">
+              <div className="flex items-center justify-between space-y-0 pb-2">
+                <span className="text-sm font-medium text-muted-foreground">Próximo Vencimento</span>
+                <Calendar className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <div className="font-bold truncate" title={stats.nextDue.title}>{stats.nextDue.title}</div>
+                <div className="text-sm text-muted-foreground">
+                  {parseLocalDate(stats.nextDue.next_due_date).toLocaleDateString('pt-BR')}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardContent className="p-4 flex flex-col justify-between h-full">
+              <div className="flex items-center justify-between space-y-0 pb-2">
+                <span className="text-sm font-medium text-muted-foreground">Próximo Vencimento</span>
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="text-sm text-muted-foreground">Nenhuma previsão</div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
       <Tabs defaultValue="transactions" className="space-y-4">
         <TabsList>
           <TabsTrigger value="transactions">Transações</TabsTrigger>
@@ -487,7 +552,7 @@ export default function RecurringTransactions() {
                             <div className="flex items-center gap-1">
                               <Calendar className="h-4 w-4" />
                               <span>
-                                Próxima: {new Date(transaction.next_due_date).toLocaleDateString('pt-BR')}
+                                Próxima: {parseLocalDate(transaction.next_due_date).toLocaleDateString('pt-BR')}
                               </span>
                             </div>
                             {transaction.category && (
@@ -566,7 +631,7 @@ export default function RecurringTransactions() {
                         </p>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <span>
-                            {new Date(log.generated_date).toLocaleDateString('pt-BR')}
+                            {parseLocalDate(log.generated_date).toLocaleDateString('pt-BR')}
                           </span>
                           <span>•</span>
                           <span className="capitalize">
@@ -599,65 +664,7 @@ export default function RecurringTransactions() {
         </TabsContent>
       </Tabs>
 
-      {/* Modal de Estatísticas */}
-      <Dialog open={showStats} onOpenChange={setShowStats}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Estatísticas das Contas Recorrentes</DialogTitle>
-            <DialogDescription>
-              Resumo das suas transações recorrentes
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid grid-cols-2 gap-4">
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-primary">{stats.total}</div>
-                <div className="text-sm text-muted-foreground">Total</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-green-600">{stats.active}</div>
-                <div className="text-sm text-muted-foreground">Ativas</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-orange-600">{stats.paused}</div>
-                <div className="text-sm text-muted-foreground">Pausadas</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className={`text-2xl font-bold ${stats.totalAmount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  R$ {Math.abs(stats.totalAmount).toFixed(2)}
-                </div>
-                <div className="text-sm text-muted-foreground">Valor Total</div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {stats.nextDue && (
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-primary" />
-                  <div>
-                    <div className="font-medium">Próxima Transação</div>
-                    <div className="text-sm text-muted-foreground">
-                      {stats.nextDue.title} - {new Date(stats.nextDue.next_due_date).toLocaleDateString('pt-BR')}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Modal de Estatísticas REMOVIDO pois agora está inline */}
 
     </>
   );

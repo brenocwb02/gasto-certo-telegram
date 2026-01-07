@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { useFinancialStats, useProfile, useGoals, useFinancialProfile } from "@/hooks/useSupabaseData";
 import { PlanStatus } from "@/components/PlanGuard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { UpcomingBillsWidget } from "@/components/dashboard/UpcomingBillsWidget";
 import { useFamily } from "@/hooks/useFamily";
 import {
   Wallet,
@@ -395,7 +396,10 @@ const Dashboard = () => {
 
         {/* Sidebar Column - Widgets */}
         <div className="lg:col-span-1 space-y-6 h-full flex flex-col">
-          {/* Quick Actions - Hidden on mobile, shown on desktop - Priority 1 */}
+          {/* Ongoing Bills Widget - Priority 1 */}
+          <UpcomingBillsWidget groupId={currentGroup?.id} />
+
+          {/* Quick Actions - Hidden on mobile, shown on desktop */}
           <div className="hidden lg:block">
             <QuickActions />
           </div>

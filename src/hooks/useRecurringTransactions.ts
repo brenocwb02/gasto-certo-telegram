@@ -129,8 +129,8 @@ export function useRecurringTransactions() {
       // Filtrar apenas logs que o usuário tem acesso
       const filteredLogs = data?.filter(log => {
         const recurring = log.recurring_transaction;
-        return recurring.user_id === user.id || 
-               (recurring.group_id && currentGroup?.id === recurring.group_id);
+        return recurring.user_id === user.id ||
+          (recurring.group_id && currentGroup?.id === recurring.group_id);
       }) || [];
 
       setGenerationLogs(filteredLogs as any);
@@ -153,11 +153,12 @@ export function useRecurringTransactions() {
     group_id?: string;
     day_of_month?: number;
     day_of_week?: number;
+    gerar_pendente?: boolean;
   }) => {
     if (!user) throw new Error('Usuário não autenticado');
 
     try {
-      const { data, error } = await (supabase.rpc as any)('create_recurring_transaction', {
+      const { data, error } = await (supabase.rpc as any)('create_recurring_transaction_v2', {
         p_title: transactionData.title,
         p_description: transactionData.description || '',
         p_amount: transactionData.amount,
@@ -169,7 +170,8 @@ export function useRecurringTransactions() {
         p_account_id: transactionData.account_id,
         p_group_id: transactionData.group_id || currentGroup?.id || undefined,
         p_day_of_month: transactionData.day_of_month,
-        p_day_of_week: transactionData.day_of_week
+        p_day_of_week: transactionData.day_of_week,
+        p_gerar_pendente: transactionData.gerar_pendente || false
       });
 
       if (error) throw error;
@@ -235,8 +237,8 @@ export function useRecurringTransactions() {
       if (data?.success) {
         await loadRecurringTransactions();
         await loadGenerationLogs();
-        return { 
-          success: true, 
+        return {
+          success: true,
           message: data.message,
           generated_count: data.generated_count,
           error_count: data.error_count
@@ -255,7 +257,7 @@ export function useRecurringTransactions() {
     const total = recurringTransactions.length;
     const active = recurringTransactions.filter(t => t.is_active).length;
     const paused = total - active;
-    
+
     const totalAmount = recurringTransactions
       .filter(t => t.is_active)
       .reduce((sum, t) => sum + (t.type === 'receita' ? t.amount : -t.amount), 0);

@@ -30,47 +30,84 @@ serve(async (req) => {
             details: [] as string[]
         };
 
-        // Buscar transações recorrentes que vencem em 3, 1 ou 0 dias
+        // Buscar transações (despesas) não efetivadas que vencem em 3, 1 ou 0 dias
         const daysToCheck = [0, 1, 3];
+        const processedUserIds = new Set<string>();
+
+        // Map para armazenar perfis: userId -> { telegram_chat_id, nome }
+        const profilesMap = new Map<string, { telegram_chat_id: number, nome: string }>();
 
         for (const daysAhead of daysToCheck) {
             const targetDate = new Date(today);
             targetDate.setDate(today.getDate() + daysAhead);
-            const targetDay = targetDate.getDate();
+            const targetDateStr = targetDate.toISOString().split('T')[0]; // YYYY-MM-DD
 
-            // Buscar recorrências ativas que vencem nesse dia
-            const { data: recurrences, error: recError } = await supabase
-                .from('recurring_transactions')
-                .select(`
-          id,
-          descricao,
-          valor,
-          dia_vencimento,
-          user_id,
-          profiles!inner(telegram_chat_id, full_name)
-        `)
-                .eq('ativa', true)
+            // Buscar despesas pendentes para esta data
+            // Nota: 'efetivada' deve ser false.
+            const { data: bills, error: billsError } = await supabase
+                .from('transactions')
+                .select('id, description:descricao, amount:valor, date:data_transacao, user_id, efetivada') // Alias para compatibilidade ou clareza
                 .eq('tipo', 'despesa')
-                .eq('dia_vencimento', targetDay);
+                .eq('efetivada', false)
+                .eq('data_transacao', targetDateStr);
 
-            if (recError) {
-                console.error('Erro ao buscar recorrências:', recError);
+            if (billsError) {
+                console.error(`Erro ao buscar contas para ${targetDateStr}:`, billsError);
+                results.details.push(`Erro DB ${targetDateStr}: ${billsError.message}`);
                 continue;
             }
 
-            if (!recurrences || recurrences.length === 0) continue;
+            if (!bills || bills.length === 0) continue;
 
-            for (const rec of recurrences) {
-                const profile = rec.profiles as any;
-                const chatId = profile?.telegram_chat_id;
+            // Coletar User IDs para buscar perfis
+            bills.forEach((b: any) => processedUserIds.add(b.user_id));
+        }
 
-                if (!chatId) {
-                    results.details.push(`Skip: ${rec.descricao} (sem Telegram)`);
+        // Buscar perfis em lote
+        if (processedUserIds.size > 0) {
+            const { data: profiles, error: profilesError } = await supabase
+                .from('profiles')
+                .select('user_id, telegram_chat_id, nome')
+                .in('user_id', Array.from(processedUserIds));
+
+            if (profiles && !profilesError) {
+                profiles.forEach((p: any) => {
+                    if (p.telegram_chat_id) {
+                        profilesMap.set(p.user_id, { telegram_chat_id: p.telegram_chat_id, nome: p.nome });
+                    }
+                });
+            }
+        }
+
+        // Processar envio
+        for (const daysAhead of daysToCheck) {
+            const targetDate = new Date(today);
+            targetDate.setDate(today.getDate() + daysAhead);
+            const targetDateStr = targetDate.toISOString().split('T')[0];
+
+            const { data: bills } = await supabase
+                .from('transactions')
+                .select('id, descricao, valor, user_id')
+                .eq('tipo', 'despesa')
+                .eq('efetivada', false)
+                .eq('data_transacao', targetDateStr);
+
+            if (!bills) continue;
+
+            for (const bill of bills) {
+                const profile = profilesMap.get(bill.user_id);
+
+                if (!profile) {
+                    results.details.push(`Skip: ${bill.descricao} (sem Telegram)`);
                     continue;
                 }
 
-                // Verificar se já enviamos lembrete hoje para esta recorrência
-                const reminderKey = `due_reminder_${rec.id}_${today.toISOString().split('T')[0]}_${daysAhead}`;
+                const chatId = profile.telegram_chat_id;
+
+                // Verificar se já enviamos lembrete hoje para esta conta
+                // Chave única: reminder_BILLID_DATE_TYPE
+                const reminderKey = `reminder_${bill.id}_${today.toISOString().split('T')[0]}_${daysAhead}d`;
+
                 const { data: existingLog } = await supabase
                     .from('notification_logs')
                     .select('id')
@@ -78,7 +115,7 @@ serve(async (req) => {
                     .single();
 
                 if (existingLog) {
-                    results.details.push(`Skip: ${rec.descricao} (já notificado)`);
+                    // results.details.push(`Skip: ${bill.descricao} (já notificado)`);
                     continue;
                 }
 
@@ -98,28 +135,28 @@ serve(async (req) => {
                 }
 
                 const message = `${emoji} *Lembrete de Vencimento*\n\n` +
-                    `📌 *${rec.descricao}*\n` +
-                    `💰 Valor: R$ ${Number(rec.valor).toFixed(2)}\n` +
+                    `📌 *${bill.descricao}*\n` +
+                    `💰 Valor: R$ ${Number(bill.valor).toFixed(2)}\n` +
                     `📅 ${urgency}\n\n` +
-                    `_Use /recorrentes para ver todas as suas contas._`;
+                    `_Acesse o app para marcar como paga._`;
 
                 // Enviar via Telegram
                 const sent = await sendTelegramMessage(chatId, message);
 
                 if (sent) {
-                    // Registrar log para evitar duplicatas
+                    // Registrar log
                     await supabase.from('notification_logs').insert({
                         key: reminderKey,
-                        user_id: rec.user_id,
+                        user_id: bill.user_id,
                         type: 'due_date_reminder',
-                        metadata: { recurring_id: rec.id, days_ahead: daysAhead }
+                        metadata: { transaction_id: bill.id, days_ahead: daysAhead }
                     });
 
                     results.sent++;
-                    results.details.push(`✅ Enviado: ${rec.descricao} (${daysAhead}d)`);
+                    results.details.push(`✅ Enviado: ${bill.descricao} (${daysAhead}d)`);
                 } else {
                     results.errors++;
-                    results.details.push(`❌ Erro: ${rec.descricao}`);
+                    results.details.push(`❌ Erro Telegram: ${bill.descricao}`);
                 }
             }
         }

@@ -16,6 +16,8 @@ import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+import { BudgetDetailsDialog } from "@/components/budget/BudgetDetailsDialog";
+
 const Budget = () => {
   const { currentGroup } = useFamily();
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -25,6 +27,7 @@ const Budget = () => {
   const [editingDefaultBudget, setEditingDefaultBudget] = useState<any>(null);
   const [overrideDialogOpen, setOverrideDialogOpen] = useState(false);
   const [selectedBudgetForOverride, setSelectedBudgetForOverride] = useState<any>(null);
+  const [selectedBudgetForDetails, setSelectedBudgetForDetails] = useState<any>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -52,12 +55,14 @@ const Budget = () => {
     refetchBudgets();
   };
 
-  const handleEditDefaultBudget = (budget: any) => {
+  const handleEditDefaultBudget = (budget: any, e: React.MouseEvent) => {
+    e.stopPropagation();
     setEditingDefaultBudget(budget);
     setDialogOpen(true);
   };
 
-  const handleDeleteDefaultBudget = async (budgetId: string) => {
+  const handleDeleteDefaultBudget = async (budgetId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!confirm("Tem certeza que deseja excluir este orçamento padrão? Isso removerá o orçamento de todos os meses.")) return;
 
     try {
@@ -77,9 +82,14 @@ const Budget = () => {
     }
   };
 
-  const handleAdjustMonth = (budget: any) => {
+  const handleAdjustMonth = (budget: any, e: React.MouseEvent) => {
+    e.stopPropagation();
     setSelectedBudgetForOverride(budget);
     setOverrideDialogOpen(true);
+  };
+
+  const handleCardClick = (budget: any) => {
+    setSelectedBudgetForDetails(budget);
   };
 
   const goToPreviousMonth = () => setCurrentMonth(prev => subMonths(prev, 1));
@@ -106,9 +116,9 @@ const Budget = () => {
             <DialogHeader>
               <DialogTitle>{editingDefaultBudget ? 'Editar Orçamento Padrão' : 'Novo Orçamento Padrão'}</DialogTitle>
             </DialogHeader>
-            <DefaultBudgetForm 
-              budget={editingDefaultBudget} 
-              onSuccess={handleSuccess} 
+            <DefaultBudgetForm
+              budget={editingDefaultBudget}
+              onSuccess={handleSuccess}
               groupId={currentGroup?.id}
               existingCategoryIds={existingCategoryIds}
             />
@@ -192,7 +202,11 @@ const Budget = () => {
                 const isDefault = budget.is_default;
 
                 return (
-                  <Card key={budget.category_id} className="hover:shadow-md transition-shadow">
+                  <Card
+                    key={budget.category_id}
+                    className="hover:shadow-lg transition-all cursor-pointer hover:border-primary/50"
+                    onClick={() => handleCardClick(budget)}
+                  >
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-base flex items-center gap-2">
@@ -218,8 +232,8 @@ const Budget = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleAdjustMonth(budget)}
-                            className="text-xs"
+                            onClick={(e) => handleAdjustMonth(budget, e)}
+                            className="text-xs hover:bg-background/80"
                           >
                             <Edit className="h-3 w-3 mr-1" />
                             Ajustar
@@ -313,14 +327,14 @@ const Budget = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleEditDefaultBudget(budget)}
+                          onClick={(e) => handleEditDefaultBudget(budget, e)}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDeleteDefaultBudget(budget.id)}
+                          onClick={(e) => handleDeleteDefaultBudget(budget.id, e)}
                           className="text-destructive hover:text-destructive"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -362,6 +376,15 @@ const Budget = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Dialog de Detalhes (Drill-down) */}
+      <BudgetDetailsDialog
+        isOpen={!!selectedBudgetForDetails}
+        onClose={() => setSelectedBudgetForDetails(null)}
+        budget={selectedBudgetForDetails}
+        currentMonth={currentMonth}
+        groupId={currentGroup?.id}
+      />
     </>
   );
 };

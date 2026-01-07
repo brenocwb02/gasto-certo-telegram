@@ -48,14 +48,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TransactionForm } from "@/components/forms/TransactionForm";
 import { toast } from "@/hooks/use-toast";
 import { useFamily } from "@/hooks/useFamily";
-import { startOfMonth, endOfMonth } from "date-fns";
+import { startOfMonth, endOfMonth, addMonths } from "date-fns";
 import { TransactionItem } from "@/components/transactions/TransactionItem";
 
 const Transactions = () => {
   const { currentGroup } = useFamily();
-  const { transactions: allTransactions, loading, deleteTransaction, refetchTransactions } = useTransactions(currentGroup?.id);
+  const { transactions: allTransactions, loading, deleteTransaction, deleteTransactionsByTag, refetchTransactions } = useTransactions(currentGroup?.id);
   const { accounts } = useAccounts(currentGroup?.id);
-  const { categories } = useCategories(currentGroup?.id);
+  const { categories = [] } = useCategories(currentGroup?.id);
 
   // State for filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -132,6 +132,20 @@ const Transactions = () => {
       const thirtyDaysAgo = new Date(now);
       thirtyDaysAgo.setDate(now.getDate() - 30);
       filtered = filtered.filter((t) => new Date(t.data_transacao) >= thirtyDaysAgo);
+    } else if (dateFilter === "6meses") {
+      const start = startOfMonth(now);
+      const end = addMonths(endOfMonth(now), 6);
+      filtered = filtered.filter((t) => {
+        const date = new Date(t.data_transacao);
+        return date >= start && date <= end;
+      });
+    } else if (dateFilter === "12meses") {
+      const start = startOfMonth(now);
+      const end = addMonths(endOfMonth(now), 12);
+      filtered = filtered.filter((t) => {
+        const date = new Date(t.data_transacao);
+        return date >= start && date <= end;
+      });
     }
 
     return filtered;
@@ -166,12 +180,45 @@ const Transactions = () => {
     if (!selected) return;
     setIsDeleting(true);
     try {
+      // Check if it's part of a group (has a tag starting with installment_group:)
+      const groupTag = selected.tags?.find((t: string) => t.startsWith('installment_group:'));
+
+      // If user chose to delete all (we'll implement the UI choice in a moment, for now default to single unless logic added)
+      // Actually, let's change the logic: If has group tag, we should ASK.
+      // But for this step, let's assume we pass a flag or handle it in the UI.
+      // Let's modify the dialog content below to include a choice.
+      // For now, let's just use single delete here and add a "deleteAll" param or state?
+      // Better: Let's create a separate function or modify this one to check a state.
+      // Let's assume we added a checkbox state in the dialog.
+
       await deleteTransaction(selected.id);
       toast({ title: "Transação excluída", description: "A transação foi removida com sucesso." });
     } catch (error) {
       toast({
         title: "Erro",
         description: error instanceof Error ? error.message : "Erro ao excluir transação",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setDeleteOpen(false);
+      setSelected(null);
+    }
+  };
+
+  const handleDeleteGroup = async () => {
+    if (!selected) return;
+    const groupTag = selected.tags?.find((t: string) => t.startsWith('installment_group:'));
+    if (!groupTag || !deleteTransactionsByTag) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteTransactionsByTag(groupTag);
+      toast({ title: "Transações excluídas", description: "Todas as parcelas foram removidas." });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Erro ao excluir parcelas",
         variant: "destructive",
       });
     } finally {
@@ -199,7 +246,14 @@ const Transactions = () => {
   const getCategoryName = (categoryId: string | null) => {
     if (!categoryId) return "Sem categoria";
     const category = categories.find((c) => c.id === categoryId);
-    return category?.nome || "Categoria não encontrada";
+    if (!category) return "Categoria não encontrada";
+
+    if (category.parent_id) {
+      const parent = categories.find(c => c.id === category.parent_id);
+      return parent ? `${parent.nome} / ${category.nome}` : category.nome;
+    }
+
+    return category.nome;
   };
 
   const getAccountName = (accountId: string | null) => {
@@ -345,6 +399,8 @@ const Transactions = () => {
                       <SelectItem value="7dias">Últimos 7 dias</SelectItem>
                       <SelectItem value="mes">Este mês</SelectItem>
                       <SelectItem value="30dias">Últimos 30 dias</SelectItem>
+                      <SelectItem value="6meses">Próximos 6 Meses</SelectItem>
+                      <SelectItem value="12meses">Próximos 12 Meses</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -510,19 +566,40 @@ const Transactions = () => {
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir transação</AlertDialogTitle>
+            <AlertDialogTitle>
+              {selected?.tags?.some((t: string) => t.startsWith('installment_group:'))
+                ? "Excluir Parcelamento?"
+                : "Excluir transação"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.
+              {selected?.tags?.some((t: string) => t.startsWith('installment_group:'))
+                ? "Esta transação faz parte de um parcelamento. Você deseja excluir apenas esta parcela ou todas as parcelas associadas?"
+                : "Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+
+            {selected?.tags?.some((t: string) => t.startsWith('installment_group:')) && (
+              <Button
+                variant="destructive"
+                onClick={handleDeleteGroup}
+                disabled={isDeleting}
+              >
+                {isDeleting ? "Excluindo..." : "Excluir Todas"}
+              </Button>
+            )}
+
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className={selected?.tags?.some((t: string) => t.startsWith('installment_group:'))
+                ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                : "bg-destructive text-destructive-foreground hover:bg-destructive/90"}
               onClick={handleDeleteConfirm}
               disabled={isDeleting}
             >
-              {isDeleting ? "Excluindo..." : "Excluir"}
+              {selected?.tags?.some((t: string) => t.startsWith('installment_group:'))
+                ? (isDeleting ? "Excluindo..." : "Apenas esta")
+                : (isDeleting ? "Excluindo..." : "Excluir")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

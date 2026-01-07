@@ -52,7 +52,14 @@ export function RecentTransactions({ showViewAllButton = true, title = "Transaç
   const getCategoryName = (categoryId: string | null) => {
     if (!categoryId) return 'Sem categoria';
     const category = categories.find(c => c.id === categoryId);
-    return category?.nome || 'Categoria não encontrada';
+    if (!category) return 'Categoria não encontrada';
+
+    if (category.parent_id) {
+      const parent = categories.find(c => c.id === category.parent_id);
+      return parent ? `${parent.nome} / ${category.nome}` : category.nome;
+    }
+
+    return category.nome;
   };
 
   const getAccountName = (accountId: string | null) => {

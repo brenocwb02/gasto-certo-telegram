@@ -243,13 +243,25 @@ const Reports = () => {
 
     // Converter para array e ordenar por valor
     return Array.from(parentCategoryMap.values())
-      .map(entry => ({
-        name: entry.parentName,
-        value: entry.total,
-        subcategories: Array.from(entry.subcategories.entries())
-          .map(([name, value]) => ({ name, value }))
-          .sort((a, b) => b.value - a.value)
-      }))
+      .map(entry => {
+        const subcategoriesArray = Array.from(entry.subcategories.entries())
+          .map(([name, value]) => ({ name, value }));
+
+        // Calcular total das subcategorias
+        const subcategoriesTotal = subcategoriesArray.reduce((acc, curr) => acc + curr.value, 0);
+
+        // Se houver diferença significativa (transações direto na categoria pai), adicionar como "Outros"
+        const remainder = entry.total - subcategoriesTotal;
+        if (remainder > 0.001) {
+          subcategoriesArray.push({ name: 'Outros', value: remainder });
+        }
+
+        return {
+          name: entry.parentName,
+          value: entry.total,
+          subcategories: subcategoriesArray.sort((a, b) => b.value - a.value)
+        };
+      })
       .sort((a, b) => b.value - a.value);
   };
 
