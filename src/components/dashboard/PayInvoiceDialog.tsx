@@ -1,16 +1,13 @@
 import { useState } from "react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useAccounts, useTransactions, useCategories } from "@/hooks/useSupabaseData";
+import { useAccounts, useTransactions } from "@/hooks/useSupabaseData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle2, Loader2, Wallet } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 interface PayInvoiceDialogProps {
     isOpen: boolean;
@@ -33,7 +30,6 @@ export function PayInvoiceDialog({ isOpen, onClose, invoice, groupId, onSuccess 
     const { toast } = useToast();
     const { accounts } = useAccounts(groupId || undefined);
     const { refetchTransactions } = useTransactions(groupId || undefined);
-    const { categories } = useCategories();
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [paymentAccount, setPaymentAccount] = useState<string>("");
@@ -45,13 +41,6 @@ export function PayInvoiceDialog({ isOpen, onClose, invoice, groupId, onSuccess 
         a.tipo === 'corrente' ||
         a.tipo === 'poupanca' ||
         a.tipo === 'dinheiro'
-    );
-
-    // Find a category for "Credit Card Payment" or similar
-    const paymentCategory = categories.find(c =>
-        c.nome.toLowerCase().includes('cartão') ||
-        c.nome.toLowerCase().includes('pagamento') ||
-        c.nome.toLowerCase().includes('fatura')
     );
 
     const handlePay = async () => {

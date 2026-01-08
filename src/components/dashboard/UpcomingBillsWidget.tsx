@@ -6,7 +6,7 @@ import { CalendarClock, CheckCircle2, ArrowRight } from "lucide-react";
 import { useTransactions, useAccounts } from "@/hooks/useSupabaseData";
 import { format, addDays, isBefore, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Badge } from "@/components/ui/badge";
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { TransactionForm } from "@/components/forms/TransactionForm";
 import { cn, parseLocalDate } from "@/lib/utils";
@@ -175,7 +175,7 @@ export function UpcomingBillsWidget({ groupId }: UpcomingBillsWidgetProps) {
     }, [upcomingBills, creditCardInvoices]);
 
     // Total value calculation (now includes invoices)
-    const totalDue = allBills.reduce((acc, curr) => acc + Number(curr?.valor || 0), 0);
+    void allBills.reduce((acc, curr) => acc + Number(curr?.valor || 0), 0);
 
     const formatCurrency = (value: number) => {
         return new Intl.NumberFormat('pt-BR', {
