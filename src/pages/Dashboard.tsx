@@ -49,7 +49,14 @@ const Dashboard = () => {
   const { goals, loading: goalsLoading } = useGoals(currentGroup?.id);
   const { financialProfile, hasCompletedQuiz, getFinancialHealthLevel } = useFinancialProfile();
   const { isTransactionLimitReached } = useLimits();
-  const { accounts, loading: accountsLoading } = useAccounts(currentGroup?.id);
+  const { accounts, loading: accountsLoading, refetchAccounts } = useAccounts(currentGroup?.id);
+
+  const handleUpdate = () => {
+    refetchAccounts();
+    // Se houver transações recentes sendo exibidas via hook do pai, atualize aqui também.
+    // Por enquanto, atualiza saldo que é crítico.
+  };
+
   const currentMonth = new Date();
 
   // Widget Visibility State
@@ -139,6 +146,7 @@ const Dashboard = () => {
               compact={true}
               groupId={currentGroup?.id}
               allAccounts={accounts}
+              onUpdate={handleUpdate}
             />
           ))}
         </div>

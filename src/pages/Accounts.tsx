@@ -187,6 +187,7 @@ const Accounts = () => {
                     account={account}
                     groupId={currentGroup?.id}
                     allAccounts={accounts}
+                    onUpdate={refetchAccounts}
                   />
                   <div className="absolute top-3 right-3 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-sm rounded-md p-1 border shadow-sm">
                     <Button

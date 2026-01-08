@@ -13,11 +13,12 @@ import { PayInvoiceDialog } from "./PayInvoiceDialog";
 interface CreditCardWidgetProps {
     account: any;
     compact?: boolean; // For dashboard vs full list
-    groupId?: string | null; // For PayInvoiceDialog
-    allAccounts?: any[]; // To find parent card name
+    groupId?: string | null;
+    allAccounts?: any[];
+    onUpdate?: () => void;
 }
 
-export function CreditCardWidget({ account, compact = false, groupId, allAccounts = [] }: CreditCardWidgetProps) {
+export function CreditCardWidget({ account, compact = false, groupId, allAccounts = [], onUpdate }: CreditCardWidgetProps) {
     const brand = getBankBrand(account.nome || "", account.banco || "");
     const [isPayDialogOpen, setIsPayDialogOpen] = useState(false);
 
@@ -185,6 +186,7 @@ export function CreditCardWidget({ account, compact = false, groupId, allAccount
                     transactionCount: 0, // We don't have this info here
                     data_transacao: new Date().toISOString().split('T')[0]
                 }}
+                onSuccess={onUpdate}
             />
         </>
     );

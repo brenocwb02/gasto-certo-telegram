@@ -16,6 +16,7 @@ interface PayInvoiceDialogProps {
     isOpen: boolean;
     onClose: () => void;
     groupId?: string | null;
+    onSuccess?: () => void;
     invoice: {
         id: string;
         cardId: string;
@@ -28,7 +29,7 @@ interface PayInvoiceDialogProps {
     } | null;
 }
 
-export function PayInvoiceDialog({ isOpen, onClose, invoice, groupId }: PayInvoiceDialogProps) {
+export function PayInvoiceDialog({ isOpen, onClose, invoice, groupId, onSuccess }: PayInvoiceDialogProps) {
     const { toast } = useToast();
     const { accounts } = useAccounts(groupId || undefined);
     const { refetchTransactions } = useTransactions(groupId || undefined);
@@ -113,7 +114,7 @@ export function PayInvoiceDialog({ isOpen, onClose, invoice, groupId }: PayInvoi
 
             const { error: payError } = await supabase
                 .from('transactions')
-                .insert(paymentTransactions);
+                .insert(paymentTransactions as any);
 
             if (payError) throw payError;
 
@@ -140,7 +141,7 @@ export function PayInvoiceDialog({ isOpen, onClose, invoice, groupId }: PayInvoi
 
             const { error: updateError } = await supabase
                 .from('transactions')
-                .update({ efetivada: true })
+                .update({ efetivada: true } as any)
                 .in('conta_origem_id', allCardIds)
                 .eq('tipo', 'despesa')
                 .eq('efetivada', false);
@@ -156,6 +157,7 @@ export function PayInvoiceDialog({ isOpen, onClose, invoice, groupId }: PayInvoi
 
             // Refresh data
             refetchTransactions();
+            if (onSuccess) onSuccess();
             onClose();
 
         } catch (error) {
