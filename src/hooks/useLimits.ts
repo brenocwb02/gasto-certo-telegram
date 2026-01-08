@@ -72,20 +72,37 @@ export function useLimits() {
                 const isTrialActive = diffDays < TRIAL_DURATION_DAYS;
                 const daysRemainingInTrial = Math.max(0, TRIAL_DURATION_DAYS - diffDays);
 
-                // Determine Plan based on subscription
+                // Check license table first (for manual/admin licenses)
+                const { data: license } = await supabase
+                    .from('licenses')
+                    .select('plano, status')
+                    .eq('user_id', user.id)
+                    .eq('status', 'ativo')
+                    .maybeSingle();
+
+                const hasActiveLicense = license && license.plano !== 'gratuito';
+                const licensePlan = license?.plano || 'gratuito';
+
+                // Determine Plan based on license OR subscription
                 let plan: LimitsState['plan'] = 'gratuito';
-                if (isPremium) {
-                    // Check specific plan from subscription info using product name
-                    const productName = subscriptionInfo?.product_name?.toLowerCase() || '';
-                    if (productName.includes('família') || productName.includes('familia')) {
-                        plan = 'familia';
-                    } else {
-                        plan = 'pessoal';
+                let hasPaidAccess = isPremium || hasActiveLicense;
+
+                if (hasPaidAccess) {
+                    // Check specific plan from license first, then subscription
+                    if (hasActiveLicense) {
+                        plan = licensePlan as LimitsState['plan'];
+                    } else if (isPremium) {
+                        const productName = subscriptionInfo?.product_name?.toLowerCase() || '';
+                        if (productName.includes('família') || productName.includes('familia')) {
+                            plan = 'familia';
+                        } else {
+                            plan = 'pessoal';
+                        }
                     }
                 }
 
-                // If Premium/Family, limits are effectively infinite
-                if (isPremium) {
+                // If has paid access (via License OR Stripe), limits are infinite
+                if (hasPaidAccess) {
                     setState({
                         transactionLimit: -1,
                         transactionUsage: 0,
