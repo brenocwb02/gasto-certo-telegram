@@ -47,6 +47,14 @@ export default function Admin() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  // Limpar data de expiração automaticamente quando selecionar vitalícia
+  const handleTipoChange = (tipo: string) => {
+    setNewTipo(tipo);
+    if (tipo === 'vitalicia') {
+      setNewExpiracao(undefined);
+    }
+  };
+
   // Redirecionar se não autenticado
   if (!user) {
     return <Navigate to="/auth" replace />;
@@ -469,7 +477,7 @@ export default function Admin() {
 
             <div className="space-y-2">
               <Label>Tipo</Label>
-              <Select value={newTipo} onValueChange={setNewTipo}>
+              <Select value={newTipo} onValueChange={handleTipoChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
@@ -483,32 +491,47 @@ export default function Admin() {
 
             <div className="space-y-2">
               <Label>Data de Expiração</Label>
-              <Popover>
-                <PopoverTrigger asChild>
+              <div className="flex gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "flex-1 justify-start text-left font-normal",
+                        !newExpiracao && "text-muted-foreground"
+                      )}
+                      disabled={newTipo === 'vitalicia'}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {newExpiracao ? format(newExpiracao, "dd/MM/yyyy", { locale: ptBR }) : "Sem expiração"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={newExpiracao}
+                      onSelect={setNewExpiracao}
+                      initialFocus
+                      locale={ptBR}
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+                {newExpiracao && newTipo !== 'vitalicia' && (
                   <Button
                     variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !newExpiracao && "text-muted-foreground"
-                    )}
+                    size="icon"
+                    onClick={() => setNewExpiracao(undefined)}
+                    title="Limpar data"
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {newExpiracao ? format(newExpiracao, "dd/MM/yyyy", { locale: ptBR }) : "Selecione uma data"}
+                    <RefreshCw className="h-4 w-4" />
                   </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={newExpiracao}
-                    onSelect={setNewExpiracao}
-                    initialFocus
-                    locale={ptBR}
-                    className={cn("p-3 pointer-events-auto")}
-                  />
-                </PopoverContent>
-              </Popover>
+                )}
+              </div>
               <p className="text-xs text-muted-foreground">
-                Deixe vazio para licenças sem expiração (vitalícias)
+                {newTipo === 'vitalicia' 
+                  ? 'Licença vitalícia não precisa de data de expiração' 
+                  : 'Deixe vazio para licenças sem expiração'}
               </p>
             </div>
           </div>
