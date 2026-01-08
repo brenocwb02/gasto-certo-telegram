@@ -40,13 +40,22 @@ export const useSubscription = () => {
         }
       });
 
-      // Handle function errors
+      // Handle function errors (including 401 auth errors)
       if (functionError) {
-        // Auth errors - treat as not subscribed
-        const errorString = JSON.stringify(functionError);
-        if (errorString.includes('Auth') || errorString.includes('session') || errorString.includes('401')) {
+        const errorString = String(functionError?.message || JSON.stringify(functionError) || '');
+        console.log('[useSubscription] Function error:', errorString);
+        
+        // Auth errors, 401, session errors - treat as not subscribed, not as failure
+        if (
+          errorString.includes('Auth') || 
+          errorString.includes('session') || 
+          errorString.includes('401') ||
+          errorString.includes('Unauthorized') ||
+          errorString.includes('missing')
+        ) {
           console.log('[useSubscription] Auth error, treating as not subscribed');
           setSubscriptionInfo({ subscribed: false });
+          setLoading(false);
           return;
         }
         throw functionError;
@@ -54,10 +63,12 @@ export const useSubscription = () => {
 
       console.log('[useSubscription] Response from check-subscription:', data);
 
-      // Handle error response from function (e.g., { error: "..." })
+      // Handle error response in data body (e.g., { subscribed: false, error: "..." })
       if (data?.error) {
-        console.log('[useSubscription] Function returned error:', data.error);
-        setSubscriptionInfo({ subscribed: false });
+        console.log('[useSubscription] Function returned error in body:', data.error);
+        // Still use the subscribed value from response if present
+        setSubscriptionInfo({ subscribed: data?.subscribed === true });
+        setLoading(false);
         return;
       }
 
