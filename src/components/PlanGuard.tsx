@@ -1,5 +1,6 @@
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLimits } from '@/hooks/useLimits';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, ShieldAlert, ShieldCheck } from 'lucide-react';
@@ -69,8 +70,18 @@ export function PlanGuard({ children, fallback, requirePremium = false }: PlanGu
   return <>{children}</>;
 }
 
+// Plan names for display
+const PLAN_NAMES: Record<string, string> = {
+  gratuito: 'Plano Gratuito',
+  pessoal: 'Plano Pessoal',
+  premium: 'Plano Premium',
+  familia: 'Plano Família',
+  familia_plus: 'Família Plus',
+  individual: 'Plano Individual',
+};
+
 export function PlanStatus() {
-  const { subscriptionInfo, loading, error, isPremium } = useSubscription();
+  const { plan, loading, isTrial, isTrialActive } = useLimits();
 
   if (loading) {
     return (
@@ -81,19 +92,34 @@ export function PlanStatus() {
     );
   }
 
-  if (error || !subscriptionInfo?.subscribed) {
+  const isPaid = plan !== 'gratuito';
+  const displayName = PLAN_NAMES[plan] || 'Plano Gratuito';
+
+  // During trial period
+  if (isTrialActive && isTrial) {
     return (
-      <div className="flex items-center gap-2 text-sm">
-        <ShieldAlert className="h-3 w-3 text-warning" />
-        <span className="text-warning">Plano Gratuito</span>
+      <div className="flex items-center gap-2 text-sm text-amber-600">
+        <ShieldCheck className="h-3 w-3" />
+        <span>Trial Ativo</span>
       </div>
     );
   }
 
+  // Paid plan (via license or Stripe)
+  if (isPaid) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-success">
+        <ShieldCheck className="h-3 w-3" />
+        <span>{displayName}</span>
+      </div>
+    );
+  }
+
+  // Free plan
   return (
-    <div className={`flex items-center gap-2 text-sm ${isPremium ? 'text-success' : 'text-warning'}`}>
-      {isPremium ? <ShieldCheck className="h-3 w-3" /> : <ShieldAlert className="h-3 w-3" />}
-      <span>{isPremium ? 'Premium' : 'Básico'}</span>
+    <div className="flex items-center gap-2 text-sm text-warning">
+      <ShieldAlert className="h-3 w-3" />
+      <span>Plano Gratuito</span>
     </div>
   );
 }
