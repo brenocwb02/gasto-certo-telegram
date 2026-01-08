@@ -1430,6 +1430,10 @@ export type Database = {
       check_transaction_limit: { Args: { user_id: string }; Returns: Json }
       clean_old_notification_logs: { Args: never; Returns: undefined }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
+      count_admin_users: {
+        Args: { p_plano?: string; p_search?: string; p_status?: string }
+        Returns: number
+      }
       count_personal_data: { Args: never; Returns: Json }
       create_family_group:
         | {
@@ -1505,20 +1509,41 @@ export type Database = {
       generate_activation_code: { Args: { user_uuid: string }; Returns: string }
       generate_recurring_transactions: { Args: never; Returns: Json }
       get_admin_stats: { Args: never; Returns: Json }
-      get_admin_users: {
-        Args: { p_limit?: number; p_offset?: number; p_search?: string }
-        Returns: {
-          created_at: string
-          email: string
-          license_expiracao: string
-          license_plano: string
-          license_status: string
-          license_tipo: string
-          nome: string
-          telegram_connected: boolean
-          user_id: string
-        }[]
-      }
+      get_admin_users:
+        | {
+            Args: { p_limit?: number; p_offset?: number; p_search?: string }
+            Returns: {
+              created_at: string
+              email: string
+              license_expiracao: string
+              license_plano: string
+              license_status: string
+              license_tipo: string
+              nome: string
+              telegram_connected: boolean
+              user_id: string
+            }[]
+          }
+        | {
+            Args: {
+              p_limit?: number
+              p_offset?: number
+              p_plano?: string
+              p_search?: string
+              p_status?: string
+            }
+            Returns: {
+              created_at: string
+              email: string
+              license_expiracao: string
+              license_plano: string
+              license_status: string
+              license_tipo: string
+              nome: string
+              telegram_connected: boolean
+              user_id: string
+            }[]
+          }
       get_audit_summary: {
         Args: { p_days_back?: number }
         Returns: {

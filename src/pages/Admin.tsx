@@ -10,19 +10,40 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Loader2, Users, DollarSign, TrendingUp, Shield, Search, RefreshCw, Calendar, MessageSquare, Crown, Edit } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Label } from '@/components/ui/label';
+import { Loader2, Users, DollarSign, TrendingUp, Shield, Search, RefreshCw, Calendar as CalendarIcon, MessageSquare, Crown, Edit, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 export default function Admin() {
   const { user } = useAuth();
-  const { isAdmin, loading, stats, users, auditLogs, fetchUsers, updateLicense } = useAdmin();
+  const { 
+    isAdmin, 
+    loading, 
+    stats, 
+    users, 
+    auditLogs, 
+    totalUsers,
+    currentPage,
+    totalPages,
+    fetchUsers, 
+    updateLicense,
+    nextPage,
+    prevPage 
+  } = useAdmin();
+  
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterPlano, setFilterPlano] = useState('todos');
+  const [filterStatus, setFilterStatus] = useState('todos');
   const [selectedUser, setSelectedUser] = useState<typeof users[0] | null>(null);
   const [newPlano, setNewPlano] = useState('');
   const [newStatus, setNewStatus] = useState('ativo');
   const [newTipo, setNewTipo] = useState('mensal');
+  const [newExpiracao, setNewExpiracao] = useState<Date | undefined>(undefined);
   const [isUpdating, setIsUpdating] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -53,7 +74,20 @@ export default function Admin() {
   }
 
   const handleSearch = () => {
-    fetchUsers(searchTerm || undefined);
+    fetchUsers(searchTerm || undefined, 1, filterPlano, filterStatus);
+  };
+
+  const handleFilterChange = (plano: string, status: string) => {
+    setFilterPlano(plano);
+    setFilterStatus(status);
+    fetchUsers(searchTerm || undefined, 1, plano, status);
+  };
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setFilterPlano('todos');
+    setFilterStatus('todos');
+    fetchUsers(undefined, 1, 'todos', 'todos');
   };
 
   const handleUpdateLicense = async () => {
@@ -61,10 +95,12 @@ export default function Admin() {
 
     setIsUpdating(true);
     try {
-      await updateLicense(selectedUser.user_id, newPlano, newStatus, newTipo);
+      const expiracaoStr = newExpiracao ? format(newExpiracao, 'yyyy-MM-dd') : undefined;
+      await updateLicense(selectedUser.user_id, newPlano, newStatus, newTipo, expiracaoStr);
       toast.success('Licença atualizada com sucesso!');
       setDialogOpen(false);
       setSelectedUser(null);
+      setNewExpiracao(undefined);
     } catch (error) {
       toast.error('Erro ao atualizar licença');
       console.error(error);
@@ -78,6 +114,7 @@ export default function Admin() {
     setNewPlano(user.license_plano);
     setNewStatus(user.license_status === 'sem_licenca' ? 'ativo' : user.license_status);
     setNewTipo(user.license_tipo === 'N/A' ? 'mensal' : user.license_tipo);
+    setNewExpiracao(user.license_expiracao ? new Date(user.license_expiracao) : undefined);
     setDialogOpen(true);
   };
 
@@ -186,25 +223,58 @@ export default function Admin() {
           <Card>
             <CardHeader>
               <CardTitle>Gestão de Usuários</CardTitle>
-              <CardDescription>Visualize e gerencie licenças dos usuários</CardDescription>
+              <CardDescription>
+                Visualize e gerencie licenças dos usuários ({totalUsers} usuários encontrados)
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              {/* Search */}
-              <div className="flex gap-2 mb-4">
-                <Input
-                  placeholder="Buscar por nome ou email..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                  className="max-w-sm"
-                />
-                <Button onClick={handleSearch} variant="secondary">
-                  <Search className="h-4 w-4 mr-2" />
-                  Buscar
-                </Button>
-                <Button onClick={() => { setSearchTerm(''); fetchUsers(); }} variant="outline">
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
+              {/* Search and Filters */}
+              <div className="flex flex-col sm:flex-row gap-2 mb-4">
+                <div className="flex gap-2 flex-1">
+                  <Input
+                    placeholder="Buscar por nome ou email..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                    className="max-w-sm"
+                  />
+                  <Button onClick={handleSearch} variant="secondary">
+                    <Search className="h-4 w-4 mr-2" />
+                    Buscar
+                  </Button>
+                </div>
+                
+                <div className="flex gap-2 items-center">
+                  <Filter className="h-4 w-4 text-muted-foreground" />
+                  <Select value={filterPlano} onValueChange={(v) => handleFilterChange(v, filterStatus)}>
+                    <SelectTrigger className="w-[130px]">
+                      <SelectValue placeholder="Plano" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos Planos</SelectItem>
+                      <SelectItem value="gratuito">Gratuito</SelectItem>
+                      <SelectItem value="premium">Premium</SelectItem>
+                      <SelectItem value="familia">Família</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  <Select value={filterStatus} onValueChange={(v) => handleFilterChange(filterPlano, v)}>
+                    <SelectTrigger className="w-[130px]">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos Status</SelectItem>
+                      <SelectItem value="ativo">Ativo</SelectItem>
+                      <SelectItem value="expirado">Expirado</SelectItem>
+                      <SelectItem value="cancelado">Cancelado</SelectItem>
+                      <SelectItem value="sem_licenca">Sem Licença</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  <Button onClick={handleClearFilters} variant="outline" size="icon">
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
 
               {/* Users Table */}
@@ -217,7 +287,7 @@ export default function Admin() {
                       <TableHead>Telegram</TableHead>
                       <TableHead>Plano</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Tipo</TableHead>
+                      <TableHead>Expira em</TableHead>
                       <TableHead>Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -239,7 +309,7 @@ export default function Admin() {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1 text-sm">
-                              <Calendar className="h-3 w-3" />
+                              <CalendarIcon className="h-3 w-3" />
                               {format(new Date(user.created_at), 'dd/MM/yyyy', { locale: ptBR })}
                             </div>
                           </TableCell>
@@ -254,7 +324,9 @@ export default function Admin() {
                           <TableCell>{getStatusBadge(user.license_status)}</TableCell>
                           <TableCell>
                             <span className="text-sm text-muted-foreground">
-                              {user.license_tipo === 'N/A' ? '-' : user.license_tipo}
+                              {user.license_expiracao 
+                                ? format(new Date(user.license_expiracao), 'dd/MM/yyyy', { locale: ptBR })
+                                : '-'}
                             </span>
                           </TableCell>
                           <TableCell>
@@ -272,6 +344,35 @@ export default function Admin() {
                   </TableBody>
                 </Table>
               </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4">
+                  <p className="text-sm text-muted-foreground">
+                    Página {currentPage} de {totalPages}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={prevPage}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      Anterior
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={nextPage}
+                      disabled={currentPage === totalPages}
+                    >
+                      Próxima
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -311,7 +412,7 @@ export default function Admin() {
                           </TableCell>
                           <TableCell>{log.table_name || '-'}</TableCell>
                           <TableCell>
-                            <span className="text-sm text-muted-foreground">
+                            <span className="text-sm text-muted-foreground max-w-xs truncate block">
                               {log.query_details ? JSON.stringify(log.query_details) : '-'}
                             </span>
                           </TableCell>
@@ -328,7 +429,7 @@ export default function Admin() {
 
       {/* Edit License Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Editar Licença</DialogTitle>
             <DialogDescription>
@@ -338,7 +439,7 @@ export default function Admin() {
           
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Plano</label>
+              <Label>Plano</Label>
               <Select value={newPlano} onValueChange={setNewPlano}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o plano" />
@@ -353,7 +454,7 @@ export default function Admin() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
+              <Label>Status</Label>
               <Select value={newStatus} onValueChange={setNewStatus}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o status" />
@@ -367,7 +468,7 @@ export default function Admin() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Tipo</label>
+              <Label>Tipo</Label>
               <Select value={newTipo} onValueChange={setNewTipo}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo" />
@@ -378,6 +479,37 @@ export default function Admin() {
                   <SelectItem value="vitalicia">Vitalícia</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Data de Expiração</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !newExpiracao && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {newExpiracao ? format(newExpiracao, "dd/MM/yyyy", { locale: ptBR }) : "Selecione uma data"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={newExpiracao}
+                    onSelect={setNewExpiracao}
+                    initialFocus
+                    locale={ptBR}
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+              <p className="text-xs text-muted-foreground">
+                Deixe vazio para licenças sem expiração (vitalícias)
+              </p>
             </div>
           </div>
 

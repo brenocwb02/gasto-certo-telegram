@@ -37,6 +37,12 @@ interface AuditLog {
   created_at: string;
 }
 
+interface UserFilters {
+  search?: string;
+  plano?: string;
+  status?: string;
+}
+
 export function useAdmin() {
   const { user } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -45,6 +51,10 @@ export function useAdmin() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [filters, setFilters] = useState<UserFilters>({});
+  const pageSize = 20;
 
   // Verificar se usuário é admin
   useEffect(() => {
@@ -76,6 +86,23 @@ export function useAdmin() {
     checkAdmin();
   }, [user]);
 
+  // Buscar contagem total de usuários
+  const fetchUserCount = useCallback(async (filterParams?: UserFilters) => {
+    if (!isAdmin) return;
+
+    try {
+      const { data, error } = await supabase.rpc('count_admin_users', {
+        p_search: filterParams?.search,
+        p_plano: filterParams?.plano,
+        p_status: filterParams?.status
+      });
+      if (error) throw error;
+      setTotalUsers(data as number);
+    } catch (err) {
+      console.error('Erro ao contar usuários:', err);
+    }
+  }, [isAdmin]);
+
   // Buscar estatísticas
   const fetchStats = useCallback(async () => {
     if (!isAdmin) return;
@@ -90,23 +117,38 @@ export function useAdmin() {
     }
   }, [isAdmin]);
 
-  // Buscar usuários
-  const fetchUsers = useCallback(async (search?: string, limit = 50, offset = 0) => {
+  // Buscar usuários com paginação e filtros
+  const fetchUsers = useCallback(async (
+    search?: string, 
+    page = 1,
+    plano?: string,
+    status?: string
+  ) => {
     if (!isAdmin) return;
+
+    const offset = (page - 1) * pageSize;
+    const filterParams = { search, plano, status };
 
     try {
       const { data, error } = await supabase.rpc('get_admin_users', {
-        p_limit: limit,
+        p_limit: pageSize,
         p_offset: offset,
-        p_search: search
+        p_search: search,
+        p_plano: plano,
+        p_status: status
       });
       if (error) throw error;
       setUsers(data as unknown as AdminUser[]);
+      setCurrentPage(page);
+      setFilters(filterParams);
+      
+      // Atualizar contagem total com mesmos filtros
+      await fetchUserCount(filterParams);
     } catch (err) {
       console.error('Erro ao buscar usuários:', err);
       setError('Erro ao carregar usuários');
     }
-  }, [isAdmin]);
+  }, [isAdmin, fetchUserCount]);
 
   // Buscar logs de auditoria
   const fetchAuditLogs = useCallback(async (limit = 50) => {
@@ -147,11 +189,32 @@ export function useAdmin() {
 
     if (error) throw error;
     
-    // Recarregar dados
-    await Promise.all([fetchStats(), fetchUsers()]);
+    // Recarregar dados mantendo filtros atuais
+    await Promise.all([
+      fetchStats(), 
+      fetchUsers(filters.search, currentPage, filters.plano, filters.status)
+    ]);
     
     return data;
-  }, [isAdmin, fetchStats, fetchUsers]);
+  }, [isAdmin, fetchStats, fetchUsers, filters, currentPage]);
+
+  // Navegação de páginas
+  const goToPage = useCallback((page: number) => {
+    fetchUsers(filters.search, page, filters.plano, filters.status);
+  }, [fetchUsers, filters]);
+
+  const nextPage = useCallback(() => {
+    const maxPage = Math.ceil(totalUsers / pageSize);
+    if (currentPage < maxPage) {
+      goToPage(currentPage + 1);
+    }
+  }, [currentPage, totalUsers, goToPage]);
+
+  const prevPage = useCallback(() => {
+    if (currentPage > 1) {
+      goToPage(currentPage - 1);
+    }
+  }, [currentPage, goToPage]);
 
   // Carregar dados iniciais quando admin confirmado
   useEffect(() => {
@@ -162,6 +225,8 @@ export function useAdmin() {
     }
   }, [isAdmin, fetchStats, fetchUsers, fetchAuditLogs]);
 
+  const totalPages = Math.ceil(totalUsers / pageSize);
+
   return {
     isAdmin,
     loading,
@@ -169,9 +234,17 @@ export function useAdmin() {
     stats,
     users,
     auditLogs,
+    totalUsers,
+    currentPage,
+    totalPages,
+    pageSize,
+    filters,
     fetchStats,
     fetchUsers,
     fetchAuditLogs,
     updateLicense,
+    goToPage,
+    nextPage,
+    prevPage,
   };
 }
