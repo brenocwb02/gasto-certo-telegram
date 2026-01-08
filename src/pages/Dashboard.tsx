@@ -131,16 +131,33 @@ const Dashboard = () => {
 
     // Only show PRINCIPAL cards (without parent_account_id)
     // Additional cards are included in the principal's invoice, so no need to display separately
-    const creditCards = accounts.filter(a => a.tipo === 'cartao' && !a.parent_account_id);
+    // Also filter out cards with no balance and no limit used (zero activity)
+    const creditCards = accounts.filter(a => {
+      if (a.tipo !== 'cartao' || a.parent_account_id) return false;
+      
+      // Show card if it has any balance (positive or negative) or limit usage
+      const hasBalance = Math.abs(a.saldo_atual) > 0;
+      const hasLimitUsage = a.limite_credito && a.limite_credito > 0 && a.saldo_atual !== 0;
+      
+      // Always show cards with activity, or cards that have a limit configured
+      return hasBalance || hasLimitUsage || (a.limite_credito && a.limite_credito > 0);
+    });
 
-    if (creditCards.length === 0) return null;
+    if (creditCards.length === 0) {
+      return (
+        <EmptyStateCard
+          icon={<CreditCard className="h-5 w-5" />}
+          title="Sem cartões ativos"
+          description="Cadastre um cartão de crédito para acompanhar faturas"
+          actionLabel="Adicionar Cartão"
+          actionHref="/accounts"
+          variant="compact"
+        />
+      );
+    }
 
     return (
       <div className="space-y-3">
-        <h2 className="text-sm font-bold flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
-          <CreditCard className="h-4 w-4" />
-          Meus Cartões
-        </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
           {creditCards.map(card => (
             <CreditCardWidget
@@ -410,14 +427,59 @@ const Dashboard = () => {
             Array.from({ length: 4 }).map((_, i) => (
               <Card key={i} className="financial-card"><CardContent className="p-6"><Skeleton className="h-12 w-full" /></CardContent></Card>
             ))
-          ) : (
-            <>
-              <StatsCard title="Saldo Total" value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.totalBalance)} change={`${stats.trend > 0 ? '+' : ''}${stats.trend.toFixed(1)}%`} changeType={stats.trend > 0 ? "positive" : "negative"} icon={Wallet} trend={Math.abs(stats.trend)} />
-              <StatsCard title="Receitas" value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthlyIncome)} change={`${stats.incomeTrend > 0 ? '+' : ''}${stats.incomeTrend.toFixed(1)}%`} changeType={stats.incomeTrend >= 0 ? "positive" : "negative"} icon={TrendingUp} trend={Math.abs(stats.incomeTrend)} />
-              <StatsCard title="Despesas" value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthlyExpenses)} change={`${stats.expenseTrend > 0 ? '+' : ''}${stats.expenseTrend.toFixed(1)}%`} changeType={stats.expenseTrend <= 0 ? "positive" : "negative"} icon={TrendingDown} trend={Math.abs(stats.expenseTrend)} />
-              <StatsCard title="Economia" value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthlySavings)} change={`${stats.savingsTrend > 0 ? '+' : ''}${stats.savingsTrend.toFixed(1)}%`} changeType={stats.savingsTrend >= 0 ? "positive" : "neutral"} icon={Target} trend={Math.abs(stats.savingsTrend)} />
-            </>
-          )}
+          ) : (() => {
+            // Get current month name in Portuguese
+            const monthName = new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(new Date());
+            const capitalizedMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+            
+            // Format trend with max 1 decimal
+            const formatChange = (value: number) => {
+              const formatted = Math.abs(value).toFixed(1);
+              const clean = formatted.endsWith('.0') ? formatted.slice(0, -2) : formatted;
+              return `${value >= 0 ? '+' : '-'}${clean}%`;
+            };
+            
+            return (
+              <>
+                <StatsCard 
+                  title="Saldo Total" 
+                  subtitle="Todas as contas"
+                  value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.totalBalance)} 
+                  change={formatChange(stats.trend)} 
+                  changeType={stats.trend > 0 ? "positive" : "negative"} 
+                  icon={Wallet} 
+                  trend={Math.abs(stats.trend)} 
+                />
+                <StatsCard 
+                  title="Receitas" 
+                  subtitle={capitalizedMonth}
+                  value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthlyIncome)} 
+                  change={formatChange(stats.incomeTrend)} 
+                  changeType={stats.incomeTrend >= 0 ? "positive" : "negative"} 
+                  icon={TrendingUp} 
+                  trend={Math.abs(stats.incomeTrend)} 
+                />
+                <StatsCard 
+                  title="Despesas" 
+                  subtitle={capitalizedMonth}
+                  value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthlyExpenses)} 
+                  change={formatChange(stats.expenseTrend)} 
+                  changeType={stats.expenseTrend <= 0 ? "positive" : "negative"} 
+                  icon={TrendingDown} 
+                  trend={Math.abs(stats.expenseTrend)} 
+                />
+                <StatsCard 
+                  title="Economia" 
+                  subtitle={capitalizedMonth}
+                  value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthlySavings)} 
+                  change={formatChange(stats.savingsTrend)} 
+                  changeType={stats.savingsTrend >= 0 ? "positive" : "neutral"} 
+                  icon={Target} 
+                  trend={Math.abs(stats.savingsTrend)} 
+                />
+              </>
+            );
+          })()}
         </div>
       )}
 

@@ -3,6 +3,7 @@ import { LucideIcon } from "lucide-react";
 
 interface StatsCardProps {
   title: string;
+  subtitle?: string; // Period context like "Este mês" or "Janeiro"
   value: string;
   change?: string;
   changeType?: "positive" | "negative" | "neutral";
@@ -13,6 +14,7 @@ interface StatsCardProps {
 
 export function StatsCard({ 
   title, 
+  subtitle,
   value, 
   change, 
   changeType = "neutral", 
@@ -20,11 +22,23 @@ export function StatsCard({
   className,
   trend 
 }: StatsCardProps) {
+  // Format trend to max 1 decimal place
+  const formatTrend = (value: number) => {
+    const formatted = Math.abs(value).toFixed(1);
+    // Remove trailing .0
+    return formatted.endsWith('.0') ? formatted.slice(0, -2) : formatted;
+  };
+
   return (
     <div className={cn("financial-card group", className)}>
       <div className="flex items-start justify-between">
         <div className="space-y-2">
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">{title}</p>
+            {subtitle && (
+              <p className="text-xs text-muted-foreground/70">{subtitle}</p>
+            )}
+          </div>
           <p className="text-3xl font-bold text-foreground">{value}</p>
           {change && (
             <p className={cn(
@@ -58,14 +72,14 @@ export function StatsCard({
                     "h-full transition-all duration-1000 rounded-full",
                     trend > 0 ? "bg-success" : "bg-expense"
                   )}
-                  style={{ width: `${Math.abs(trend)}%` }}
+                  style={{ width: `${Math.min(Math.abs(trend), 100)}%` }}
                 />
               </div>
               <span className={cn(
                 "text-xs font-medium",
                 trend > 0 ? "text-success" : "text-expense"
               )}>
-                {trend > 0 ? "+" : ""}{trend}%
+                {trend > 0 ? "+" : "-"}{formatTrend(trend)}%
               </span>
             </div>
           </div>
