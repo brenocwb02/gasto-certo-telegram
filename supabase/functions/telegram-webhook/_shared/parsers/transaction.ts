@@ -484,6 +484,17 @@ export function parseTransaction(texto: string, contasUsuario: AccountData[], ca
     if (resultado.conta_origem) confianca += 30;
     if (resultado.descricao && resultado.descricao !== 'Transação') confianca += 10;
     if (resultado.categoria_sugerida) confianca += 10;
+
+    // 7. Extrair Parcelas
+    const matchParcelas = texto.match(/\b(\d+)\s*x\b/i) || texto.match(/em\s+(\d+)\s*(?:x|vezes|parcelas)/i);
+    if (matchParcelas) {
+        const parcelas = parseInt(matchParcelas[1]);
+        if (parcelas > 1 && parcelas <= 60) {
+            resultado.parcelas = parcelas;
+            resultado.is_installment = true;
+        }
+    }
+
     resultado.confianca = confianca;
 
     return resultado;

@@ -88,7 +88,9 @@ export async function handleSelectAccountCallback(
             categoria_id: categoriaId,
             conta_origem_id: accountId,
             conta_destino_id: null,
-            origem: 'telegram'
+            origem: 'telegram',
+            parcelas: pending.parcelas || 1,
+            is_installment: pending.is_installment || false
         };
 
         // Atualizar sessão com dados completos
@@ -111,6 +113,9 @@ export async function handleSelectAccountCallback(
         confirmMsg += `*Tipo:* ${tipoLabel}\n`;
         confirmMsg += `*Descrição:* ${pending.descricao}\n`;
         confirmMsg += `*Valor:* ${formatCurrency(pending.valor)}\n`;
+        if (pending.parcelas && pending.parcelas > 1) {
+            confirmMsg += `*Parcelas:* ${pending.parcelas}x de ${formatCurrency((pending.valor || 0) / pending.parcelas)}\n`;
+        }
         confirmMsg += `*Conta:* ${conta?.nome || 'Conta'}\n`;
 
         // Exibir Categoria e Subcategoria separadamente
@@ -170,35 +175,80 @@ export async function handleConfirmTransactionCallback(
     if (action === 'confirm_transaction') {
         const transactionData = session.contexto;
 
-        // Limpar campos que não existem na tabela transactions (evitar erro "column does not exist")
-        const dbData = {
-            user_id: transactionData.user_id,
-            group_id: transactionData.group_id || null,
-            valor: transactionData.valor,
-            descricao: transactionData.descricao,
-            tipo: transactionData.tipo,
-            categoria_id: transactionData.categoria_id || null,
-            conta_origem_id: transactionData.conta_origem_id || null,
-            conta_destino_id: transactionData.conta_destino_id || null,
-            origem: transactionData.origem || 'telegram',
-            data_transacao: transactionData.data_transacao || new Date().toISOString().split('T')[0],
-        };
+        const parcelas = transactionData.parcelas || 1;
+        const isInstallment = parcelas > 1;
+        const installGroupId = isInstallment ? crypto.randomUUID() : null;
+        const installmentValue = isInstallment ? (transactionData.valor / parcelas) : transactionData.valor;
+        const baseDate = new Date(); // Today
 
-        const { error: transactionError } = await supabase.from('transactions').insert(dbData);
+        if (isInstallment) {
+            for (let i = 0; i < parcelas; i++) {
+                const recurrenceDate = new Date(baseDate);
+                recurrenceDate.setMonth(baseDate.getMonth() + i);
 
-        if (transactionError) {
-            // Check for Custom Plan Limit Error (P0001)
-            if (transactionError.code === 'P0001') {
-                const upgradeMsg = `🔒 *Limite do Plano Gratuito Atingido*\n\n` +
-                    `Você já atingiu o limite de **30 transações mensais**.\n\n` +
-                    `Para continuar registrando, faça um upgrade para o **Plano Premium**! 🚀\n\n` +
-                    `/planos - Ver opções`;
-                await editTelegramMessage(chatId, messageId, upgradeMsg);
-                // Clear session to avoid stuck state
-                await supabase.from('telegram_sessions').delete().eq('id', sessionId);
-                return;
+                const dbData = {
+                    user_id: transactionData.user_id,
+                    group_id: transactionData.group_id || null,
+                    valor: installmentValue,
+                    descricao: `${transactionData.descricao} (${i + 1}/${parcelas})`,
+                    tipo: transactionData.tipo,
+                    categoria_id: transactionData.categoria_id || null,
+                    conta_origem_id: transactionData.conta_origem_id || null,
+                    conta_destino_id: transactionData.conta_destino_id || null,
+                    origem: transactionData.origem || 'telegram',
+                    data_transacao: recurrenceDate.toISOString().split('T')[0],
+                    efetivada: i === 0, // First one paid/effective if user flow assumes paid now? Actually credit card is usually pending. But let's follow standard flow.
+                    // Actually, if it's Credit Card, usually it's "realized" (purchase made) but bill is future.
+                    // The 'efetivada' flag usually means "money left the account" or "consolidated". 
+                    // For Credit Card, 'efetivada' = true usually means appear on invoice?
+                    // Let's stick to default: Usually expense is true unless future.
+                    // But for installments 2..N, they are definitely future.
+                    // Installment 1: If today, likely true?
+                    // Let's force false for i > 0.
+                    tags: [`installment_group:${installGroupId}`]
+                };
+
+                const { error: transactionError } = await supabase.from('transactions').insert(dbData);
+                if (transactionError) {
+                    if (transactionError.code === 'P0001') {
+                        await editTelegramMessage(chatId, messageId, `🔒 *Limite Atingido na parcela ${i + 1}*\n\nFaça upgrade para continuar.`);
+                        await supabase.from('telegram_sessions').delete().eq('id', sessionId);
+                        return;
+                    }
+                    console.error('Erro ao inserir parcela:', transactionError);
+                }
             }
-            throw transactionError;
+        } else {
+            // Single Transaction
+            const dbData = {
+                user_id: transactionData.user_id,
+                group_id: transactionData.group_id || null,
+                valor: transactionData.valor,
+                descricao: transactionData.descricao,
+                tipo: transactionData.tipo,
+                categoria_id: transactionData.categoria_id || null,
+                conta_origem_id: transactionData.conta_origem_id || null,
+                conta_destino_id: transactionData.conta_destino_id || null,
+                origem: transactionData.origem || 'telegram',
+                data_transacao: transactionData.data_transacao || new Date().toISOString().split('T')[0],
+            };
+
+            const { error: transactionError } = await supabase.from('transactions').insert(dbData);
+
+            if (transactionError) {
+                // Check for Custom Plan Limit Error (P0001)
+                if (transactionError.code === 'P0001') {
+                    const upgradeMsg = `🔒 *Limite do Plano Gratuito Atingido*\n\n` +
+                        `Você já atingiu o limite de **30 transações mensais**.\n\n` +
+                        `Para continuar registrando, faça um upgrade para o **Plano Premium**! 🚀\n\n` +
+                        `/planos - Ver opções`;
+                    await editTelegramMessage(chatId, messageId, upgradeMsg);
+                    // Clear session to avoid stuck state
+                    await supabase.from('telegram_sessions').delete().eq('id', sessionId);
+                    return;
+                }
+                throw transactionError;
+            }
         }
 
         // Buscar nomes para montar mensagem bonita

@@ -10,6 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { AccountForm } from "@/components/forms/AccountForm";
 import { useLimits } from "@/hooks/useLimits";
 import { useToast } from "@/hooks/use-toast";
+import { CreditCardWidget } from "@/components/dashboard/CreditCardWidget";
 
 const Accounts = () => {
   const { currentGroup } = useFamily();
@@ -178,67 +179,116 @@ const Accounts = () => {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {accounts.map((account) => (
-            <Card key={account.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div className="flex items-center space-x-2">
-                  {getAccountIcon(account.tipo)}
-                  <CardTitle className="text-sm font-medium">{account.nome}</CardTitle>
-                </div>
-                <div className="flex space-x-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEdit(account)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Excluir conta</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Tem certeza que deseja excluir a conta "{account.nome}"?
-                          Esta ação irá desativar a conta, mas suas transações serão mantidas.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => handleDeleteAccount(account.id)}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          {accounts.map((account) => {
+            if (account.tipo === 'cartao') {
+              return (
+                <div key={account.id} className="relative group">
+                  <CreditCardWidget account={account} />
+                  <div className="absolute top-3 right-3 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-sm rounded-md p-1 border shadow-sm">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => handleEdit(account)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                         >
-                          Excluir
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir conta</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Tem certeza que deseja excluir a conta "{account.nome}"?
+                            Esta ação irá desativar a conta, mas suas transações serão mantidas.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDeleteAccount(account.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold" style={{ color: account.cor || undefined }}>
-                  {formatCurrency(account.saldo_atual)}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Saldo inicial: {formatCurrency(account.saldo_inicial)}
-                </p>
-                {account.banco && (
-                  <Badge variant="outline" className="mt-2">
-                    {account.banco}
-                  </Badge>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+              );
+            }
+
+            return (
+              <Card key={account.id} className="hover:shadow-md transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <div className="flex items-center space-x-2">
+                    {getAccountIcon(account.tipo)}
+                    <CardTitle className="text-sm font-medium">{account.nome}</CardTitle>
+                  </div>
+                  <div className="flex space-x-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEdit(account)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir conta</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Tem certeza que deseja excluir a conta "{account.nome}"?
+                            Esta ação irá desativar a conta, mas suas transações serão mantidas.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDeleteAccount(account.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" style={{ color: account.cor || undefined }}>
+                    {formatCurrency(account.saldo_atual)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Saldo inicial: {formatCurrency(account.saldo_inicial)}
+                  </p>
+                  {account.banco && (
+                    <Badge variant="outline" className="mt-2">
+                      {account.banco}
+                    </Badge>
+                  )}
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
       )}
 

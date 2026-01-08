@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom"; // Added import
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 // Badge removed - unused
@@ -57,13 +58,26 @@ const Transactions = () => {
   const { accounts } = useAccounts(currentGroup?.id);
   const { categories = [] } = useCategories(currentGroup?.id);
 
+  const [searchParams] = useSearchParams(); // Added hook
+
   // State for filters
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("todos");
   const [categoryFilter, setCategoryFilter] = useState<string>("todos");
-  const [accountFilter, setAccountFilter] = useState<string>("todos");
+  // Initialize accountFilter from URL param "accountId" if present
+  const [accountFilter, setAccountFilter] = useState<string>(searchParams.get("accountId") || "todos");
   const [dateFilter, setDateFilter] = useState<string>("mes");
   const [showFilters, setShowFilters] = useState(false);
+
+  // Sync filter with URL params when they change
+  useEffect(() => {
+    const accId = searchParams.get("accountId");
+    if (accId) {
+      setAccountFilter(accId);
+      // Opcional: Abrir os filtros automaticamente para o usuário ver
+      setShowFilters(true);
+    }
+  }, [searchParams]);
 
   // Dialog states
   const [createOpen, setCreateOpen] = useState(false);
@@ -117,7 +131,47 @@ const Transactions = () => {
 
     // Date filter
     const now = new Date();
-    if (dateFilter === "mes") {
+
+    // Special handling for Credit Card Invoice Cycle
+    const selectedAcc = accounts.find(a => a.id === accountFilter);
+    const isCreditCard = selectedAcc?.tipo === 'cartao';
+    const closingDay = Number(selectedAcc?.dia_fechamento);
+
+    if (dateFilter === "mes" && isCreditCard && closingDay) {
+      // Calculate Invoice Cycle
+      // If today <= closingDay, current invoice closes this month.
+      // Start: Previous Month (closingDay + 1)
+      // End: This Month (closingDay)
+
+      // If today > closingDay, current invoice closes next month.
+      // Start: This Month (closingDay + 1)
+      // End: Next Month (closingDay)
+
+      // However, the "Month" filter usually implies "Show me transactions relevant to NOW".
+      // Let's assume we want the "Open/Current" invoice relative to today.
+
+      let start, end;
+      const currentDay = now.getDate();
+
+      if (currentDay <= closingDay) {
+        // Cycle closes THIS month
+        // Example: Closing 28. Today 15. Cycle: Last Month 29 to This Month 28.
+        end = new Date(Date.UTC(now.getFullYear(), now.getMonth(), closingDay, 23, 59, 59, 999));
+        start = new Date(Date.UTC(now.getFullYear(), now.getMonth() - 1, closingDay + 1, 0, 0, 0, 0));
+      } else {
+        // Cycle closes NEXT month
+        // Example: Closing 28. Today 29. Cycle: This Month 29 to Next Month 28.
+        end = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, closingDay, 23, 59, 59, 999));
+        start = new Date(Date.UTC(now.getFullYear(), now.getMonth(), closingDay + 1, 0, 0, 0, 0));
+      }
+
+      filtered = filtered.filter((t) => {
+        const date = new Date(t.data_transacao);
+        // Compare timestamps to handle timezone differences robustly
+        return date.getTime() >= start.getTime() && date.getTime() <= end.getTime();
+      });
+
+    } else if (dateFilter === "mes") {
       const start = startOfMonth(now);
       const end = endOfMonth(now);
       filtered = filtered.filter((t) => {
@@ -264,6 +318,11 @@ const Transactions = () => {
 
   const hasActiveFilters = searchTerm || typeFilter !== "todos" || categoryFilter !== "todos" || accountFilter !== "todos" || dateFilter !== "mes";
 
+  const selectedAccount = useMemo(() => {
+    if (accountFilter === "todos") return null;
+    return accounts.find((a) => a.id === accountFilter);
+  }, [accountFilter, accounts]);
+
   return (
     <>
       {/* Header */}
@@ -272,7 +331,9 @@ const Transactions = () => {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Transações</h1>
             <p className="text-sm sm:text-base text-muted-foreground">
-              {currentGroup ? `Visualizando: ${currentGroup.name}` : "Suas transações pessoais"}
+              {selectedAccount
+                ? `Visualizando: ${selectedAccount.nome}`
+                : (currentGroup ? `Visualizando: ${currentGroup.name}` : "Suas transações pessoais")}
             </p>
           </div>
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
@@ -295,6 +356,28 @@ const Transactions = () => {
             </DialogContent>
           </Dialog>
         </div>
+
+        {selectedAccount && (
+          <div className="bg-muted/50 p-4 rounded-lg border flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Saldo Atual da Conta</p>
+                <p className={cn("text-2xl font-bold", selectedAccount.saldo_atual >= 0 ? "text-success" : "text-expense")}>
+                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedAccount.saldo_atual)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Saldo Inicial: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedAccount.saldo_inicial)}
+                </p>
+              </div>
+            </div>
+            {selectedAccount.tipo === 'cartao' && (
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">Limite Disponível</p>
+                <p className="font-semibold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format((Number(selectedAccount.limite) || 0) + Number(selectedAccount.saldo_atual))}</p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -328,7 +411,7 @@ const Transactions = () => {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Saldo</p>
+                  <p className="text-sm text-muted-foreground">Resultado</p>
                   <p className={cn("text-2xl font-bold", stats.saldo >= 0 ? "text-success" : "text-expense")}>
                     {formatAmount(stats.saldo)}
                   </p>

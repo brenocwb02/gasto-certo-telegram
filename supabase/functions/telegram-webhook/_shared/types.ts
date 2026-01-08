@@ -13,6 +13,8 @@ export interface ParsedTransaction {
     categoria_sugerida: string | null;
     confianca: number;
     campos_faltantes: string[];
+    parcelas?: number;
+    is_installment?: boolean;
 }
 
 export interface AccountData {

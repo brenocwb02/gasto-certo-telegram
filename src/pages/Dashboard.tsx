@@ -10,25 +10,34 @@ import { TransactionForm } from "@/components/forms/TransactionForm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { useFinancialStats, useProfile, useGoals, useFinancialProfile } from "@/hooks/useSupabaseData";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useFinancialStats, useProfile, useGoals, useFinancialProfile, useAccounts } from "@/hooks/useSupabaseData";
 import { PlanStatus } from "@/components/PlanGuard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UpcomingBillsWidget } from "@/components/dashboard/UpcomingBillsWidget";
+import { CreditCardWidget } from "@/components/dashboard/CreditCardWidget";
 import { useFamily } from "@/hooks/useFamily";
 import {
   Wallet,
+  CreditCard,
   TrendingUp,
   TrendingDown,
   Target,
   Plus,
   Heart,
-  Award,
-  ArrowRight,
   Lock,
   Lightbulb,
   AlertTriangle,
   Bot,
-  Sparkles
+  Sparkles,
+  Settings2
 } from "lucide-react";
 import { useLimits } from "@/hooks/useLimits";
 
@@ -40,114 +49,110 @@ const Dashboard = () => {
   const { goals, loading: goalsLoading } = useGoals(currentGroup?.id);
   const { financialProfile, hasCompletedQuiz, getFinancialHealthLevel } = useFinancialProfile();
   const { isTransactionLimitReached } = useLimits();
+  const { accounts, loading: accountsLoading } = useAccounts(currentGroup?.id);
   const currentMonth = new Date();
 
-  const [isHealthVisible, setIsHealthVisible] = useState(() => {
-    return localStorage.getItem('hideHealthWidget') !== 'true';
+  // Widget Visibility State
+  const [visibleWidgets, setVisibleWidgets] = useState(() => {
+    const saved = localStorage.getItem('dashboardWidgets');
+    if (saved) {
+      return JSON.parse(saved);
+    }
+    return {
+      stats: true,
+      charts: true,
+      creditCards: true,
+      upcomingBills: true,
+      recentTransactions: true,
+      goals: true,
+      insights: true,
+      health: true,
+      budget: true,
+      quickActions: true,
+      limits: true // Visible by default for conversion
+    };
   });
 
+  const toggleWidget = (key: string) => {
+    const newState = { ...visibleWidgets, [key]: !visibleWidgets[key] };
+    setVisibleWidgets(newState);
+    localStorage.setItem('dashboardWidgets', JSON.stringify(newState));
+  };
+
   const FinancialHealthSection = () => {
-    if (!isHealthVisible) return null;
+    if (!visibleWidgets.health) return null;
 
-    const handleDismiss = () => {
-      setIsHealthVisible(false);
-      localStorage.setItem('hideHealthWidget', 'true');
-    };
-
-    if (!hasCompletedQuiz) {
-      return (
-        <Card className="financial-card relative group">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={handleDismiss}
-          >
-            <span className="sr-only">Fechar</span>
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-          </Button>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Heart className="h-5 w-5" />
-              Saúde Financeira
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-center py-6">
-            <Award className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="font-semibold mb-2">Descubra sua Saúde Financeira</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Faça nosso quiz e receba um score personalizado com recomendações.
-            </p>
-            <Button asChild className="w-full">
-              <a href="/quiz-financeiro">Fazer Quiz <ArrowRight className="ml-2 h-4 w-4" /></a>
-            </Button>
-          </CardContent>
-        </Card>
-      );
-    }
-
-    const healthLevel = getFinancialHealthLevel(financialProfile?.financial_health_score || 0);
-
+    // Compact Widget
     return (
-      <Card className="financial-card relative group">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={handleDismiss}
-        >
-          <span className="sr-only">Fechar</span>
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-        </Button>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Heart className="h-5 w-5" />
-            Saúde Financeira
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="text-center">
-            <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${healthLevel.bgColor} ${healthLevel.color} mb-2`}>
-              <Heart className="h-4 w-4 mr-1" />
-              {healthLevel.level}
+      <Card className="relative overflow-hidden border-none bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md">
+        <div className="p-4 flex items-center gap-4">
+          <div className="flex items-center gap-3 flex-1">
+            <div className="p-2 bg-white/15 rounded-full backdrop-blur-sm shrink-0">
+              <Heart className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-sm leading-none mb-1">
+                {hasCompletedQuiz
+                  ? `Saúde ${getFinancialHealthLevel(financialProfile?.financial_health_score || 0).level}`
+                  : "Sua Saúde Financeira"}
+              </h3>
+              <p className="text-xs text-blue-100/80 line-clamp-1">
+                {hasCompletedQuiz ? "Continue assim!" : "Descubra seu perfil."}
+              </p>
             </div>
           </div>
-
-          <Button asChild variant="outline" className="w-full">
+          <Button asChild size="sm" variant="secondary" className="h-8 text-xs bg-white text-indigo-600 hover:bg-blue-50 border-0 shadow-sm whitespace-nowrap px-3 shrink-0">
             <a href="/quiz-financeiro">
-              Ver Detalhes
-              <ArrowRight className="ml-2 h-4 w-4" />
+              {hasCompletedQuiz ? "Ver Score" : "Quiz"}
             </a>
           </Button>
-        </CardContent>
+        </div>
       </Card>
     );
   };
-  // Insights IA Section
+
+  const CreditCardsSection = () => {
+    if (accountsLoading) {
+      return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        <Skeleton className="h-40 w-full rounded-xl" />
+        <Skeleton className="h-40 w-full rounded-xl" />
+      </div>;
+    }
+
+    const creditCards = accounts.filter(a => a.tipo === 'cartao');
+
+    if (creditCards.length === 0) return null;
+
+    return (
+      <div className="space-y-3">
+        <h2 className="text-sm font-bold flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
+          <CreditCard className="h-4 w-4" />
+          Meus Cartões
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
+          {creditCards.map(card => (
+            <CreditCardWidget key={card.id} account={card} compact={true} />
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   const AIInsightsSection = () => {
     const insights = [];
 
-    if (stats.savingsTrend > 0) {
-      // Using savingsTrend as proxy for "Scenario Improved"
-      // Or I can use monthlySavings > 0?
-      // Let's use the exact logic from DashboardNew but adapted to available stats
-    }
-    // Actually, let's copy the logic exactly but adapt variables:
-    // stats.trend in DashboardNew was the generic trend.
-    // In Dashboard.tsx we have stats.savingsTrend, stats.incomeTrend, stats.expenseTrend.
+    if (statsLoading || !stats) return null;
 
-    // Logic 1: Savings improved
     if (stats.savingsTrend > 5) {
       insights.push({
         icon: Lightbulb,
         type: "success",
         title: "Economia detectada!",
-        message: `Sua economia cresceu ${stats.savingsTrend.toFixed(1)}% comparado ao mês anterior. Continue assim!`,
+        message: `Sua economia cresceu ${stats.savingsTrend.toFixed(1)}% comparado ao mês anterior.`,
         borderColor: "border-l-green-500"
       });
     }
 
-    // Logic 2: High Expenses (Expenses > Income)
     const isNegativeMonth = stats.monthlyExpenses > stats.monthlyIncome;
     const isNegativeBalance = stats.totalBalance < 0;
 
@@ -156,7 +161,7 @@ const Dashboard = () => {
         icon: AlertTriangle,
         type: "warning",
         title: "Saldo Negativo",
-        message: "Seu saldo total está negativo. É importante priorizar o pagamento de dívidas.",
+        message: "Seu saldo total está negativo. Priorize o pagamento de dívidas.",
         borderColor: "border-l-red-500"
       });
     } else if (isNegativeMonth) {
@@ -164,29 +169,27 @@ const Dashboard = () => {
         icon: AlertTriangle,
         type: "warning",
         title: "Atenção aos gastos",
-        message: "Suas despesas estão acima das receitas este mês. Considere revisar seu orçamento.",
+        message: "Suas despesas estão acima das receitas este mês.",
         borderColor: "border-l-orange-500"
       });
     }
 
-    // Logic 3: No Goals
     if (goals.length === 0 && !goalsLoading) {
       insights.push({
         icon: Target,
         type: "info",
         title: "Crie suas metas",
-        message: "Você ainda não tem metas financeiras. Que tal criar uma meta para Fundo de Emergência?",
+        message: "Que tal criar uma meta para Fundo de Emergência?",
         borderColor: "border-l-blue-500"
       });
     }
 
-    // Default
     if (insights.length === 0) {
       insights.push({
         icon: Sparkles,
         type: "info",
         title: "Tudo sob controle",
-        message: "Suas finanças estão equilibradas. Continue registrando suas transações.",
+        message: "Suas finanças estão equilibradas. Continue assim!",
         borderColor: "border-l-blue-500"
       });
     }
@@ -219,10 +222,10 @@ const Dashboard = () => {
   };
 
   const GoalsSection = () => (
-    <Card className="financial-card h-full flex flex-col">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Target className="h-5 w-5" />
+    <Card className="financial-card h-full flex flex-col border-none shadow-sm bg-card/50">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Target className="h-4 w-4 text-primary" />
           Metas Atuais
         </CardTitle>
       </CardHeader>
@@ -230,44 +233,26 @@ const Dashboard = () => {
         {goalsLoading ? (
           Array.from({ length: 2 }).map((_, i) => (
             <div key={i} className="space-y-2">
-              <div className="flex justify-between items-center">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-4 w-12" />
-              </div>
+              <Skeleton className="h-4 w-24" />
               <Skeleton className="h-2 w-full rounded-full" />
-              <Skeleton className="h-3 w-40" />
             </div>
           ))
         ) : goals.length === 0 ? (
           <div className="text-center py-6">
-            <Target className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground mb-3">
-              Nenhuma meta definida.
-            </p>
-            <Button variant="outline" size="sm" asChild>
-              <a href="/metas">Criar Meta</a>
-            </Button>
+            <p className="text-sm text-muted-foreground mb-3">Nenhuma meta definida.</p>
+            <Button variant="outline" size="sm" asChild><a href="/metas">Criar Meta</a></Button>
           </div>
         ) : (
           goals.slice(0, 3).map((goal) => {
-            const percentage = Number(goal.valor_meta) > 0
-              ? (Number(goal.valor_atual) / Number(goal.valor_meta)) * 100
-              : 0;
-            const isOverTarget = percentage >= 100;
+            const percentage = Number(goal.valor_meta) > 0 ? (Number(goal.valor_atual) / Number(goal.valor_meta)) * 100 : 0;
             return (
-              <div key={goal.id} className="space-y-2">
+              <div key={goal.id} className="space-y-1">
                 <div className="flex justify-between items-center text-sm">
-                  <span className="font-medium truncate">{goal.titulo}</span>
-                  <span className="text-muted-foreground">
-                    {percentage.toFixed(0)}%
-                  </span>
+                  <span className="font-medium truncate max-w-[150px]">{goal.titulo}</span>
+                  <span className="text-xs text-muted-foreground">{percentage.toFixed(0)}%</span>
                 </div>
-                <div className="w-full bg-muted rounded-full h-2">
-                  <div
-                    className={`h-2 rounded-full transition-all duration-1000 ${isOverTarget ? 'bg-success' : 'bg-primary'
-                      }`}
-                    style={{ width: `${Math.min(percentage, 100)}%` }}
-                  ></div>
+                <div className="w-full bg-muted rounded-full h-1.5">
+                  <div className={`h-1.5 rounded-full ${percentage >= 100 ? 'bg-success' : 'bg-primary'}`} style={{ width: `${Math.min(percentage, 100)}%` }}></div>
                 </div>
               </div>
             );
@@ -278,137 +263,139 @@ const Dashboard = () => {
   );
 
   return (
-    <>
-      {/* Welcome Section */}
-      <div className="space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-              Olá{profile?.nome ? `, ${profile.nome}` : ''}! 👋
-            </h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              {currentGroup ? `Resumo do grupo: ${currentGroup.name}` : 'Resumo das suas finanças hoje'}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            <PlanStatus />
-            <Dialog open={showTransactionForm} onOpenChange={setShowTransactionForm}>
-              <DialogTrigger asChild>
-                <Button className="flex items-center gap-2" disabled={isTransactionLimitReached}>
-                  {isTransactionLimitReached ? <Lock className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-                  <span className="hidden sm:inline">Nova Transação</span>
-                  <span className="sm:hidden">Nova</span>
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <TransactionForm
-                  onSuccess={() => setShowTransactionForm(false)}
-                  onCancel={() => setShowTransactionForm(false)}
-                  groupId={currentGroup?.id}
-                />
-              </DialogContent>
-            </Dialog>
-          </div>
+    <div className="space-y-8 animate-in fade-in duration-500 pb-10">
+
+      {/* HEADER */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-primary">
+            Olá{profile?.nome ? `, ${profile.nome}` : ''}! 🌟
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            Visão Geral Financeira
+          </p>
         </div>
+        <div className="flex items-center gap-3">
+          <PlanStatus />
 
-        {/* Limit Warnings */}
-        <LimitsBanner />
+          {/* Customization Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="shrink-0">
+                <Settings2 className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Personalizar Dashboard</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuCheckboxItem checked={visibleWidgets.stats} onCheckedChange={() => toggleWidget('stats')}>
+                Saldo e Resumo
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem checked={visibleWidgets.charts} onCheckedChange={() => toggleWidget('charts')}>
+                Gráficos
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem checked={visibleWidgets.creditCards} onCheckedChange={() => toggleWidget('creditCards')}>
+                Cartões de Crédito
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem checked={visibleWidgets.upcomingBills} onCheckedChange={() => toggleWidget('upcomingBills')}>
+                Contas a Pagar
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem checked={visibleWidgets.recentTransactions} onCheckedChange={() => toggleWidget('recentTransactions')}>
+                Transações Recentes
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem checked={visibleWidgets.quickActions} onCheckedChange={() => toggleWidget('quickActions')}>
+                Ações Rápidas
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem checked={visibleWidgets.goals} onCheckedChange={() => toggleWidget('goals')}>
+                Metas
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem checked={visibleWidgets.insights} onCheckedChange={() => toggleWidget('insights')}>
+                Insights IA
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem checked={visibleWidgets.health} onCheckedChange={() => toggleWidget('health')}>
+                Saúde Financeira
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuCheckboxItem checked={visibleWidgets.limits} onCheckedChange={() => toggleWidget('limits')}>
+                Avisos de Plano
+              </DropdownMenuCheckboxItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Dialog open={showTransactionForm} onOpenChange={setShowTransactionForm}>
+            <DialogTrigger asChild>
+              <Button className="flex items-center gap-2 shadow-sm" size="default" disabled={isTransactionLimitReached}>
+                {isTransactionLimitReached ? <Lock className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                <span className="hidden sm:inline">Nova Transação</span>
+                <span className="sm:hidden">Nova</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <TransactionForm
+                onSuccess={() => setShowTransactionForm(false)}
+                onCancel={() => setShowTransactionForm(false)}
+                groupId={currentGroup?.id}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {statsLoading ? (
-          Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i} className="financial-card">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2 flex-1">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-8 w-32" />
-                    <Skeleton className="h-4 w-28" />
-                  </div>
-                  <Skeleton className="h-12 w-12 rounded-xl" />
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        ) : (
-          <>
-            <StatsCard
-              title="Saldo Total"
-              value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.totalBalance)}
-              change={`${stats.trend > 0 ? '+' : ''}${stats.trend.toFixed(1)}% vs mês anterior`}
-              changeType={stats.trend > 0 ? "positive" : "negative"}
-              icon={Wallet}
-              trend={Math.abs(stats.trend)}
-            />
-            <StatsCard
-              title="Receitas do Mês"
-              value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthlyIncome)}
-              change={`${stats.incomeTrend > 0 ? '+' : ''}${stats.incomeTrend.toFixed(1)}% vs mês anterior`}
-              changeType={stats.incomeTrend >= 0 ? "positive" : "negative"}
-              icon={TrendingUp}
-              trend={Math.abs(stats.incomeTrend)}
-            />
-            <StatsCard
-              title="Despesas do Mês"
-              value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthlyExpenses)}
-              change={`${stats.expenseTrend > 0 ? '+' : ''}${stats.expenseTrend.toFixed(1)}% vs mês anterior`}
-              changeType={stats.expenseTrend <= 0 ? "positive" : "negative"}
-              icon={TrendingDown}
-              trend={Math.abs(stats.expenseTrend)}
-            />
-            <StatsCard
-              title="Economia"
-              value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthlySavings)}
-              change={`${stats.savingsTrend > 0 ? '+' : ''}${stats.savingsTrend.toFixed(1)}% vs mês anterior`}
-              changeType={stats.savingsTrend >= 0 ? "positive" : "neutral"}
-              icon={Target}
-              trend={Math.abs(stats.savingsTrend)}
-            />
-          </>
-        )}
-      </div>
+      {visibleWidgets.limits && <LimitsBanner />}
 
-      {/* AI Insights Section */}
-      <AIInsightsSection />
+      {/* TOP: STATS CARDS */}
+      {visibleWidgets.stats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {statsLoading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i} className="financial-card"><CardContent className="p-6"><Skeleton className="h-12 w-full" /></CardContent></Card>
+            ))
+          ) : (
+            <>
+              <StatsCard title="Saldo Total" value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.totalBalance)} change={`${stats.trend > 0 ? '+' : ''}${stats.trend.toFixed(1)}%`} changeType={stats.trend > 0 ? "positive" : "negative"} icon={Wallet} trend={Math.abs(stats.trend)} />
+              <StatsCard title="Receitas" value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthlyIncome)} change={`${stats.incomeTrend > 0 ? '+' : ''}${stats.incomeTrend.toFixed(1)}%`} changeType={stats.incomeTrend >= 0 ? "positive" : "negative"} icon={TrendingUp} trend={Math.abs(stats.incomeTrend)} />
+              <StatsCard title="Despesas" value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthlyExpenses)} change={`${stats.expenseTrend > 0 ? '+' : ''}${stats.expenseTrend.toFixed(1)}%`} changeType={stats.expenseTrend <= 0 ? "positive" : "negative"} icon={TrendingDown} trend={Math.abs(stats.expenseTrend)} />
+              <StatsCard title="Economia" value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthlySavings)} change={`${stats.savingsTrend > 0 ? '+' : ''}${stats.savingsTrend.toFixed(1)}%`} changeType={stats.savingsTrend >= 0 ? "positive" : "neutral"} icon={Target} trend={Math.abs(stats.savingsTrend)} />
+            </>
+          )}
+        </div>
+      )}
 
-      {/* Main Dashboard Grid - Mobile First */}
-      {/* Charts Row - Split 50/50 for balance */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <CashFlowForecast groupId={currentGroup?.id} />
-        <FinancialChart groupId={currentGroup?.id} />
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
-      {/* Details Row - Main Content + Sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Column - Transactions & Tracking */}
+        {/* LEFT COLUMN (2/3): Main Data */}
         <div className="lg:col-span-2 space-y-6">
+          {visibleWidgets.charts && (
+            <div className="grid grid-cols-1 gap-6">
+              <FinancialChart groupId={currentGroup?.id} />
+              <CashFlowForecast groupId={currentGroup?.id} />
+            </div>
+          )}
 
-          {/* Tracking Grid (Budget & Goals) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <BudgetSummary month={currentMonth} groupId={currentGroup?.id} />
-            <GoalsSection />
-          </div>
-
-          <RecentTransactions limit={5} groupId={currentGroup?.id} />
+          {visibleWidgets.recentTransactions && (
+            <RecentTransactions limit={10} groupId={currentGroup?.id} />
+          )}
         </div>
 
-        {/* Sidebar Column - Widgets */}
-        <div className="lg:col-span-1 space-y-6 h-full flex flex-col">
-          {/* Ongoing Bills Widget - Priority 1 */}
-          <UpcomingBillsWidget groupId={currentGroup?.id} />
+        {/* RIGHT COLUMN (1/3): Widgets & Sidebar */}
+        <div className="space-y-6">
+          {visibleWidgets.health && <FinancialHealthSection />}
 
-          {/* Quick Actions - Hidden on mobile, shown on desktop */}
-          <div className="hidden lg:block">
-            <QuickActions />
-          </div>
+          {visibleWidgets.creditCards && <CreditCardsSection />}
 
-          <FinancialHealthSection />
-          {/* Removed Budget and Goals from here */}
+          {visibleWidgets.quickActions && <QuickActions />}
+
+          {visibleWidgets.upcomingBills && <UpcomingBillsWidget groupId={currentGroup?.id} />}
+
+          {visibleWidgets.insights && <AIInsightsSection />}
+
+          {visibleWidgets.goals && <GoalsSection />}
+
+          {visibleWidgets.budget && <BudgetSummary month={currentMonth} groupId={currentGroup?.id} />}
         </div>
+
       </div>
-    </>
+    </div>
   );
 };
 

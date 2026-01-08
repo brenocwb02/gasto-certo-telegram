@@ -125,9 +125,61 @@ export function TransactionForm({ onSuccess, onCancel, onRefetch, mode = 'create
           // Generate a unique ID for this installment group to allow bulk deletion later
           const installGroupId = crypto.randomUUID();
 
+          // Get account details to check for credit card closing date
+          const selectedAccount = accounts.find(a => a.id === data.conta_origem_id);
+          const closingDay = selectedAccount?.dia_fechamento;
+          const dueDay = selectedAccount?.dia_vencimento;
+
+          // Smart Date Logic:
+          // If credit card AND purchase date >= closing date, the "financial effect" starts next month.
+          // However, we preserve data_transacao as the purchase date for history.
+          // We can use data_vencimento to indicate when it will be paid.
+
+          let baseDate = startDate;
+          let isPostClosing = false;
+
+          if (selectedAccount?.tipo === 'cartao' && closingDay) {
+            const purchaseDay = startDate.getDate();
+            if (purchaseDay >= closingDay) {
+              isPostClosing = true;
+              // If bought after closing, the first payment is skipped one month effectively?
+              // Example: Closes 25th, Due 5th.
+              // Buy 20th Jan -> Closes 25th Jan -> Due 5th Feb. (0 month shift in terms of "next due date" relative to purchase month? No, it's next month).
+              // Buy 26th Jan -> Closes 25th Feb -> Due 5th Mar. (1 month shift).
+              // "startDate" is Jan 26. "addMonths(Start, 0)" is Jan 26.
+              // We want the "Reference Month" for the first installment to be March? Or Feb?
+              // Usually systems treat the "Date" of the installment as the "Due Date" or "Competence Date".
+              // If I map it to "Competence", Jan 26 purchase -> Feb Competence.
+              // Let's shift the DATE of the installments if post-closing, effectively moving them to the "Billable Month".
+
+              // SHIFT STRATEGY:
+              // If post-closing, we add 1 month to the calculation base for ALL installments?
+              // Yes, because 1/10 will fall in Mar, 2/10 in Apr.
+              baseDate = addMonths(startDate, 1);
+            }
+          }
+
           // Create N transactions, one for each installment
           for (let i = 0; i < totalInstallments; i++) {
-            const installmentDate = addMonths(startDate, i);
+            // If post-closing, i=0 starts at baseDate (Purchase+1mo).
+            // If normal, i=0 starts at baseDate (Purchase).
+            // Actually, usually 1st installment is next month anyway?
+            // "Parcelado em 2x": 1st Invoice, 2nd Invoice.
+            // If I buy Jan 20 (Open Jan Invoice), 1/2 is Jan Invoice (Pay Feb), 2/2 is Feb Invoice (Pay Mar).
+            // rule: i starts at 0.
+
+            const installmentDate = addMonths(baseDate, i);
+
+            // Calculate specific due date if we have account info
+            let specificDueDate = null;
+            if (dueDay) {
+              // Due date is in the month following the *invoice* month?
+              // Simplification: automatic due date is hard without complex calendar logic, 
+              // but we can try to set data_vencimento if we want.
+              // For now, let's keep it simple: relying on the installmentDate (transacao) 
+              // falling into the correct month bucket.
+            }
+
             await addTransaction({
               descricao: `${data.descricao} (${i + 1}/${totalInstallments})`,
               valor: installmentValue,
@@ -136,8 +188,8 @@ export function TransactionForm({ onSuccess, onCancel, onRefetch, mode = 'create
               conta_origem_id: data.conta_origem_id,
               conta_destino_id: null,
               data_transacao: format(installmentDate, 'yyyy-MM-dd'),
-              observacoes: `Parcela ${i + 1} de ${totalInstallments}`,
-              efetivada: i === 0 ? data.efetivada : false,
+              observacoes: `Parcela ${i + 1} de ${totalInstallments}${isPostClosing ? ' (Fechamento virado)' : ''}`,
+              efetivada: false, // Installments are always future/pending by default
               anexos: null,
               tags: [`installment_group:${installGroupId}`],
               data_vencimento: null,
