@@ -63,21 +63,57 @@ export function PayInvoiceDialog({ isOpen, onClose, invoice, groupId }: PayInvoi
 
             if (!user) throw new Error("Usuário não autenticado");
 
-            // 1. Create the payment transaction (Expense from checking account)
-            const paymentTransaction = {
-                descricao: `Pagamento Fatura ${invoice.cardName}`,
-                valor: numericAmount,
-                tipo: 'despesa',
-                conta_origem_id: paymentAccount,
-                categoria_id: paymentCategory?.id || null, // Best effort category match
-                data_transacao: paymentDate,
-                user_id: user.id,
-                efetivada: true // Payment is immediate
-            };
+            // 1. Create the payment transaction (Transfer from checking account to credit card)
+            // This ensures double-entry bookkeeping: Asset Decreases, Liability Decreases (via Transfer to Card)
+
+            // 1. Split Payment Logic (Distribute payment across Principal + Additional cards)
+
+            // Find all relevant cards (Principal + Children)
+            const relevantCards = accounts.filter(a => a.id === invoice.cardId || a.parent_account_id === invoice.cardId);
+
+            // Calculate total debt to determine proportions
+            const totalDebt = relevantCards.reduce((sum, a) => sum + (Number(a.saldo_atual) < 0 ? Math.abs(Number(a.saldo_atual)) : 0), 0);
+
+            const paymentTransactions = relevantCards.map(card => {
+                const cardDebt = Number(card.saldo_atual) < 0 ? Math.abs(Number(card.saldo_atual)) : 0;
+
+                let proportion = 0;
+                if (totalDebt > 0) {
+                    proportion = cardDebt / totalDebt;
+                } else if (card.id === invoice.cardId) {
+                    proportion = 1;
+                }
+
+                const shareAmount = Number((numericAmount * proportion).toFixed(2));
+
+                if (shareAmount <= 0) return null;
+
+                return {
+                    descricao: `Pagamento Fatura ${card.nome}`,
+                    valor: shareAmount,
+                    tipo: 'transferencia',
+                    conta_origem_id: paymentAccount,
+                    conta_destino_id: card.id,
+                    categoria_id: null,
+                    data_transacao: paymentDate,
+                    user_id: user.id,
+                    efetivada: true,
+                    observacoes: `Pagamento proporcional (${(proportion * 100).toFixed(0)}%) da fatura consolidada.`
+                };
+            }).filter(Boolean);
+
+            // Edge case: Rounding errors fix
+            if (paymentTransactions.length > 0) {
+                const totalDistributed = paymentTransactions.reduce((sum, t) => sum + (t?.valor || 0), 0);
+                const diff = numericAmount - totalDistributed;
+                if (Math.abs(diff) > 0.001) {
+                    paymentTransactions[0]!.valor += diff;
+                }
+            }
 
             const { error: payError } = await supabase
                 .from('transactions')
-                .insert(paymentTransaction);
+                .insert(paymentTransactions);
 
             if (payError) throw payError;
 

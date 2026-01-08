@@ -27,7 +27,19 @@ export function CreditCardWidget({ account, compact = false, groupId, allAccount
 
     // Calculations
     const limit = Number(account.limite) || 0;
-    const balance = Number(account.saldo_atual) || 0; // Negative usually
+
+    // Aggregated Balance Logic
+    // If this is a principal card, we should include the balance of its additional cards
+    // to reflect the TRUE total invoice status.
+    let aggregatedBalance = Number(account.saldo_atual) || 0;
+
+    if (!isAdditionalCard && allAccounts.length > 0) {
+        const childCards = allAccounts.filter(a => a.parent_account_id === account.id);
+        const childBalanceSum = childCards.reduce((sum, child) => sum + (Number(child.saldo_atual) || 0), 0);
+        aggregatedBalance += childBalanceSum;
+    }
+
+    const balance = aggregatedBalance; // Use aggregated balance for display
 
     // Balance is usually negative for debt. 
     // Spent = |balance| (if negative)
