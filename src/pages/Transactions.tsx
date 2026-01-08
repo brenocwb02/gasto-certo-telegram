@@ -235,7 +235,7 @@ const Transactions = () => {
     setIsDeleting(true);
     try {
       // Check if it's part of a group (has a tag starting with installment_group:)
-      const groupTag = selected.tags?.find((t: string) => t.startsWith('installment_group:'));
+      void selected.tags?.find((t: string) => t.startsWith('installment_group:'));
 
       // If user chose to delete all (we'll implement the UI choice in a moment, for now default to single unless logic added)
       // Actually, let's change the logic: If has group tag, we should ASK.
@@ -373,7 +373,7 @@ const Transactions = () => {
             {selectedAccount.tipo === 'cartao' && (
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Limite Disponível</p>
-                <p className="font-semibold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format((Number(selectedAccount.limite) || 0) + Number(selectedAccount.saldo_atual))}</p>
+                <p className="font-semibold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format((Number(selectedAccount.limite_credito) || 0) + Number(selectedAccount.saldo_atual))}</p>
               </div>
             )}
           </div>

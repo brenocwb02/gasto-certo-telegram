@@ -25,7 +25,7 @@ import {
   XCircle,
   AlertCircle,
   RefreshCw,
-  BarChart3,
+  
   Users
 } from "lucide-react";
 import { useRecurringTransactions } from "@/hooks/useRecurringTransactions";
@@ -53,11 +53,11 @@ export default function RecurringTransactions() {
     getFrequencyLabel,
     isDueSoon,
     isOverdue
-  } = useRecurringTransactions();
+  } = useRecurringTransactions(); void(getRecurringStats); void(generationLogs);
 
   // Estados para modais
   const [showCreateRecurring, setShowCreateRecurring] = useState(false);
-  const [showStats, setShowStats] = useState(false);
+  const [, setShowStats] = useState(false); void(setShowStats);
 
   // Estados para formulário
   const [formData, setFormData] = useState({

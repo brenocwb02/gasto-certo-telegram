@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { useTransactions, useAccounts, useCategories } from '@/hooks/useSupabaseData';
 import { useRecurringTransactions } from '@/hooks/useRecurringTransactions';
 import { useLimits } from '@/hooks/useLimits';
-import { Loader2, Plus, Repeat, CalendarClock, CreditCard } from 'lucide-react';
+import { Loader2, Plus, Repeat, CreditCard } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { addDays, addWeeks, addMonths, addYears, parseISO, format } from 'date-fns';
 
@@ -171,7 +171,6 @@ export function TransactionForm({ onSuccess, onCancel, onRefetch, mode = 'create
             const installmentDate = addMonths(baseDate, i);
 
             // Calculate specific due date if we have account info
-            let specificDueDate = null;
             if (dueDay) {
               // Due date is in the month following the *invoice* month?
               // Simplification: automatic due date is hard without complex calendar logic, 

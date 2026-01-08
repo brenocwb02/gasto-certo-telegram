@@ -258,7 +258,7 @@ serve(async (req) => {
     console.log('Generated filters:', JSON.stringify(filters));
 
     // Execute query
-    const results = await executeQuery(supabase, userId, filters);
+    const results = await executeQuery(supabase as any, userId, filters);
     console.log('Results found:', results.length);
 
     // Format response

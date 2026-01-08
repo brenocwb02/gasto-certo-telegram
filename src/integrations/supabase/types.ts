@@ -1025,6 +1025,7 @@ export type Database = {
           description: string | null
           end_date: string | null
           frequency: string
+          gerar_pendente: boolean
           group_id: string | null
           id: string
           is_active: boolean
@@ -1046,6 +1047,7 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           frequency: string
+          gerar_pendente?: boolean
           group_id?: string | null
           id?: string
           is_active?: boolean
@@ -1067,6 +1069,7 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           frequency?: string
+          gerar_pendente?: boolean
           group_id?: string | null
           id?: string
           is_active?: boolean
@@ -1247,6 +1250,7 @@ export type Database = {
           data_transacao: string
           data_vencimento: string | null
           descricao: string
+          efetivada: boolean
           group_id: string | null
           id: string
           installment_number: number | null
@@ -1269,6 +1273,7 @@ export type Database = {
           data_transacao?: string
           data_vencimento?: string | null
           descricao: string
+          efetivada?: boolean
           group_id?: string | null
           id?: string
           installment_number?: number | null
@@ -1291,6 +1296,7 @@ export type Database = {
           data_transacao?: string
           data_vencimento?: string | null
           descricao?: string
+          efetivada?: boolean
           group_id?: string | null
           id?: string
           installment_number?: number | null
@@ -1436,16 +1442,53 @@ export type Database = {
         Args: never
         Returns: undefined
       }
-      create_recurring_transaction: {
+      create_recurring_transaction:
+        | {
+            Args: {
+              p_account_id?: string
+              p_amount: number
+              p_category_id?: string
+              p_day_of_month?: number
+              p_day_of_week?: number
+              p_description?: string
+              p_end_date?: string
+              p_frequency: string
+              p_gerar_pendente?: boolean
+              p_group_id?: string
+              p_start_date: string
+              p_title: string
+              p_type: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_account_id?: string
+              p_amount: number
+              p_category_id?: string
+              p_day_of_month?: number
+              p_day_of_week?: number
+              p_description: string
+              p_end_date?: string
+              p_frequency: string
+              p_group_id?: string
+              p_start_date: string
+              p_title: string
+              p_type: string
+            }
+            Returns: Json
+          }
+      create_recurring_transaction_v2: {
         Args: {
           p_account_id?: string
           p_amount: number
           p_category_id?: string
           p_day_of_month?: number
           p_day_of_week?: number
-          p_description: string
+          p_description?: string
           p_end_date?: string
           p_frequency: string
+          p_gerar_pendente?: boolean
           p_group_id?: string
           p_start_date: string
           p_title: string
@@ -1460,6 +1503,7 @@ export type Database = {
       }
       dissolve_family_group: { Args: { p_group_id: string }; Returns: Json }
       generate_activation_code: { Args: { user_uuid: string }; Returns: string }
+      generate_recurring_transactions: { Args: never; Returns: Json }
       get_admin_stats: { Args: never; Returns: Json }
       get_admin_users: {
         Args: { p_limit?: number; p_offset?: number; p_search?: string }
