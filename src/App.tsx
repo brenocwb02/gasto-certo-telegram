@@ -34,6 +34,7 @@ const CheckoutSuccess = lazy(() => import("@/pages/CheckoutSuccess"));
 const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
 const UpdatePassword = lazy(() => import("@/pages/UpdatePassword"));
 const Admin = lazy(() => import("@/pages/Admin"));
+const InvoiceDetails = lazy(() => import("@/pages/InvoiceDetails"));
 
 const queryClient = new QueryClient();
 
@@ -223,6 +224,16 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute>
               <Admin />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/invoices/:cardId"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <InvoiceDetails />
+              </AppLayout>
             </ProtectedRoute>
           }
         />

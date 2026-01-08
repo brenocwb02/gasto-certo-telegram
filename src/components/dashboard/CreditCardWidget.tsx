@@ -152,7 +152,7 @@ export function CreditCardWidget({ account, compact = false, groupId, allAccount
                     {!compact && !isAdditionalCard && (
                         <div className="flex gap-2 pt-2">
                             <Button variant="outline" size="sm" className="w-full text-xs" asChild>
-                                <Link to={`/transactions?accountId=${account.id}`}>Ver Fatura</Link>
+                                <Link to={`/invoices/${account.id}`}>Ver Fatura</Link>
                             </Button>
                             {usedAmount > 0 && (
                                 <Button
