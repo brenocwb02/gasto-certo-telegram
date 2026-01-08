@@ -9,18 +9,18 @@
     /* Primary Brand Colors - Professional Blue */
     --background: 240 10% 98%;
     --foreground: 224 15% 12%;
-    
+
     /* Fintech Brand Colors */
-    --primary: 224 64% 33%;
+    --primary: 213 74% 15%;
     --primary-foreground: 0 0% 98%;
-    --primary-light: 224 64% 45%;
-    --primary-glow: 224 64% 85%;
-    
-    /* Financial Success Colors */
-    --success: 142 76% 36%;
+    --primary-light: 213 74% 25%;
+    --primary-glow: 213 74% 85%;
+
+    /* Financial Success Colors (New Boas Contas Green) */
+    --success: 145 63% 49%;
     --success-foreground: 0 0% 98%;
-    --success-light: 142 76% 45%;
-    
+    --success-light: 145 63% 59%;
+
     /* Warning & Expense Colors */
     --warning: 45 93% 58%;
     --warning-foreground: 0 0% 98%;
@@ -31,103 +31,103 @@
     --card: 0 0% 100%;
     --card-foreground: 224 15% 12%;
     --card-hover: 240 25% 96%;
-    
+
     /* Interactive Elements */
     --popover: 0 0% 100%;
     --popover-foreground: 224 15% 12%;
-    
+
     /* Secondary & Muted */
     --secondary: 224 12% 95%;
     --secondary-foreground: 224 15% 12%;
-    
+
     --muted: 224 12% 95%;
     --muted-foreground: 224 8% 46%;
-    
+
     /* Accent Colors */
-    --accent: 224 64% 33%;
+    --accent: 213 74% 15%;
     --accent-foreground: 0 0% 98%;
-    --accent-hover: 224 64% 28%;
-    
+    --accent-hover: 213 74% 10%;
+
     /* Destructive */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    
+
     /* Borders & Inputs */
     --border: 224 12% 88%;
     --input: 224 12% 92%;
-    --ring: 224 64% 33%;
+    --ring: 213 74% 15%;
 
     /* Border Radius */
     --radius: 0.75rem;
-    
+
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-light)));
     --gradient-success: linear-gradient(135deg, hsl(var(--success)), hsl(var(--success-light)));
     --gradient-hero: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-light)) 100%);
     --gradient-card: linear-gradient(145deg, hsl(var(--card)) 0%, hsl(var(--card-hover)) 100%);
-    
+
     /* Shadows */
     --shadow-sm: 0 2px 8px hsla(var(--primary), 0.08);
     --shadow-md: 0 4px 16px hsla(var(--primary), 0.12);
     --shadow-lg: 0 8px 32px hsla(var(--primary), 0.16);
     --shadow-glow: 0 0 24px hsla(var(--primary-glow), 0.6);
-    
+
     /* Transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-fast: all 0.15s ease-out;
-    
+
     /* Sidebar */
     --sidebar-background: 224 15% 97%;
     --sidebar-foreground: 224 15% 12%;
-    --sidebar-primary: 224 64% 33%;
+    --sidebar-primary: 213 74% 15%;
     --sidebar-primary-foreground: 0 0% 98%;
     --sidebar-accent: 224 12% 95%;
     --sidebar-accent-foreground: 224 15% 12%;
     --sidebar-border: 224 12% 88%;
-    --sidebar-ring: 224 64% 33%;
+    --sidebar-ring: 213 74% 15%;
   }
 
   .dark {
     /* Dark Mode - Professional Fintech Theme */
     --background: 224 15% 6%;
     --foreground: 224 5% 96%;
-    
+
     /* Brand Colors in Dark */
     --primary: 224 64% 58%;
     --primary-foreground: 224 15% 6%;
     --primary-light: 224 64% 65%;
     --primary-glow: 224 64% 25%;
-    
+
     /* Cards & Surfaces */
     --card: 224 15% 9%;
     --card-foreground: 224 5% 96%;
     --card-hover: 224 15% 12%;
-    
+
     /* Interactive */
     --popover: 224 15% 9%;
     --popover-foreground: 224 5% 96%;
-    
+
     /* Secondary & Muted */
     --secondary: 224 12% 15%;
     --secondary-foreground: 224 5% 96%;
-    
+
     --muted: 224 12% 15%;
     --muted-foreground: 224 5% 65%;
-    
+
     /* Accent */
     --accent: 224 64% 58%;
     --accent-foreground: 224 15% 6%;
     --accent-hover: 224 64% 65%;
-    
+
     /* Destructive */
     --destructive: 0 84% 65%;
     --destructive-foreground: 224 15% 6%;
-    
+
     /* Borders & Inputs */
     --border: 224 12% 18%;
     --input: 224 12% 15%;
     --ring: 224 64% 58%;
-    
+
     /* Sidebar Dark */
     --sidebar-background: 224 15% 8%;
     --sidebar-foreground: 224 5% 96%;
@@ -148,68 +148,93 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
-  
+
   /* Custom Scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
   }
-  
+
   ::-webkit-scrollbar-track {
     @apply bg-muted;
   }
-  
+
   ::-webkit-scrollbar-thumb {
     @apply bg-border rounded-full;
   }
-  
+
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-accent;
   }
 }
 
 @layer components {
+
   /* Financial Cards */
   .financial-card {
     @apply bg-gradient-to-br from-card to-card-hover border border-border rounded-xl p-6 shadow-md hover:shadow-lg transition-all duration-300;
   }
-  
+
   .stats-card {
     @apply bg-card border border-border rounded-xl p-4 hover:bg-card-hover transition-all duration-200;
   }
-  
+
   /* Hero Elements */
   .hero-gradient {
     background: var(--gradient-hero);
   }
-  
+
   .primary-gradient {
     background: var(--gradient-primary);
   }
-  
+
   .success-gradient {
     background: var(--gradient-success);
   }
-  
+
   /* Animation Classes */
+  .animate-logo-pulse {
+    animation: logoPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes logoPulse {
+
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    50% {
+      opacity: 0.8;
+      transform: scale(0.95);
+    }
+  }
+
   .animate-fade-in {
     animation: fadeIn 0.6s ease-out;
   }
-  
+
   .animate-slide-up {
     animation: slideUp 0.5s ease-out;
   }
-  
+
   @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
   }
-  
+
   @keyframes slideUp {
-    from { 
+    from {
       opacity: 0;
       transform: translateY(20px);
     }
-    to { 
+
+    to {
       opacity: 1;
       transform: translateY(0);
     }

@@ -114,10 +114,10 @@ export function Sidebar({ className, onClose, isExpanded = false, onToggle }: Si
             isExpanded ? "h-10 px-2" : "h-10 w-10"
           )}
         >
-          <img src="/logo-icon.png" alt="Boas Contas" className="h-8 w-8 flex-shrink-0" />
+          <img src="/logo-icon.png" alt="Boas Contas" className="h-8 w-8 flex-shrink-0 animate-logo-pulse" />
           <span
             className={cn(
-              "whitespace-nowrap font-bold text-[#1a365d] transition-all duration-300 overflow-hidden",
+              "whitespace-nowrap font-bold text-primary transition-all duration-300 overflow-hidden",
               isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0"
             )}
           >
