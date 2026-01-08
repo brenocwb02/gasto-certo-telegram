@@ -35,6 +35,198 @@ export function UpcomingBillsWidget({ groupId }: UpcomingBillsWidgetProps) {
         setIsPayInvoiceOpen(true);
     };
 
+    const creditCardAccountIds = useMemo(() => {
+        return new Set(accounts.filter(a => a.tipo === 'cartao').map(a => a.id));
+    }, [accounts]);
+
+    // Filter logic: Expenses, Not Paid, Due within next 7 days (or overdue)
+    // EXCLUDE credit card transactions - they should appear as invoices, not individual bills
+    const upcomingBills = useMemo(() => {
+        if (!transactions) return [];
+
+        const today = startOfDay(new Date());
+        const next7Days = endOfDay(addDays(today, 7));
+
+        return transactions
+            .filter((t: any) => {
+                if (t.tipo !== 'despesa') return false;
+                if (t.efetivada) return false;
+
+                // SKIP credit card transactions - they are part of invoices, not individual bills
+                if (t.conta_origem_id && creditCardAccountIds.has(t.conta_origem_id)) {
+                    return false;
+                }
+
+                // Use parseLocalDate to avoid timezone issues
+                const date = parseLocalDate(t.data_transacao);
+
+                // Check if date is today or in the future, up to 7 days
+                // Also show overdue bills
+                return isBefore(date, next7Days);
+            })
+            .sort((a, b) => {
+                const dateA = parseLocalDate(a.data_transacao);
+                const dateB = parseLocalDate(b.data_transacao);
+                return dateA.getTime() - dateB.getTime();
+            });
+    }, [transactions, creditCardAccountIds]);
+
+    // Calculate credit card invoices (virtual entries)
+    // Only PRINCIPAL cards get an invoice (cards without parent_account_id)
+    // Invoice includes transactions from principal + all its additional cards
+    const creditCardInvoices = useMemo(() => {
+        // Principal cards = cards without a parent (parent_account_id is null/undefined)
+        const principalCards = accounts.filter((a: any) =>
+            a.tipo === 'cartao' && !a.parent_account_id
+        );
+
+        // Additional cards grouped by their parent
+        const additionalCardsByParent = new Map<string, string[]>();
+        accounts.forEach((a: any) => {
+            if (a.tipo === 'cartao' && a.parent_account_id) {
+                const existing = additionalCardsByParent.get(a.parent_account_id) || [];
+                existing.push(a.id);
+                additionalCardsByParent.set(a.parent_account_id, existing);
+            }
+        });
+
+        return principalCards.map(card => {
+            // Get IDs of this card + all its additional cards
+            const additionalCardIds = additionalCardsByParent.get(card.id) || [];
+            const allCardIds = [card.id, ...additionalCardIds];
+
+            // Get all transactions for principal + additional cards that are not yet paid
+            const cardTransactions = transactions?.filter((t: any) =>
+                allCardIds.includes(t.conta_origem_id) &&
+                t.tipo === 'despesa' &&
+                !t.efetivada
+            ) || [];
+
+            const total = cardTransactions.reduce((sum, t: any) => sum + Number(t.valor), 0);
+
+            if (total === 0) return null;
+
+            // Calculate due date based on closing and payment days
+            // Universal rule: due date is first dia_vencimento AFTER the closing date
+            const now = new Date();
+            const closingDay = Number(card.dia_fechamento) || 28;
+            const dueDay = Number(card.dia_vencimento) || 10;
+            const currentDay = now.getDate();
+
+            let closingMonth, closingYear;
+
+            // Determine which closing date is relevant (current cycle)
+            if (currentDay <= closingDay) {
+                // We are BEFORE or ON closing day = invoice closes THIS month
+                closingMonth = now.getMonth();
+                closingYear = now.getFullYear();
+            } else {
+                // We are AFTER closing day = current cycle closes NEXT month
+                closingMonth = now.getMonth() + 1;
+                closingYear = now.getFullYear();
+            }
+
+            // Now calculate due date based on dueDay vs closingDay
+            let dueMonth = closingMonth;
+            let dueYear = closingYear;
+
+            if (dueDay > closingDay) {
+                // Due date is in the SAME month as closing (Nubank-style)
+                // Ex: closing 4, due 10 → same month
+                dueMonth = closingMonth;
+                dueYear = closingYear;
+            } else {
+                // Due date is in the NEXT month after closing (Santander-style)
+                // Ex: closing 28, due 10 → next month
+                dueMonth = closingMonth + 1;
+                dueYear = closingYear;
+            }
+
+            // Handle year overflow
+            if (dueMonth > 11) {
+                dueMonth = dueMonth - 12;
+                dueYear = dueYear + 1;
+            }
+
+            const dueDate = new Date(dueYear, dueMonth, dueDay);
+
+            return {
+                id: `invoice-${card.id}`,
+                descricao: `Fatura ${card.nome}`,
+                valor: total,
+                data_transacao: dueDate.toISOString().split('T')[0],
+                tipo: 'fatura',
+                isInvoice: true,
+                cardId: card.id,
+                cardName: card.nome,
+                transactionCount: cardTransactions.length
+            };
+        }).filter(Boolean);
+    }, [accounts, transactions]);
+
+    // Combine regular bills with invoice entries
+    const allBills = useMemo(() => {
+        const combined = [...upcomingBills, ...creditCardInvoices].filter(Boolean) as any[];
+        return combined.sort((a, b) => {
+            const dateA = parseLocalDate(a.data_transacao);
+            const dateB = parseLocalDate(b.data_transacao);
+            return dateA.getTime() - dateB.getTime();
+        });
+    }, [upcomingBills, creditCardInvoices]);
+
+    // Total value calculation (now includes invoices)
+    const totalDue = allBills.reduce((acc, curr) => acc + Number(curr?.valor || 0), 0);
+
+    const formatCurrency = (value: number) => {
+        return new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+        }).format(value);
+    };
+
+    const handleEdit = (transaction: any) => {
+        setSelectedTransaction(transaction);
+        setIsEditDialogOpen(true);
+    };
+
+    if (loading) {
+        return (
+            <Card className="h-full">
+                <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                        <CalendarClock className="h-4 w-4" />
+                        Contas a Pagar
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="h-12 bg-muted rounded animate-pulse" />
+                    <div className="h-12 bg-muted rounded animate-pulse" />
+                </CardContent>
+            </Card>
+        )
+    }
+
+    // Empty state
+    if (allBills.length === 0) {
+        return (
+            <Card className="h-full border-l-4 border-l-success bg-gradient-to-r from-background to-green-50/20">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                        <CalendarClock className="h-4 w-4" />
+                        Contas a Pagar
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center justify-center py-6 text-center">
+                    <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center mb-3 text-green-600">
+                        <CheckCircle2 className="h-6 w-6" />
+                    </div>
+                    <p className="font-medium">Tudo em dia!</p>
+                    <p className="text-sm text-muted-foreground">Nenhuma conta pendente para os próximos 7 dias.</p>
+                </CardContent>
+            </Card>
+        );
+    }
+
     // ... (rest of filtering logic)
 
     return (
@@ -112,20 +304,35 @@ export function UpcomingBillsWidget({ groupId }: UpcomingBillsWidgetProps) {
                 </CardContent>
             </Card>
 
-            <TransactionForm
-                isOpen={isEditDialogOpen}
-                onClose={() => setIsEditDialogOpen(false)}
-                transaction={selectedTransaction}
-                onSuccess={() => {
-                    refetchTransactions();
-                    setIsEditDialogOpen(false);
-                }}
-            />
+            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Editar Conta</DialogTitle>
+                    </DialogHeader>
+                    {selectedTransaction && (
+                        <TransactionForm
+                            mode="edit"
+                            initialData={selectedTransaction}
+                            groupId={groupId || undefined}
+                            onRefetch={refetchTransactions}
+                            onSuccess={() => {
+                                setIsEditDialogOpen(false);
+                                setSelectedTransaction(null);
+                            }}
+                            onCancel={() => {
+                                setIsEditDialogOpen(false);
+                                setSelectedTransaction(null);
+                            }}
+                        />
+                    )}
+                </DialogContent>
+            </Dialog>
 
             <PayInvoiceDialog
                 isOpen={isPayInvoiceOpen}
                 onClose={() => setIsPayInvoiceOpen(false)}
                 invoice={selectedInvoice}
+                groupId={groupId}
             />
         </>
     );

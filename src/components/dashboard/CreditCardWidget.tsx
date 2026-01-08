@@ -1,20 +1,29 @@
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CreditCard } from "lucide-react";
+import { CreditCard, Link as LinkIcon } from "lucide-react";
 import { getBankBrand } from "@/lib/bank-brands";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
+import { PayInvoiceDialog } from "./PayInvoiceDialog";
 
 interface CreditCardWidgetProps {
     account: any;
     compact?: boolean; // For dashboard vs full list
+    groupId?: string | null; // For PayInvoiceDialog
+    allAccounts?: any[]; // To find parent card name
 }
 
-export function CreditCardWidget({ account, compact = false }: CreditCardWidgetProps) {
+export function CreditCardWidget({ account, compact = false, groupId, allAccounts = [] }: CreditCardWidgetProps) {
     const brand = getBankBrand(account.nome || "", account.banco || "");
+    const [isPayDialogOpen, setIsPayDialogOpen] = useState(false);
+
+    // Check if this is an additional card
+    const isAdditionalCard = !!account.parent_account_id;
+    const parentCard = isAdditionalCard ? allAccounts.find(a => a.id === account.parent_account_id) : null;
 
     // Calculations
     const limit = Number(account.limite) || 0;
@@ -70,69 +79,101 @@ export function CreditCardWidget({ account, compact = false }: CreditCardWidgetP
         new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
     return (
-        <Card className={cn(
-            "overflow-hidden transition-all hover:shadow-md border-t-4",
-            compact ? "min-w-[280px]" : "w-full"
-        )} style={{ borderTopColor: brand.primaryColor }}>
-            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-                <div className="flex items-center gap-3">
-                    <div
-                        className="h-10 w-10 rounded-full flex items-center justify-center text-white font-bold shadow-sm"
-                        style={{ backgroundColor: brand.primaryColor, color: brand.secondaryColor }}
-                    >
-                        {account.banco ? account.banco[0].toUpperCase() : <CreditCard className="h-5 w-5" />}
+        <>
+            <Card className={cn(
+                "overflow-hidden transition-all hover:shadow-md border-t-4",
+                compact ? "min-w-[280px]" : "w-full"
+            )} style={{ borderTopColor: brand.primaryColor }}>
+                <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+                    <div className="flex items-center gap-3">
+                        <div
+                            className="h-10 w-10 rounded-full flex items-center justify-center text-white font-bold shadow-sm"
+                            style={{ backgroundColor: brand.primaryColor, color: brand.secondaryColor }}
+                        >
+                            {account.banco ? account.banco[0].toUpperCase() : <CreditCard className="h-5 w-5" />}
+                        </div>
+                        <div>
+                            <CardTitle className="text-base font-semibold">{account.nome}</CardTitle>
+                            <p className="text-xs text-muted-foreground">{brand.name}</p>
+                        </div>
                     </div>
-                    <div>
-                        <CardTitle className="text-base font-semibold">{account.nome}</CardTitle>
-                        <p className="text-xs text-muted-foreground">{brand.name}</p>
+                    {closingDay && !isAdditionalCard && (
+                        <Badge variant="secondary" className={cn("text-[10px] uppercase", invoiceBadgeColor)}>
+                            {invoiceStatus}
+                        </Badge>
+                    )}
+                    {isAdditionalCard && (
+                        <Badge variant="outline" className="text-[10px] text-muted-foreground border-muted-foreground/50">
+                            <LinkIcon className="h-3 w-3 mr-1" />
+                            Adicional
+                        </Badge>
+                    )}
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {/* Limit Bar */}
+                    <div className="space-y-1">
+                        <div className="flex justify-between text-xs mb-1">
+                            <span className="text-muted-foreground">Limite Usado</span>
+                            <span className={cn("font-bold", statusText)}>{percentage.toFixed(0)}%</span>
+                        </div>
+                        <Progress value={Math.min(percentage, 100)} indicatorClassName={statusColor} className="h-2" />
                     </div>
-                </div>
-                {closingDay && (
-                    <Badge variant="secondary" className={cn("text-[10px] uppercase", invoiceBadgeColor)}>
-                        {invoiceStatus}
-                    </Badge>
-                )}
-            </CardHeader>
-            <CardContent className="space-y-4">
-                {/* Limit Bar */}
-                <div className="space-y-1">
-                    <div className="flex justify-between text-xs mb-1">
-                        <span className="text-muted-foreground">Limite Usado</span>
-                        <span className={cn("font-bold", statusText)}>{percentage.toFixed(0)}%</span>
-                    </div>
-                    <Progress value={Math.min(percentage, 100)} indicatorClassName={statusColor} className="h-2" />
-                </div>
 
-                {/* Values Grid */}
-                <div className="grid grid-cols-2 gap-4 pt-1">
-                    <div>
-                        <p className="text-xs text-muted-foreground">Em Aberto</p>
-                        <p className="text-lg font-bold text-foreground">
-                            {formatCurrency(usedAmount)}
-                        </p>
+                    {/* Values Grid */}
+                    <div className="grid grid-cols-2 gap-4 pt-1">
+                        <div>
+                            <p className="text-xs text-muted-foreground">Em Aberto</p>
+                            <p className="text-lg font-bold text-foreground">
+                                {formatCurrency(usedAmount)}
+                            </p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-xs text-muted-foreground">Disponível</p>
+                            <p className={cn("text-lg font-bold", availableLimit < 0 ? "text-red-500" : "text-green-600")}>
+                                {formatCurrency(availableLimit)}
+                            </p>
+                        </div>
                     </div>
-                    <div className="text-right">
-                        <p className="text-xs text-muted-foreground">Disponível</p>
-                        <p className={cn("text-lg font-bold", availableLimit < 0 ? "text-red-500" : "text-green-600")}>
-                            {formatCurrency(availableLimit)}
-                        </p>
-                    </div>
-                </div>
 
-                {/* Footer / Actions */}
-                {!compact && (
-                    <div className="flex gap-2 pt-2">
-                        <Button variant="outline" size="sm" className="w-full text-xs" asChild>
-                            <Link to={`/transactions?accountId=${account.id}`}>Ver Fatura</Link>
-                        </Button>
-                        {invoiceStatus === 'Fechada' && (
-                            <Button size="sm" className="w-full text-xs bg-green-600 hover:bg-green-700 text-white">
-                                Pagar
+                    {/* Footer / Actions */}
+                    {!compact && !isAdditionalCard && (
+                        <div className="flex gap-2 pt-2">
+                            <Button variant="outline" size="sm" className="w-full text-xs" asChild>
+                                <Link to={`/transactions?accountId=${account.id}`}>Ver Fatura</Link>
                             </Button>
-                        )}
-                    </div>
-                )}
-            </CardContent>
-        </Card>
+                            {usedAmount > 0 && (
+                                <Button
+                                    size="sm"
+                                    className="w-full text-xs bg-green-600 hover:bg-green-700 text-white"
+                                    onClick={() => setIsPayDialogOpen(true)}
+                                >
+                                    Pagar
+                                </Button>
+                            )}
+                        </div>
+                    )}
+                    {isAdditionalCard && !compact && (
+                        <div className="pt-2 text-xs text-muted-foreground text-center">
+                            Fatura consolidada no cartão {parentCard?.nome || 'principal'}
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* Pay Invoice Dialog */}
+            <PayInvoiceDialog
+                isOpen={isPayDialogOpen}
+                onClose={() => setIsPayDialogOpen(false)}
+                groupId={groupId}
+                invoice={{
+                    id: `invoice-${account.id}`,
+                    cardId: account.id,
+                    cardName: account.nome,
+                    valor: usedAmount,
+                    transactionCount: 0, // We don't have this info here
+                    data_transacao: new Date().toISOString().split('T')[0]
+                }}
+            />
+        </>
     );
 }

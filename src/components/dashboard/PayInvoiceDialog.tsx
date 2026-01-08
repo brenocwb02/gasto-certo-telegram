@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 interface PayInvoiceDialogProps {
     isOpen: boolean;
     onClose: () => void;
+    groupId?: string | null;
     invoice: {
         id: string;
         cardId: string;
@@ -27,10 +28,10 @@ interface PayInvoiceDialogProps {
     } | null;
 }
 
-export function PayInvoiceDialog({ isOpen, onClose, invoice }: PayInvoiceDialogProps) {
+export function PayInvoiceDialog({ isOpen, onClose, invoice, groupId }: PayInvoiceDialogProps) {
     const { toast } = useToast();
-    const { accounts } = useAccounts();
-    const { refetchTransactions } = useTransactions(); // We'll need to refetch to update UI
+    const { accounts } = useAccounts(groupId || undefined);
+    const { refetchTransactions } = useTransactions(groupId || undefined);
     const { categories } = useCategories();
 
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -38,8 +39,12 @@ export function PayInvoiceDialog({ isOpen, onClose, invoice }: PayInvoiceDialogP
     const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [amount, setAmount] = useState<string>(invoice ? String(invoice.valor) : "");
 
-    // Filter accounts for payment (only wallet or checking account)
-    const paymentAccounts = accounts.filter(a => a.tipo === 'corrente' || a.tipo === 'carteira');
+    // Filter accounts for payment (exclude credit cards and investments - only liquid accounts)
+    const paymentAccounts = accounts.filter(a =>
+        a.tipo === 'corrente' ||
+        a.tipo === 'poupanca' ||
+        a.tipo === 'dinheiro'
+    );
 
     // Find a category for "Credit Card Payment" or similar
     const paymentCategory = categories.find(c =>

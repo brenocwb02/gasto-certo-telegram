@@ -119,7 +119,9 @@ const Dashboard = () => {
       </div>;
     }
 
-    const creditCards = accounts.filter(a => a.tipo === 'cartao');
+    // Only show PRINCIPAL cards (without parent_account_id)
+    // Additional cards are included in the principal's invoice, so no need to display separately
+    const creditCards = accounts.filter(a => a.tipo === 'cartao' && !a.parent_account_id);
 
     if (creditCards.length === 0) return null;
 
@@ -131,7 +133,13 @@ const Dashboard = () => {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
           {creditCards.map(card => (
-            <CreditCardWidget key={card.id} account={card} compact={true} />
+            <CreditCardWidget
+              key={card.id}
+              account={card}
+              compact={true}
+              groupId={currentGroup?.id}
+              allAccounts={accounts}
+            />
           ))}
         </div>
       </div>
