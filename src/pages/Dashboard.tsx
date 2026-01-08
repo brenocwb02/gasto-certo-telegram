@@ -1,14 +1,15 @@
 import { useState } from "react";
 import { StatsCard } from "@/components/dashboard/StatsCard";
-import { LimitsBanner } from "@/components/dashboard/LimitsBanner";
+import { CollapsibleLimitsBanner } from "@/components/dashboard/CollapsibleLimitsBanner";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
-import { QuickActions } from "@/components/dashboard/QuickActions";
 import { FinancialChart } from "@/components/dashboard/FinancialChart";
 import { CashFlowForecast } from "@/components/dashboard/CashFlowForecast";
 import { BudgetSummary } from "@/components/dashboard/BudgetSummary";
 import { TransactionForm } from "@/components/forms/TransactionForm";
+import { DashboardWidgetAccordion } from "@/components/dashboard/DashboardWidgetAccordion";
+import { EmptyStateCard } from "@/components/dashboard/EmptyStateCard";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -37,7 +38,9 @@ import {
   AlertTriangle,
   Bot,
   Sparkles,
-  Settings2
+  Settings2,
+  Receipt,
+  PiggyBank,
 } from "lucide-react";
 import { useLimits } from "@/hooks/useLimits";
 
@@ -154,7 +157,63 @@ const Dashboard = () => {
     );
   };
 
-  const AIInsightsSection = () => {
+  // Versão compacta das Ações Rápidas para uso dentro do accordion
+  const QuickActionsCompact = () => {
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [transactionType, setTransactionType] = useState<'receita' | 'despesa' | 'transferencia'>('despesa');
+
+    const openTransactionDialog = (tipo: 'receita' | 'despesa' | 'transferencia') => {
+      setTransactionType(tipo);
+      setDialogOpen(true);
+    };
+
+    return (
+      <>
+        <div className="grid grid-cols-3 gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex flex-col items-center gap-1 h-auto py-2"
+            onClick={() => openTransactionDialog('receita')}
+          >
+            <TrendingUp className="h-4 w-4 text-success" />
+            <span className="text-xs">Receita</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex flex-col items-center gap-1 h-auto py-2"
+            onClick={() => openTransactionDialog('despesa')}
+          >
+            <TrendingDown className="h-4 w-4 text-expense" />
+            <span className="text-xs">Despesa</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex flex-col items-center gap-1 h-auto py-2"
+            onClick={() => openTransactionDialog('transferencia')}
+          >
+            <Wallet className="h-4 w-4 text-primary" />
+            <span className="text-xs">Transfer</span>
+          </Button>
+        </div>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <TransactionForm
+              initialData={{ tipo: transactionType }}
+              onSuccess={() => setDialogOpen(false)}
+              onCancel={() => setDialogOpen(false)}
+              groupId={currentGroup?.id}
+            />
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  };
+
+  // Versão compacta dos Insights AI para uso dentro do accordion
+  const AIInsightsCompact = () => {
     const insights = [];
 
     if (statsLoading || !stats) return null;
@@ -164,8 +223,7 @@ const Dashboard = () => {
         icon: Lightbulb,
         type: "success",
         title: "Economia detectada!",
-        message: `Sua economia cresceu ${stats.savingsTrend.toFixed(1)}% comparado ao mês anterior.`,
-        borderColor: "border-l-green-500"
+        message: `+${stats.savingsTrend.toFixed(1)}% vs mês anterior`,
       });
     }
 
@@ -177,26 +235,14 @@ const Dashboard = () => {
         icon: AlertTriangle,
         type: "warning",
         title: "Saldo Negativo",
-        message: "Seu saldo total está negativo. Priorize o pagamento de dívidas.",
-        borderColor: "border-l-red-500"
+        message: "Priorize o pagamento de dívidas",
       });
     } else if (isNegativeMonth) {
       insights.push({
         icon: AlertTriangle,
         type: "warning",
-        title: "Atenção aos gastos",
-        message: "Suas despesas estão acima das receitas este mês.",
-        borderColor: "border-l-orange-500"
-      });
-    }
-
-    if (goals.length === 0 && !goalsLoading) {
-      insights.push({
-        icon: Target,
-        type: "info",
-        title: "Crie suas metas",
-        message: "Que tal criar uma meta para Fundo de Emergência?",
-        borderColor: "border-l-blue-500"
+        title: "Atenção",
+        message: "Despesas acima das receitas",
       });
     }
 
@@ -204,79 +250,77 @@ const Dashboard = () => {
       insights.push({
         icon: Sparkles,
         type: "info",
-        title: "Tudo sob controle",
-        message: "Suas finanças estão equilibradas. Continue assim!",
-        borderColor: "border-l-blue-500"
+        title: "Tudo certo!",
+        message: "Finanças equilibradas",
       });
     }
 
     return (
-      <Card className="mb-6 border-l-4 border-l-primary shadow-sm bg-gradient-to-r from-background to-muted/20">
-        <CardHeader className="pb-2 pt-4">
-          <CardTitle className="flex items-center gap-2 text-base font-semibold text-primary">
-            <Bot className="h-4 w-4" />
-            Insights Inteligentes
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pb-4">
-          <div className="space-y-3">
-            {insights.slice(0, 2).map((insight, idx) => (
-              <div key={idx} className="flex items-start gap-3">
-                <div className={`p-1.5 rounded-full bg-muted mt-0.5 ${insight.type === 'warning' ? 'text-orange-500 bg-orange-100' : 'text-blue-500 bg-blue-100'}`}>
-                  <insight.icon className="h-4 w-4" />
-                </div>
-                <div>
-                  <h4 className="font-medium text-sm">{insight.title}</h4>
-                  <p className="text-sm text-muted-foreground">{insight.message}</p>
-                </div>
-              </div>
-            ))}
+      <div className="space-y-2">
+        {insights.slice(0, 2).map((insight, idx) => (
+          <div key={idx} className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+            <div className={`p-1 rounded-full ${insight.type === 'warning' ? 'text-orange-500 bg-orange-100' : insight.type === 'success' ? 'text-green-500 bg-green-100' : 'text-blue-500 bg-blue-100'}`}>
+              <insight.icon className="h-3 w-3" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-xs truncate">{insight.title}</p>
+              <p className="text-xs text-muted-foreground truncate">{insight.message}</p>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        ))}
+      </div>
     );
   };
 
-  const GoalsSection = () => (
-    <Card className="financial-card h-full flex flex-col border-none shadow-sm bg-card/50">
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Target className="h-4 w-4 text-primary" />
-          Metas Atuais
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4 flex-1">
-        {goalsLoading ? (
-          Array.from({ length: 2 }).map((_, i) => (
+  const GoalsSection = () => {
+    if (goalsLoading) {
+      return (
+        <div className="space-y-4">
+          {Array.from({ length: 2 }).map((_, i) => (
             <div key={i} className="space-y-2">
               <Skeleton className="h-4 w-24" />
               <Skeleton className="h-2 w-full rounded-full" />
             </div>
-          ))
-        ) : goals.length === 0 ? (
-          <div className="text-center py-6">
-            <p className="text-sm text-muted-foreground mb-3">Nenhuma meta definida.</p>
-            <Button variant="outline" size="sm" asChild><a href="/metas">Criar Meta</a></Button>
-          </div>
-        ) : (
-          goals.slice(0, 3).map((goal) => {
-            const percentage = Number(goal.valor_meta) > 0 ? (Number(goal.valor_atual) / Number(goal.valor_meta)) * 100 : 0;
-            return (
-              <div key={goal.id} className="space-y-1">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="font-medium truncate max-w-[150px]">{goal.titulo}</span>
-                  <span className="text-xs text-muted-foreground">{percentage.toFixed(0)}%</span>
-                </div>
-                <div className="w-full bg-muted rounded-full h-1.5">
-                  <div className={`h-1.5 rounded-full ${percentage >= 100 ? 'bg-success' : 'bg-primary'}`} style={{ width: `${Math.min(percentage, 100)}%` }}></div>
-                </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (goals.length === 0) {
+      return (
+        <EmptyStateCard
+          icon={<Target className="h-5 w-5" />}
+          title="Defina suas metas"
+          description="Crie metas financeiras para acompanhar seu progresso"
+          actionLabel="Criar Meta"
+          actionHref="/goals"
+          variant="compact"
+        />
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        {goals.slice(0, 3).map((goal) => {
+          const percentage = Number(goal.valor_meta) > 0 ? (Number(goal.valor_atual) / Number(goal.valor_meta)) * 100 : 0;
+          return (
+            <div key={goal.id} className="space-y-1">
+              <div className="flex justify-between items-center text-sm">
+                <span className="font-medium truncate max-w-[150px]">{goal.titulo}</span>
+                <span className="text-xs text-muted-foreground">{percentage.toFixed(0)}%</span>
               </div>
-            );
-          })
-        )}
-      </CardContent>
-    </Card>
-  );
+              <div className="w-full bg-muted rounded-full h-1.5">
+                <div className={`h-1.5 rounded-full ${percentage >= 100 ? 'bg-success' : 'bg-primary'}`} style={{ width: `${Math.min(percentage, 100)}%` }}></div>
+              </div>
+            </div>
+          );
+        })}
+        <Button variant="ghost" size="sm" className="w-full text-xs" asChild>
+          <a href="/goals">Ver todas as metas</a>
+        </Button>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-10">
@@ -357,7 +401,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {visibleWidgets.limits && <LimitsBanner />}
+      {visibleWidgets.limits && <CollapsibleLimitsBanner />}
 
       {/* TOP: STATS CARDS */}
       {visibleWidgets.stats && (
@@ -393,21 +437,55 @@ const Dashboard = () => {
           )}
         </div>
 
-        {/* RIGHT COLUMN (1/3): Widgets & Sidebar */}
-        <div className="space-y-6">
+        {/* RIGHT COLUMN (1/3): Widgets condensados em Accordion */}
+        <div className="space-y-4">
           {visibleWidgets.health && <FinancialHealthSection />}
-
-          {visibleWidgets.creditCards && <CreditCardsSection />}
-
-          {visibleWidgets.quickActions && <QuickActions />}
-
-          {visibleWidgets.upcomingBills && <UpcomingBillsWidget groupId={currentGroup?.id} />}
-
-          {visibleWidgets.insights && <AIInsightsSection />}
-
-          {visibleWidgets.goals && <GoalsSection />}
-
-          {visibleWidgets.budget && <BudgetSummary month={currentMonth} groupId={currentGroup?.id} />}
+          
+          <DashboardWidgetAccordion
+            defaultOpen={['quickActions', 'creditCards']}
+            sections={[
+              ...(visibleWidgets.quickActions ? [{
+                id: 'quickActions',
+                title: 'Ações Rápidas',
+                icon: <Plus className="h-4 w-4" />,
+                content: <QuickActionsCompact />,
+              }] : []),
+              ...(visibleWidgets.creditCards ? [{
+                id: 'creditCards',
+                title: 'Meus Cartões',
+                icon: <CreditCard className="h-4 w-4" />,
+                content: <CreditCardsSection />,
+                badge: accounts.filter(a => a.tipo === 'cartao' && !a.parent_account_id).length > 0 
+                  ? accounts.filter(a => a.tipo === 'cartao' && !a.parent_account_id).length.toString() 
+                  : undefined,
+              }] : []),
+              ...(visibleWidgets.upcomingBills ? [{
+                id: 'upcomingBills',
+                title: 'Contas a Pagar',
+                icon: <Receipt className="h-4 w-4" />,
+                content: <UpcomingBillsWidget groupId={currentGroup?.id} />,
+              }] : []),
+              ...(visibleWidgets.goals ? [{
+                id: 'goals',
+                title: 'Metas',
+                icon: <Target className="h-4 w-4" />,
+                content: <GoalsSection />,
+                badge: goals.length > 0 ? goals.length.toString() : undefined,
+              }] : []),
+              ...(visibleWidgets.insights ? [{
+                id: 'insights',
+                title: 'Insights IA',
+                icon: <Bot className="h-4 w-4" />,
+                content: <AIInsightsCompact />,
+              }] : []),
+              ...(visibleWidgets.budget ? [{
+                id: 'budget',
+                title: 'Orçamento',
+                icon: <PiggyBank className="h-4 w-4" />,
+                content: <BudgetSummary month={currentMonth} groupId={currentGroup?.id} />,
+              }] : []),
+            ]}
+          />
         </div>
 
       </div>
