@@ -1,13 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAccounts, useTransactions } from "@/hooks/useSupabaseData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle2, Loader2, Wallet } from "lucide-react";
+import { CheckCircle2, Loader2, Wallet, AlertTriangle } from "lucide-react";
+import { startOfMonth, endOfMonth, format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface PayInvoiceDialogProps {
     isOpen: boolean;
@@ -35,6 +38,7 @@ export function PayInvoiceDialog({ isOpen, onClose, invoice, groupId, onSuccess 
     const [paymentAccount, setPaymentAccount] = useState<string>("");
     const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [amount, setAmount] = useState<string>(invoice ? String(invoice.valor) : "");
+    const [duplicateWarning, setDuplicateWarning] = useState<{ exists: boolean; date?: string; amount?: number } | null>(null);
 
     // Filter accounts for payment (exclude credit cards and investments - only liquid accounts)
     const paymentAccounts = accounts.filter(a =>
@@ -42,6 +46,49 @@ export function PayInvoiceDialog({ isOpen, onClose, invoice, groupId, onSuccess 
         a.tipo === 'poupanca' ||
         a.tipo === 'dinheiro'
     );
+
+    // Check for duplicate payments when dialog opens
+    useEffect(() => {
+        if (!isOpen || !invoice) {
+            setDuplicateWarning(null);
+            return;
+        }
+
+        const checkDuplicatePayment = async () => {
+            try {
+                // Find recent payments (transfers) to this card in the current month
+                const now = new Date();
+                const monthStart = format(startOfMonth(now), 'yyyy-MM-dd');
+                const monthEnd = format(endOfMonth(now), 'yyyy-MM-dd');
+
+                const { data: recentPayments } = await supabase
+                    .from('transactions')
+                    .select('id, valor, data_transacao, descricao')
+                    .eq('conta_destino_id', invoice.cardId)
+                    .eq('tipo', 'transferencia')
+                    .gte('data_transacao', monthStart)
+                    .lte('data_transacao', monthEnd)
+                    .order('data_transacao', { ascending: false })
+                    .limit(1);
+
+                if (recentPayments && recentPayments.length > 0) {
+                    const payment = recentPayments[0];
+                    setDuplicateWarning({
+                        exists: true,
+                        date: format(new Date(payment.data_transacao), "dd 'de' MMMM", { locale: ptBR }),
+                        amount: payment.valor
+                    });
+                } else {
+                    setDuplicateWarning({ exists: false });
+                }
+            } catch (error) {
+                console.error('Error checking duplicate payment:', error);
+                setDuplicateWarning(null);
+            }
+        };
+
+        checkDuplicatePayment();
+    }, [isOpen, invoice]);
 
     const handlePay = async () => {
         if (!invoice || !paymentAccount) return;
@@ -177,13 +224,29 @@ export function PayInvoiceDialog({ isOpen, onClose, invoice, groupId, onSuccess 
                 </DialogHeader>
 
                 <div className="grid gap-4 py-4">
+                    {/* Duplicate Payment Warning */}
+                    {duplicateWarning?.exists && (
+                        <Alert className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
+                            <AlertTriangle className="h-4 w-4 text-amber-600" />
+                            <AlertDescription className="text-amber-800 dark:text-amber-200">
+                                <strong>Atenção:</strong> Já existe um pagamento de{" "}
+                                <strong>R$ {duplicateWarning.amount?.toFixed(2)}</strong> registrado em{" "}
+                                <strong>{duplicateWarning.date}</strong> para este cartão neste mês.
+                                Verifique se não é um pagamento duplicado.
+                            </AlertDescription>
+                        </Alert>
+                    )}
+
                     <div className="p-4 bg-muted/50 rounded-lg border flex flex-col items-center justify-center text-center">
                         <span className="text-sm text-muted-foreground mb-1">Valor Total da Fatura</span>
                         <span className="text-3xl font-bold text-primary">
                             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(invoice.valor)}
                         </span>
                         <span className="text-xs text-muted-foreground mt-2">
-                            {invoice.transactionCount} lançamentos serão conciliados
+                            {invoice.transactionCount > 0 
+                                ? `${invoice.transactionCount} lançamentos serão conciliados`
+                                : 'Transações pendentes serão marcadas como pagas'
+                            }
                         </span>
                     </div>
 

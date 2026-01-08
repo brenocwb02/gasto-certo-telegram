@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -9,12 +9,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Switch } from '@/components/ui/switch';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useTransactions, useAccounts, useCategories } from '@/hooks/useSupabaseData';
 import { useRecurringTransactions } from '@/hooks/useRecurringTransactions';
 import { useLimits } from '@/hooks/useLimits';
-import { Loader2, Plus, Repeat, CreditCard } from 'lucide-react';
+import { Loader2, Plus, Repeat, CreditCard, AlertTriangle, CalendarClock, TrendingUp } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { addDays, addWeeks, addMonths, addYears, parseISO, format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 const transactionSchema = z.object({
   descricao: z.string().min(1, 'Descrição é obrigatória'),
@@ -96,6 +98,79 @@ export function TransactionForm({ onSuccess, onCancel, onRefetch, mode = 'create
   const watchedIsRecurring = form.watch('is_recurring');
   const watchedEfetivada = form.watch('efetivada');
   const watchedIsInstallment = form.watch('is_installment');
+  const watchedAccountId = form.watch('conta_origem_id');
+  const watchedDate = form.watch('data_transacao');
+  const watchedValor = form.watch('valor');
+  const watchedInstallmentCount = form.watch('installment_count');
+
+  // Credit card invoice calculation
+  const creditCardInfo = useMemo(() => {
+    if (!watchedAccountId || !watchedDate) return null;
+    
+    const selectedAccount = accounts.find(a => a.id === watchedAccountId);
+    if (!selectedAccount || selectedAccount.tipo !== 'cartao') return null;
+
+    const closingDay = Number(selectedAccount.dia_fechamento);
+    const dueDay = Number(selectedAccount.dia_vencimento);
+    if (!closingDay || !dueDay) return null;
+
+    const transactionDate = parseISO(watchedDate);
+    const purchaseDay = transactionDate.getDate();
+    const isPostClosing = purchaseDay >= closingDay;
+
+    // Calculate invoice month
+    let invoiceMonth = transactionDate;
+    if (isPostClosing) {
+      invoiceMonth = addMonths(transactionDate, 1);
+    }
+
+    // Calculate due date
+    const dueDate = new Date(invoiceMonth.getFullYear(), invoiceMonth.getMonth(), dueDay);
+
+    return {
+      isPostClosing,
+      invoiceMonth: format(invoiceMonth, 'MMMM/yyyy', { locale: ptBR }),
+      dueDate: format(dueDate, "dd 'de' MMMM", { locale: ptBR }),
+      closingDay,
+      accountName: selectedAccount.nome
+    };
+  }, [watchedAccountId, watchedDate, accounts]);
+
+  // Installment impact preview
+  const installmentPreview = useMemo(() => {
+    if (!watchedIsInstallment || !watchedValor || !watchedInstallmentCount) return null;
+    
+    const totalValue = parseFloat(watchedValor) || 0;
+    const installments = parseInt(watchedInstallmentCount) || 1;
+    const installmentValue = totalValue / installments;
+
+    // Calculate months
+    const months: string[] = [];
+    const startDate = watchedDate ? parseISO(watchedDate) : new Date();
+    
+    // Check if post-closing
+    const selectedAccount = accounts.find(a => a.id === watchedAccountId);
+    let baseDate = startDate;
+    if (selectedAccount?.tipo === 'cartao') {
+      const closingDay = Number(selectedAccount.dia_fechamento);
+      if (closingDay && startDate.getDate() >= closingDay) {
+        baseDate = addMonths(startDate, 1);
+      }
+    }
+
+    for (let i = 0; i < Math.min(installments, 6); i++) {
+      const monthDate = addMonths(baseDate, i);
+      months.push(format(monthDate, 'MMM/yy', { locale: ptBR }));
+    }
+
+    return {
+      totalValue,
+      installmentValue,
+      installments,
+      months,
+      hasMore: installments > 6
+    };
+  }, [watchedIsInstallment, watchedValor, watchedInstallmentCount, watchedDate, watchedAccountId, accounts]);
 
   const onSubmit = async (data: TransactionFormData) => {
     setIsSubmitting(true);
@@ -198,9 +273,15 @@ export function TransactionForm({ onSuccess, onCancel, onRefetch, mode = 'create
             } as any);
           }
 
+          // Enhanced toast with invoice info
+          const selectedAcc = accounts.find(a => a.id === data.conta_origem_id);
+          const invoiceInfo = selectedAcc?.tipo === 'cartao' && creditCardInfo
+            ? ` Primeira parcela na fatura de ${creditCardInfo.invoiceMonth}.`
+            : '';
+
           toast({
-            title: 'Parcelas criadas!',
-            description: `${totalInstallments} parcelas de R$ ${installmentValue.toFixed(2)} foram registradas.`,
+            title: '✅ Parcelas criadas!',
+            description: `${totalInstallments}x de R$ ${installmentValue.toFixed(2)} = R$ ${parseFloat(data.valor).toFixed(2)} total.${invoiceInfo}`,
           });
         } else {
           // Regular single transaction
@@ -248,11 +329,20 @@ export function TransactionForm({ onSuccess, onCancel, onRefetch, mode = 'create
             });
 
             toast({
-              title: 'Recorrência criada!',
+              title: '✅ Recorrência criada!',
               description: `Próximo lançamento agendado para ${format(nextDate, 'dd/MM/yyyy')}.`
             });
           } else {
-            toast({ title: 'Transação criada', description: 'A transação foi registrada com sucesso.' });
+            // Enhanced toast for credit card transactions
+            const selectedAcc = accounts.find(a => a.id === data.conta_origem_id);
+            if (selectedAcc?.tipo === 'cartao' && creditCardInfo) {
+              toast({ 
+                title: '✅ Lançamento registrado!', 
+                description: `R$ ${parseFloat(data.valor).toFixed(2)} adicionado à fatura de ${creditCardInfo.invoiceMonth} (vence ${creditCardInfo.dueDate}).`
+              });
+            } else {
+              toast({ title: '✅ Transação criada', description: 'A transação foi registrada com sucesso.' });
+            }
           }
         }
 
@@ -541,7 +631,7 @@ export function TransactionForm({ onSuccess, onCancel, onRefetch, mode = 'create
                   </div>
 
                   {watchedIsInstallment && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 animate-in slide-in-from-top-2">
+                    <div className="space-y-4 pt-2 animate-in slide-in-from-top-2">
                       <FormField
                         control={form.control}
                         name="installment_count"
@@ -560,16 +650,66 @@ export function TransactionForm({ onSuccess, onCancel, onRefetch, mode = 'create
                           </FormItem>
                         )}
                       />
-                      <div className="flex items-center text-sm text-muted-foreground pt-6">
-                        {form.watch('installment_count') && form.watch('valor') && (
-                          <span>
-                            {form.watch('installment_count')}x de R$ {(parseFloat(form.watch('valor') || '0') / parseInt(form.watch('installment_count') || '1')).toFixed(2)}
-                          </span>
-                        )}
-                      </div>
+                      
+                      {/* Installment Impact Preview */}
+                      {installmentPreview && (
+                        <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 space-y-2">
+                          <div className="flex items-center gap-2 text-primary font-medium text-sm">
+                            <TrendingUp className="h-4 w-4" />
+                            Impacto do Parcelamento
+                          </div>
+                          <div className="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                              <span className="text-muted-foreground">Valor Total:</span>
+                              <p className="font-bold text-lg">R$ {installmentPreview.totalValue.toFixed(2)}</p>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Valor/Parcela:</span>
+                              <p className="font-bold text-lg">{installmentPreview.installments}x de R$ {installmentPreview.installmentValue.toFixed(2)}</p>
+                            </div>
+                          </div>
+                          <div className="pt-2 border-t border-primary/10">
+                            <span className="text-xs text-muted-foreground">Faturas afetadas:</span>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {installmentPreview.months.map((month, i) => (
+                                <span key={i} className="px-2 py-0.5 bg-primary/10 text-primary text-xs rounded-full">
+                                  {month}
+                                </span>
+                              ))}
+                              {installmentPreview.hasMore && (
+                                <span className="px-2 py-0.5 text-muted-foreground text-xs">
+                                  +{installmentPreview.installments - 6} meses
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* --- Credit Card Post-Closing Alert --- */}
+            {mode === 'create' && creditCardInfo?.isPostClosing && !watchedIsInstallment && (
+              <Alert className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-800 dark:text-amber-200">
+                  <strong>Atenção:</strong> Esta compra foi feita após o fechamento (dia {creditCardInfo.closingDay}).
+                  Ela entrará na fatura de <strong>{creditCardInfo.invoiceMonth}</strong>, com vencimento em {creditCardInfo.dueDate}.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* --- Credit Card Invoice Info --- */}
+            {mode === 'create' && creditCardInfo && !creditCardInfo.isPostClosing && !watchedIsInstallment && (
+              <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg text-sm text-muted-foreground">
+                <CalendarClock className="h-4 w-4" />
+                <span>
+                  Esta transação entrará na fatura de <strong className="text-foreground">{creditCardInfo.invoiceMonth}</strong> 
+                  {" "}(vence {creditCardInfo.dueDate})
+                </span>
               </div>
             )}
             {/* -------------------------------- */}
