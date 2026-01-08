@@ -106,7 +106,7 @@ export function TransactionForm({ onSuccess, onCancel, onRefetch, mode = 'create
   // Credit card invoice calculation
   const creditCardInfo = useMemo(() => {
     if (!watchedAccountId || !watchedDate) return null;
-    
+
     const selectedAccount = accounts.find(a => a.id === watchedAccountId);
     if (!selectedAccount || selectedAccount.tipo !== 'cartao') return null;
 
@@ -118,14 +118,21 @@ export function TransactionForm({ onSuccess, onCancel, onRefetch, mode = 'create
     const purchaseDay = transactionDate.getDate();
     const isPostClosing = purchaseDay >= closingDay;
 
-    // Calculate invoice month
+    // Calculate invoice month (Closing Month)
     let invoiceMonth = transactionDate;
     if (isPostClosing) {
       invoiceMonth = addMonths(transactionDate, 1);
     }
 
-    // Calculate due date
-    const dueDate = new Date(invoiceMonth.getFullYear(), invoiceMonth.getMonth(), dueDay);
+    // Determine due date based on Closing vs Due Day rule
+    let dueDateMonth = invoiceMonth;
+    if (dueDay < closingDay) {
+      // If due day is before closing day (e.g. Close 28, Due 10), 
+      // the due date is in the NEXT month relative to closing.
+      dueDateMonth = addMonths(invoiceMonth, 1);
+    }
+
+    const dueDate = new Date(dueDateMonth.getFullYear(), dueDateMonth.getMonth(), dueDay);
 
     return {
       isPostClosing,
@@ -139,7 +146,7 @@ export function TransactionForm({ onSuccess, onCancel, onRefetch, mode = 'create
   // Installment impact preview
   const installmentPreview = useMemo(() => {
     if (!watchedIsInstallment || !watchedValor || !watchedInstallmentCount) return null;
-    
+
     const totalValue = parseFloat(watchedValor) || 0;
     const installments = parseInt(watchedInstallmentCount) || 1;
     const installmentValue = totalValue / installments;
@@ -147,7 +154,7 @@ export function TransactionForm({ onSuccess, onCancel, onRefetch, mode = 'create
     // Calculate months
     const months: string[] = [];
     const startDate = watchedDate ? parseISO(watchedDate) : new Date();
-    
+
     // Check if post-closing
     const selectedAccount = accounts.find(a => a.id === watchedAccountId);
     let baseDate = startDate;
@@ -336,8 +343,8 @@ export function TransactionForm({ onSuccess, onCancel, onRefetch, mode = 'create
             // Enhanced toast for credit card transactions
             const selectedAcc = accounts.find(a => a.id === data.conta_origem_id);
             if (selectedAcc?.tipo === 'cartao' && creditCardInfo) {
-              toast({ 
-                title: '✅ Lançamento registrado!', 
+              toast({
+                title: '✅ Lançamento registrado!',
                 description: `R$ ${parseFloat(data.valor).toFixed(2)} adicionado à fatura de ${creditCardInfo.invoiceMonth} (vence ${creditCardInfo.dueDate}).`
               });
             } else {
@@ -650,7 +657,7 @@ export function TransactionForm({ onSuccess, onCancel, onRefetch, mode = 'create
                           </FormItem>
                         )}
                       />
-                      
+
                       {/* Installment Impact Preview */}
                       {installmentPreview && (
                         <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 space-y-2">
@@ -707,7 +714,7 @@ export function TransactionForm({ onSuccess, onCancel, onRefetch, mode = 'create
               <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg text-sm text-muted-foreground">
                 <CalendarClock className="h-4 w-4" />
                 <span>
-                  Esta transação entrará na fatura de <strong className="text-foreground">{creditCardInfo.invoiceMonth}</strong> 
+                  Esta transação entrará na fatura de <strong className="text-foreground">{creditCardInfo.invoiceMonth}</strong>
                   {" "}(vence {creditCardInfo.dueDate})
                 </span>
               </div>
