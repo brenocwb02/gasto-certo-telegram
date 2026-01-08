@@ -40,25 +40,17 @@ export const useSubscription = () => {
         }
       });
 
-      // Handle function errors (including 401 auth errors)
+      // Handle function errors (including 401 auth errors and non-2xx responses)
       if (functionError) {
         const errorString = String(functionError?.message || JSON.stringify(functionError) || '');
         console.log('[useSubscription] Function error:', errorString);
         
-        // Auth errors, 401, session errors - treat as not subscribed, not as failure
-        if (
-          errorString.includes('Auth') || 
-          errorString.includes('session') || 
-          errorString.includes('401') ||
-          errorString.includes('Unauthorized') ||
-          errorString.includes('missing')
-        ) {
-          console.log('[useSubscription] Auth error, treating as not subscribed');
-          setSubscriptionInfo({ subscribed: false });
-          setLoading(false);
-          return;
-        }
-        throw functionError;
+        // Any function error (including FunctionsHttpError for non-2xx) - treat as not subscribed
+        // This is expected when auth session is not ready or missing
+        console.log('[useSubscription] Function error detected, treating as not subscribed');
+        setSubscriptionInfo({ subscribed: false });
+        setLoading(false);
+        return;
       }
 
       console.log('[useSubscription] Response from check-subscription:', data);
