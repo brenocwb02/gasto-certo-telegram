@@ -4,6 +4,7 @@ import { handleFaturaCommand, handlePagarCommand, handleConfigCartaoCommand } fr
 import { handleSaldoCommand, handleExtratoCommand, handleResumoCommand, handlePrevisaoCommand, handleTopGastosCommand, handleCompararMesesCommand, handleOrcamentoCommand, handleDividasCommand } from './financial.ts';
 import { handleCategoriasCommand } from './categories.ts';
 import { handleRecorrenteNovaCommand, handleRecorrentesCommand, handlePausarRecorrenteCommand } from './recurring.ts';
+import { handleContasAPagarCommand, handlePendentesCommand } from './contasapagar.ts';
 import { handleMeuPerfilCommand } from './profile.ts';
 import { handleEditarUltimaCommand, handleDesfazerCommand } from './transactions.ts';
 import { handleTutorialCommand } from './general.ts';
@@ -13,6 +14,7 @@ import { sendTelegramMessage } from '../_shared/telegram-api.ts';
 import { unlinkUser } from '../utils/auth.ts';
 import { handleMetasCommand } from './goals.ts';
 import { handleOnboardingStart } from './onboarding.ts';
+
 
 /**
  * Roteador central de comandos
@@ -123,6 +125,12 @@ export async function handleCommand(supabase: any, command: string, userId: stri
             await handlePausarRecorrenteCommand(supabase, chatId, userId);
             break;
 
+        case '/contasapagar':
+        case '/contas_a_pagar':
+        case '/pendentes':
+            await handlePendentesCommand(supabase, chatId, userId);
+            break;
+
         case '/tutorial':
             await handleTutorialCommand(chatId);
             break;
@@ -152,6 +160,14 @@ export async function handleCommand(supabase: any, command: string, userId: stri
 
         case '/sys_update_menu':
             await handleUpdateMenuCommand(chatId);
+            break;
+
+        case '/stop':
+        case '/cancel':
+        case '/cancelar':
+            // Limpar sessão do usuário
+            await supabase.from('telegram_sessions').update({ contexto: {}, status: 'idle' }).eq('user_id', userId);
+            await sendTelegramMessage(chatId, '🛑 *Operação cancelada.* \n\nVocê pode iniciar uma nova operação a qualquer momento.', { parse_mode: 'Markdown' });
             break;
 
         default:

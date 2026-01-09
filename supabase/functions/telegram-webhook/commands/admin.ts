@@ -234,7 +234,7 @@ function getSettingsMenu() {
             `❓ /ajuda\n` +
             `   Este menu interativo\n\n` +
             `🌐 *App Web:*\n` +
-            `   https://app.boascontas.com\n` +
+            `   https://www.boascontas.com.br\n` +
             `   Acesse recursos avançados!\n\n` +
             `💡 *Dica:* Use o app web para\n` +
             `   gráficos detalhados e relatórios!`,

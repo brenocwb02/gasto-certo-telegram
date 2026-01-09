@@ -43,7 +43,7 @@ export async function handleExtratoCommand(supabase: any, chatId: number, userId
     `)
         .eq('user_id', userId)
         .order('data_transacao', { ascending: false })
-        .limit(15);
+        .limit(10);
 
     if (!transactions || transactions.length === 0) {
         await sendTelegramMessage(chatId, '📭 Nenhuma transação encontrada.');
@@ -55,18 +55,21 @@ export async function handleExtratoCommand(supabase: any, chatId: number, userId
     const today = new Date().toLocaleDateString('pt-BR');
     const yesterday = new Date(Date.now() - 86400000).toLocaleDateString('pt-BR');
 
-    for (const t of transactions) {
-        const dateRaw = new Date(t.data_transacao + 'T12:00:00'); // Fix TZ
-        const dateStr = dateRaw.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-        const fullDateStr = dateRaw.toLocaleDateString('pt-BR'); // Para comparação
+    // Botões de exclusão inline
+    const inlineKeyboard: Array<Array<{ text: string; callback_data: string }>> = [];
+    let buttonRow: Array<{ text: string; callback_data: string }> = [];
 
-        // Cabeçalho de Data
+    for (let i = 0; i < transactions.length; i++) {
+        const t = transactions[i];
+        const dateRaw = new Date(t.data_transacao + 'T12:00:00');
+        const dateStr = dateRaw.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+        const fullDateStr = dateRaw.toLocaleDateString('pt-BR');
+
         if (fullDateStr !== currentDate) {
             currentDate = fullDateStr;
             let label = `📅 ${dateStr}`;
             if (fullDateStr === today) label = '📅 Hoje';
             if (fullDateStr === yesterday) label = '📅 Ontem';
-
             list += `\n*${label}*\n`;
         }
 
@@ -74,14 +77,24 @@ export async function handleExtratoCommand(supabase: any, chatId: number, userId
         const valorFmt = formatCurrency(parseFloat(t.valor));
         const cat = t.category?.nome || 'Outros';
         const conta = t.account?.nome || '';
+        const num = i + 1;
 
-        // Formato Monospace para alinhar e destacar
-        // Ex: 🔴 R$ 50,00 - Mercado
-        list += `${icon} \`${valorFmt}\` • ${t.descricao}\n`;
-        list += `   _${cat} • ${conta}_\n`; // Detalhe menor
+        list += `${num}. ${icon} \`${valorFmt}\` • ${t.descricao}\n`;
+        list += `   _${cat} • ${conta}_\n`;
+
+        // Botão de excluir (5 por linha)
+        buttonRow.push({ text: `🗑️ ${num}`, callback_data: `del_tx_${t.id}` });
+        if (buttonRow.length === 5 || i === transactions.length - 1) {
+            inlineKeyboard.push(buttonRow);
+            buttonRow = [];
+        }
     }
 
-    await sendTelegramMessage(chatId, `📋 *Extrato Recente*\n${list}`, { parse_mode: 'Markdown' });
+    const message = `📋 *Extrato Recente*\n${list}\n_Clique no número para excluir._`;
+    await sendTelegramMessage(chatId, message, {
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard: inlineKeyboard }
+    });
 }
 
 /**
@@ -362,23 +375,86 @@ export async function handleCompararMesesCommand(supabase: any, chatId: number, 
  */
 export async function handleOrcamentoCommand(supabase: any, chatId: number, userId: string): Promise<void> {
     try {
-        const firstDay = new Date();
-        firstDay.setDate(1);
-        const month = firstDay.toISOString().split('T')[0];
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+        const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
+        const monthEnd = `${year}-${String(month).padStart(2, '0')}-31`;
 
-        const { data: budgets } = await supabase.rpc('get_budgets_with_defaults', { p_month: month });
+        // Buscar group_id do usuário (se pertencer a um grupo familiar)
+        const { data: familyMember } = await supabase
+            .from('family_members')
+            .select('group_id')
+            .eq('member_id', userId)
+            .eq('status', 'active')
+            .maybeSingle();
 
-        if (!budgets || budgets.length === 0) {
-            await sendTelegramMessage(chatId, '📊 *Orçamento do Mês*\n\n📭 Você ainda não definiu orçamentos padrão.\n\n💡 Acesse o app para criar seus orçamentos: https://app.boascontas.com/orcamento');
+        const groupId = familyMember?.group_id;
+
+        // Buscar orçamentos padrão (pessoais OU do grupo)
+        let budgetQuery = supabase
+            .from('default_budgets')
+            .select('id, amount, category_id, category:categories(id, nome, cor)');
+
+        if (groupId) {
+            // Se está em grupo, buscar orçamentos do grupo
+            budgetQuery = budgetQuery.or(`user_id.eq.${userId},group_id.eq.${groupId}`);
+        } else {
+            // Senão, buscar apenas pessoais
+            budgetQuery = budgetQuery.eq('user_id', userId);
+        }
+
+        const { data: defaultBudgets, error: budgetError } = await budgetQuery;
+
+        if (budgetError) {
+            console.error('Erro ao buscar orçamentos:', budgetError);
+            await sendTelegramMessage(chatId, '❌ Erro ao carregar orçamentos.');
             return;
         }
+
+        if (!defaultBudgets || defaultBudgets.length === 0) {
+            await sendTelegramMessage(chatId, '📊 *Orçamento do Mês*\n\n📭 Você ainda não definiu orçamentos padrão.\n\n💡 Acesse o app para criar seus orçamentos:\nhttps://www.boascontas.com.br/orcamento');
+            return;
+        }
+
+        // Buscar transações do mês para calcular gasto por categoria
+        const { data: transactions } = await supabase
+            .from('transactions')
+            .select('valor, categoria_id')
+            .eq('user_id', userId)
+            .eq('tipo', 'despesa')
+            .gte('data_transacao', monthStart)
+            .lte('data_transacao', monthEnd);
+
+        // Buscar subcategorias de cada categoria principal
+        const categoryIds = defaultBudgets.map((b: any) => b.category_id);
+        const { data: subcategories } = await supabase
+            .from('categories')
+            .select('id, parent_id')
+            .in('parent_id', categoryIds);
+
+        // Mapear subcategorias para categorias pai
+        const subcatMap: Record<string, string> = {};
+        subcategories?.forEach((sub: any) => {
+            subcatMap[sub.id] = sub.parent_id;
+        });
+
+        // Calcular gasto por categoria principal (incluindo subcategorias)
+        const spentByCategory: Record<string, number> = {};
+        transactions?.forEach((tx: any) => {
+            // Se é subcategoria, mapear para pai
+            const parentId = subcatMap[tx.categoria_id] || tx.categoria_id;
+            if (parentId) {
+                spentByCategory[parentId] = (spentByCategory[parentId] || 0) + parseFloat(tx.valor);
+            }
+        });
 
         let totalBudget = 0;
         let totalSpent = 0;
 
-        const list = budgets.map((b: any) => {
+        const list = defaultBudgets.map((b: any) => {
             const budget = parseFloat(b.amount);
-            const spent = parseFloat(b.spent);
+            const spent = spentByCategory[b.category_id] || 0;
             const remaining = budget - spent;
             const percent = budget > 0 ? ((spent / budget) * 100).toFixed(0) : '0';
 
@@ -387,9 +463,9 @@ export async function handleOrcamentoCommand(supabase: any, chatId: number, user
 
             const icon = spent > budget ? '🔴' : spent > budget * 0.8 ? '🟡' : '🟢';
             const bar = '█'.repeat(Math.min(10, Math.floor((spent / budget) * 10))) + '░'.repeat(Math.max(0, 10 - Math.floor((spent / budget) * 10)));
-            const typeIndicator = b.is_default ? '📋' : '✏️';
+            const categoryName = (b.category as any)?.nome || 'Categoria';
 
-            return `${icon} *${b.category_name}* ${typeIndicator}\n${bar} ${percent}%\n${formatCurrency(spent)} / ${formatCurrency(budget)}\n${remaining >= 0 ? '✅' : '⚠️'} Restante: ${formatCurrency(Math.abs(remaining))}`;
+            return `${icon} *${categoryName}*\n${bar} ${percent}%\n${formatCurrency(spent)} / ${formatCurrency(budget)}\n${remaining >= 0 ? '✅' : '⚠️'} Restante: ${formatCurrency(Math.abs(remaining))}`;
         }).join('\n\n');
 
         const totalPercent = totalBudget > 0 ? ((totalSpent / totalBudget) * 100).toFixed(0) : '0';

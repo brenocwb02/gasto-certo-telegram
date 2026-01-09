@@ -220,13 +220,51 @@ function formatResults(results: any[], filters: QueryFilters): string {
   return formatResults(results, { ...filters, aggregation: 'list' });
 }
 
+// Helper para editar mensagem do Telegram
+async function editTelegramMessage(chatId: number, messageId: number, text: string): Promise<void> {
+  const token = Deno.env.get('TELEGRAM_BOT_TOKEN');
+  if (!token) throw new Error('TELEGRAM_BOT_TOKEN not configured');
+
+  const response = await fetch(`https://api.telegram.org/bot${token}/editMessageText`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      message_id: messageId,
+      text,
+      parse_mode: 'Markdown'
+    })
+  });
+
+  const data = await response.json();
+  if (!data.ok) {
+    console.error('Error editing Telegram message:', data);
+  }
+}
+
+// Helper para enviar mensagem do Telegram
+async function sendTelegramMessage(chatId: number, text: string): Promise<void> {
+  const token = Deno.env.get('TELEGRAM_BOT_TOKEN');
+  if (!token) throw new Error('TELEGRAM_BOT_TOKEN not configured');
+
+  await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text,
+      parse_mode: 'Markdown'
+    })
+  });
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { question, userId } = await req.json();
+    const { question, userId, responseMethod, chatId, messageId } = await req.json();
 
     if (!question || !userId) {
       throw new Error('Pergunta e userId são obrigatórios');
@@ -263,7 +301,18 @@ serve(async (req) => {
 
     // Format response
     const answer = formatResults(results, filters);
+    const fullAnswer = `❓ *Pergunta:* ${question}\n\n${answer}`;
 
+    // Async response handling
+    if (responseMethod === 'edit_message' && chatId && messageId) {
+      await editTelegramMessage(chatId, messageId, fullAnswer);
+      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    } else if (responseMethod === 'send_message' && chatId) {
+      await sendTelegramMessage(chatId, fullAnswer);
+      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // Default sync response
     return new Response(
       JSON.stringify({ answer, resultsCount: results.length }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -272,10 +321,20 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in query-engine:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorAnswer = '❌ Desculpe, não consegui entender sua pergunta. Tente reformular ou seja mais específico.';
+
+    // Try to notify user about error if async context exists
+    try {
+      const body: any = await req.clone().json().catch(() => ({}));
+      if (body.chatId && body.messageId && body.responseMethod === 'edit_message') {
+        await editTelegramMessage(body.chatId, body.messageId, errorAnswer);
+      }
+    } catch (e) { /* ignore */ }
+
     return new Response(
       JSON.stringify({
         error: errorMessage,
-        answer: '❌ Desculpe, não consegui entender sua pergunta. Tente reformular ou seja mais específico.'
+        answer: errorAnswer
       }),
       {
         status: 500,

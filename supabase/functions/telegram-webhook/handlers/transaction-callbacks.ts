@@ -1,8 +1,11 @@
 import { sendTelegramMessage, editTelegramMessage } from '../_shared/telegram-api.ts';
+import { gerarTecladoSubcategorias } from '../_shared/parsers/transaction.ts';
 import { formatCurrency } from '../_shared/formatters.ts';
 import { getUserTelegramContext } from '../utils/context.ts';
 import { getRandomSuccessMessage, getEmojiForCategory, getCategoryComment } from '../_shared/ux-helpers.ts';
 import { processCelebrations } from '../_shared/sticker-helper.ts';
+import { generateNudge } from '../_shared/nudges.ts';
+import { checkBudgetThreshold } from '../_shared/budget-alerts.ts';
 
 /**
  * Handle 'select_account_' callback
@@ -130,15 +133,31 @@ export async function handleSelectAccountCallback(
         if (conta?.visibility === 'personal') {
             confirmMsg += `\n👤 *Pessoal* (só você vê)`;
         } else {
-            // Default é família/grupo se não for explicitamente pessoal
-            // Se tiver nome do grupo na sessão ou contexto, poderia mostrar, mas "Família" é genérico o suficiente
             confirmMsg += `\n🏠 *Família* (todos veem)`;
+        }
+
+        // 🧠 NUDGE COMPORTAMENTAL
+        // Verificar se devemos mostrar reflexão antes de confirmar
+        let confirmButtonText = "✅ Confirmar";
+
+        console.info(`[Nudge Check] tipo=${pending.tipo}, categoriaId=${categoriaId}, valor=${pending.valor}`);
+
+        if (pending.tipo === 'despesa' && categoriaId) {
+            console.info(`[Nudge Check] Chamando generateNudge para userId=${userId}`);
+            const nudge = await generateNudge(supabase, userId, categoriaId, pending.valor);
+            console.info(`[Nudge Check] Resultado:`, nudge ? 'NUDGE ENCONTRADO' : 'null');
+            if (nudge) {
+                confirmMsg += `\n\n🤔 *Momento de Reflexão*\n${nudge.message}`;
+                confirmButtonText = nudge.severity === 'danger'
+                    ? "⚠️ Confirmar Mesmo Assim"
+                    : "✅ Confirmar";
+            }
         }
 
         const keyboard = {
             inline_keyboard: [
                 [
-                    { text: "✅ Confirmar", callback_data: `confirm_transaction:${sessionData.id}` },
+                    { text: confirmButtonText, callback_data: `confirm_transaction:${sessionData.id}` },
                     { text: "❌ Cancelar", callback_data: `cancel_transaction:${sessionData.id}` }
                 ]
             ]
@@ -175,11 +194,27 @@ export async function handleConfirmTransactionCallback(
     if (action === 'confirm_transaction') {
         const transactionData = session.contexto;
 
+        // Buscar tipo da conta para determinar efetivada
+        const { data: accountInfo } = await supabase
+            .from('accounts')
+            .select('tipo')
+            .eq('id', transactionData.conta_origem_id)
+            .single();
+
+        const isCardAccount = accountInfo?.tipo === 'cartao_credito' || accountInfo?.tipo === 'cartao';
+        const today = new Date().toISOString().split('T')[0];
+        const transactionDate = transactionData.data_transacao || today;
+
+        // Lógica de efetivada:
+        // - Cartão de crédito: SEMPRE true (compra já aconteceu, vai para fatura)
+        // - Outras contas: true se data <= hoje, false se data futura
+        const shouldBeEffective = isCardAccount || transactionDate <= today;
+
         const parcelas = transactionData.parcelas || 1;
         const isInstallment = parcelas > 1;
-        const installGroupId = isInstallment ? crypto.randomUUID() : null;
+        const installGroupId = isInstallment ? crypto.randomUUID() : null; // parcela_id common to all
         const installmentValue = isInstallment ? (transactionData.valor / parcelas) : transactionData.valor;
-        const baseDate = new Date(); // Today
+        const baseDate = transactionDate ? new Date(transactionDate) : new Date();
 
         if (isInstallment) {
             for (let i = 0; i < parcelas; i++) {
@@ -197,15 +232,13 @@ export async function handleConfirmTransactionCallback(
                     conta_destino_id: transactionData.conta_destino_id || null,
                     origem: transactionData.origem || 'telegram',
                     data_transacao: recurrenceDate.toISOString().split('T')[0],
-                    efetivada: i === 0, // First one paid/effective if user flow assumes paid now? Actually credit card is usually pending. But let's follow standard flow.
-                    // Actually, if it's Credit Card, usually it's "realized" (purchase made) but bill is future.
-                    // The 'efetivada' flag usually means "money left the account" or "consolidated". 
-                    // For Credit Card, 'efetivada' = true usually means appear on invoice?
-                    // Let's stick to default: Usually expense is true unless future.
-                    // But for installments 2..N, they are definitely future.
-                    // Installment 1: If today, likely true?
-                    // Let's force false for i > 0.
-                    tags: [`installment_group:${installGroupId}`]
+                    // Parcela atual: efetivada se for cartão (sempre true) ou se for hoje
+                    // Parcelas futuras: efetivada se cartão, senão false
+                    efetivada: isCardAccount ? true : (i === 0 && shouldBeEffective),
+                    tags: [`installment_group:${installGroupId}`],
+                    parcela_atual: i + 1,
+                    total_parcelas: parcelas,
+                    parcela_id: installGroupId
                 };
 
                 const { error: transactionError } = await supabase.from('transactions').insert(dbData);
@@ -231,6 +264,7 @@ export async function handleConfirmTransactionCallback(
                 conta_destino_id: transactionData.conta_destino_id || null,
                 origem: transactionData.origem || 'telegram',
                 data_transacao: transactionData.data_transacao || new Date().toISOString().split('T')[0],
+                efetivada: shouldBeEffective, // Cartão = sempre true, outras = true se hoje ou passado
             };
 
             const { error: transactionError } = await supabase.from('transactions').insert(dbData);
@@ -292,9 +326,209 @@ export async function handleConfirmTransactionCallback(
         // 🎉 Processar celebrações (stickers) após sucesso
         await processCelebrations(transactionData.user_id, chatId);
 
+        // ⚠️ Verificar se orçamento atingiu 80%+ e enviar alerta
+        if (transactionData.tipo === 'despesa' && transactionData.categoria_id) {
+            const budgetAlert = await checkBudgetThreshold(
+                supabase,
+                transactionData.user_id,
+                transactionData.categoria_id,
+                transactionData.valor
+            );
+            if (budgetAlert) {
+                // Enviar alerta como mensagem separada
+                await sendTelegramMessage(chatId, budgetAlert.message);
+            }
+        }
+
     } else if (action === 'cancel_transaction') {
         await editTelegramMessage(chatId, messageId, "❌ Registo cancelado.");
     }
 
     await supabase.from('telegram_sessions').delete().eq('id', sessionId);
+}
+
+/**
+ * Handle 'select_category_' callback (Parent Category)
+ */
+export async function handleSelectCategoryCallback(
+    supabase: any,
+    chatId: number,
+    userId: string,
+    messageId: number,
+    data: string,
+    telegramId: string
+): Promise<void> {
+    const categoryId = data.replace('select_category_', '');
+
+    try {
+        // Buscar sessão
+        const { data: session } = await supabase
+            .from('telegram_sessions')
+            .select('contexto')
+            .eq('telegram_id', telegramId)
+            .single();
+
+        if (!session?.contexto?.waiting_for || session.contexto.waiting_for !== 'category' || !session.contexto.pending_transaction) {
+            await editTelegramMessage(chatId, messageId, '❌ Sessão expirada.');
+            return;
+        }
+
+        const pending = session.contexto.pending_transaction;
+
+        // Se for "Outros", finalizar direto ou categorizar como Outros
+        if (categoryId === 'outros') {
+            // Buscar categoria Outros no banco
+            const { data: catOutros } = await supabase
+                .from('categories')
+                .select('id, nome')
+                .eq('user_id', userId)
+                .ilike('nome', 'outros')
+                .limit(1)
+                .single();
+
+            // Atualizar contexto e ir para confirmação
+            pending.categoria_id = catOutros?.id || null;
+            pending.categoria_nome = catOutros?.nome || 'Outros';
+            pending.subcategoria_id = null;
+            pending.subcategoria_nome = null;
+
+            await updateSessionAndConfirm(supabase, chatId, userId, messageId, telegramId, pending, session.contexto);
+            return;
+        }
+
+        // Buscar categoria selecionada
+        const { data: categoria } = await supabase
+            .from('categories')
+            .select('id, nome')
+            .eq('id', categoryId)
+            .single();
+
+        if (!categoria) {
+            await editTelegramMessage(chatId, messageId, '❌ Categoria não encontrada.');
+            return;
+        }
+
+        // Buscar subcategorias dessa categoria
+        const { data: subcategorias } = await supabase
+            .from('categories')
+            .select('id, nome')
+            .eq('parent_id', categoryId)
+            .eq('user_id', userId);
+
+        if (subcategorias && subcategorias.length > 0) {
+            // Mostrar subcategorias
+            const keyboard = gerarTecladoSubcategorias(subcategorias, categoryId);
+
+            await editTelegramMessage(chatId, messageId, `📂 *Categoria: ${categoria.nome}*\nAgora escolha a subcategoria:`, { reply_markup: keyboard });
+        } else {
+            // Sem subcategorias, selecionar a própria categoria e confirmar
+            pending.categoria_id = categoria.id;
+            pending.categoria_nome = categoria.nome;
+            pending.subcategoria_id = null;
+            pending.subcategoria_nome = null;
+
+            await updateSessionAndConfirm(supabase, chatId, userId, messageId, telegramId, pending, session.contexto);
+        }
+
+    } catch (e) {
+        console.error('Erro select_category:', e);
+    }
+}
+
+/**
+ * Handle 'select_subcategory_' callback
+ */
+export async function handleSelectSubcategoryCallback(
+    supabase: any,
+    chatId: number,
+    userId: string,
+    messageId: number,
+    data: string,
+    telegramId: string
+): Promise<void> {
+    const subcategoryId = data.replace('select_subcategory_', '');
+
+    try {
+        const { data: session } = await supabase.from('telegram_sessions').select('contexto').eq('telegram_id', telegramId).single();
+        if (!session?.contexto?.pending_transaction) return;
+
+        const pending = session.contexto.pending_transaction;
+
+        // Buscar subcategoria e pai
+        const { data: subcat } = await supabase
+            .from('categories')
+            .select('id, nome, parent:categories!parent_id(id, nome)')
+            .eq('id', subcategoryId)
+            .single();
+
+        if (subcat) {
+            const parentObj = Array.isArray(subcat.parent) ? subcat.parent[0] : subcat.parent;
+            const parentName = parentObj?.nome || 'Outros';
+
+            pending.categoria_id = parentObj?.id || subcat.parent?.id; // Fallback messy but safe
+            // Simplificando ID:
+            pending.categoria_id = Array.isArray(subcat.parent) ? subcat.parent[0]?.id : subcat.parent?.id;
+
+            pending.categoria_nome = parentName;
+            pending.subcategoria_id = subcat.id;
+            pending.subcategoria_nome = subcat.nome;
+
+            await updateSessionAndConfirm(supabase, chatId, userId, messageId, telegramId, pending, session.contexto);
+        }
+    } catch (e) {
+        console.error('Erro select_subcategory:', e);
+    }
+}
+
+/**
+ * Helper para atualizar sessão e mostrar confirmação final (reusa lógica)
+ */
+async function updateSessionAndConfirm(
+    supabase: any,
+    chatId: number,
+    userId: string,
+    messageId: number,
+    telegramId: string,
+    pending: any,
+    currentContext: any
+) {
+    // Se ainda falta conta, perguntar conta
+    // Mas se chegou aqui, provavelmente já passou pela validação de conta ou a conta foi identificada no parser
+    // O fluxo em text.ts checka conta -> DEPOIS categoria.
+    // Se o parser identificou conta mas não categoria, estamos aqui.
+    // Então pending.conta_origem deve existir. Se não, idealmente deveríamos perguntar.
+
+    // Atualizar pending na sessão (limpar waiting_for categoria)
+    // Mas agora vamos proceder para confirmação. 
+    // Para reaproveitar `handleSelectAccountCallback` (que monta a msg de confirmação),
+    // podemos simular que a conta foi selecionada (se já tivermos ID) ou chamar uma função comum `showConfirmation`.
+    // Como `handleSelectAccountCallback` é meio gordo e mistura seleção de conta com confirmação, vou refatorar a parte de exibição ou chamá-la.
+
+    // MELHOR ABORDAGEM: Simular call para handleSelectAccountCallback passando o conta_origem já existente.
+    // Isso garante que a lógica de "Prepare Transaction Complete" roda igual.
+    // Mas `handleSelectAccountCallback` espera `data` = `select_account_ID`.
+
+    if (pending.conta_origem) {
+        // Atualizar o pending transaction na sessão antes de chamar
+        await supabase.from('telegram_sessions').update({
+            contexto: {
+                ...currentContext,
+                waiting_for: 'account', // Hack: mudar para account para o handler aceitar? Ou o handler aceita 'category'?
+                pending_transaction: pending
+            }
+        }).eq('telegram_id', telegramId);
+
+        // Precisamos ajustar handleSelectAccountCallback para aceitar waiting_for != 'account' SE quisermos reaproveitar?
+        // Ou melhor duplicar a logica de 'Montar Confirmação'? Duplicar é mais seguro agora.
+
+        // Vou forçar waiting_for='account' para passar na validação do handleSelectAccountCallback
+        // (linha 30: if session.contexto.waiting_for !== 'account' return)
+
+        // CHAMAR handleSelectAccountCallback
+        await handleSelectAccountCallback(supabase, chatId, userId, messageId, `select_account_${pending.conta_origem}`, telegramId);
+    } else {
+        // Se não tem conta (caso raro se o fluxo foi: Parser -> Sem Categoria -> Select Categoria -> Mas conta era null?)
+        // Se conta for null, handleTextMessage teria pego primeiro "Verificar se falta conta".
+        // Então conta_origem já deve vir do parser se passou pelo if da conta.
+    }
 }

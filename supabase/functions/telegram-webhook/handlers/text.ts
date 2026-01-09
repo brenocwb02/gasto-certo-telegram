@@ -1,4 +1,3 @@
-
 import { sendTelegramMessage, editTelegramMessage } from '../_shared/telegram-api.ts';
 import { handleCommand } from '../commands/router.ts';
 import { handleStartUnlinkedCommand } from '../commands/admin.ts';
@@ -9,9 +8,11 @@ import { getUserTelegramContext } from '../utils/context.ts';
 import { formatCurrency } from '../_shared/formatters.ts';
 import {
     parseTransaction,
-    gerarTecladoContas
+    gerarTecladoContas,
+    gerarTecladoCategorias
 } from '../_shared/parsers/transaction.ts';
 import { getEmojiForCategory } from '../_shared/ux-helpers.ts';
+import { generateNudge } from '../_shared/nudges.ts';
 import { Client } from 'https://deno.land/x/postgres@v0.17.0/mod.ts';
 
 /**
@@ -589,7 +590,99 @@ export async function handleTextMessage(supabase: any, chatId: number, message: 
             `);
             console.log('✅ Migração 7 aplicada: fix_goals_trigger_column');
 
-            await sendTelegramMessage(chatId, '✅ Todas as migrações (1-7) aplicadas com sucesso!');
+            // 8. Create Notification Logs (Fix Hourly Alerts)
+            await client.queryObject(`
+                -- Create notification_logs table if not exists
+                CREATE TABLE IF NOT EXISTS public.notification_logs (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+                    key TEXT NOT NULL,
+                    type TEXT NOT NULL,
+                    metadata JSONB,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                );
+
+                -- Indexes for faster lookups
+                CREATE INDEX IF NOT EXISTS idx_notification_logs_key ON public.notification_logs(key);
+                CREATE INDEX IF NOT EXISTS idx_notification_logs_user_id ON public.notification_logs(user_id);
+                CREATE INDEX IF NOT EXISTS idx_notification_logs_created_at ON public.notification_logs(created_at);
+
+                -- Enable RLS
+                ALTER TABLE public.notification_logs ENABLE ROW LEVEL SECURITY;
+
+                -- RLS: Service Role (used by Edge Functions) bypasses RLS, but we add a policy for user viewing just in case
+                DROP POLICY IF EXISTS "Users can view their own notification logs" ON public.notification_logs;
+                CREATE POLICY "Users can view their own notification logs"
+                    ON public.notification_logs
+                    FOR SELECT
+                    USING (auth.uid() = user_id);
+            `);
+            console.log('✅ Migração 8 aplicada: create_notification_logs');
+
+            // 9. Fix Check Plan Limits (Include Family Members)
+            await client.queryObject(`
+                CREATE OR REPLACE FUNCTION public.check_plan_limits(
+                    p_user_id UUID, 
+                    p_resource_type TEXT
+                )
+                RETURNS JSONB
+                LANGUAGE plpgsql
+                SECURITY DEFINER
+                SET search_path = public
+                AS $$
+                DECLARE
+                    v_plan TEXT;
+                    v_status TEXT;
+                    v_user_created_at TIMESTAMP WITH TIME ZONE;
+                    v_is_trial BOOLEAN;
+                    v_count INTEGER;
+                    v_limit INTEGER;
+                    v_start_of_month TIMESTAMP WITH TIME ZONE;
+                    v_is_family_member BOOLEAN;
+                BEGIN
+                    -- 1. Check Licenses Table
+                    SELECT plano, status INTO v_plan, v_status FROM public.licenses WHERE user_id = p_user_id AND status = 'ativo' LIMIT 1;
+                    
+                    -- 2. Check Family Membership (New Step)
+                    SELECT EXISTS (
+                        SELECT 1 FROM public.family_members 
+                        WHERE member_id = p_user_id AND status = 'active'
+                    ) INTO v_is_family_member;
+
+                    -- Determine if Premium
+                    IF v_plan IN ('individual', 'family_owner', 'family_member', 'vitalicia') OR v_is_family_member THEN 
+                        RETURN jsonb_build_object('allowed', true, 'reason', 'premium'); 
+                    END IF;
+
+                    -- Free Plan / Trial Logic
+                    SELECT created_at INTO v_user_created_at FROM auth.users WHERE id = p_user_id;
+                    v_is_trial := (now() - v_user_created_at) < interval '14 days';
+                    
+                    IF v_is_trial THEN RETURN jsonb_build_object('allowed', true, 'reason', 'trial'); END IF;
+
+                    v_start_of_month := date_trunc('month', now());
+
+                    IF p_resource_type = 'transaction' THEN
+                        v_limit := 30;
+                        SELECT count(*) INTO v_count FROM public.transactions WHERE user_id = p_user_id AND data_transacao >= v_start_of_month::date;
+                        IF v_count >= v_limit THEN RETURN jsonb_build_object('allowed', false, 'message', 'Limite mensal de 30 transações atingido no Plano Gratuito.'); END IF;
+                    ELSIF p_resource_type = 'account' THEN
+                        v_limit := 1;
+                        SELECT count(*) INTO v_count FROM public.accounts WHERE user_id = p_user_id AND ativo = true;
+                        IF v_count >= v_limit THEN RETURN jsonb_build_object('allowed', false, 'message', 'Limite de 1 conta atingido no Plano Gratuito.'); END IF;
+                    ELSIF p_resource_type = 'category' THEN
+                        v_limit := 5;
+                        SELECT count(*) INTO v_count FROM public.categories WHERE user_id = p_user_id;
+                        IF v_count >= v_limit THEN RETURN jsonb_build_object('allowed', false, 'message', 'Limite de 5 categorias atingido no Plano Gratuito.'); END IF;
+                    END IF;
+
+                    RETURN jsonb_build_object('allowed', true, 'reason', 'within_limit');
+                END;
+                $$;
+            `);
+            console.log('✅ Migração 9 aplicada: fix_check_plan_limits_family');
+
+            await sendTelegramMessage(chatId, '✅ Todas as migrações (1-9) aplicadas com sucesso!');
 
         } catch (e) {
             console.error('Erro ao rodar migrações:', e);
@@ -611,7 +704,11 @@ export async function handleTextMessage(supabase: any, chatId: number, message: 
     // 7. Perguntas em Linguagem Natural
     const questionKeywords = ['quanto', 'quantos', 'quantas', 'qual', 'quais', 'onde', 'quando', 'como', 'analise', 'diga'];
     if (questionKeywords.some(kw => text!.toLowerCase().startsWith(kw))) {
-        await handlePerguntarCommand(supabase, chatId, userId, text);
+        try {
+            await handlePerguntarCommand(supabase, chatId, userId, text);
+        } catch (e) {
+            console.error('Erro ao processar pergunta:', e);
+        }
         return new Response('OK', { headers: corsHeaders });
     }
 
@@ -627,7 +724,7 @@ export async function handleTextMessage(supabase: any, chatId: number, message: 
     }
 
     // Fluxo de Confirmação de Transação
-    // Verificar se falta conta
+    // 1. Verificar se falta conta
     if (!parsed.conta_origem || !accounts.map((a: any) => a.id).includes(parsed.conta_origem)) {
         // Salvar estado e perguntar conta
         const keyboard = gerarTecladoContas(accounts);
@@ -651,6 +748,30 @@ export async function handleTextMessage(supabase: any, chatId: number, message: 
         return new Response('OK', { headers: corsHeaders });
     }
 
+    // 2. Verificar se falta categoria (NOVO)
+    const hasCategory = parsed.categoria_id || parsed.subcategoria_id;
+    if (!hasCategory && parsed.tipo === 'despesa') {
+        const keyboard = gerarTecladoCategorias(categories); // Precisamos criar essa função
+
+        // Upsert session
+        await supabase.from('telegram_sessions').upsert({
+            user_id: userId,
+            telegram_id: message.from.id.toString(),
+            chat_id: chatId.toString(),
+            contexto: {
+                waiting_for: 'category',
+                pending_transaction: parsed
+            },
+            status: 'ativo'
+        }, { onConflict: 'telegram_id' });
+
+        await sendTelegramMessage(chatId,
+            `📂 *Qual a categoria deste gasto?*\n\n📝 ${parsed.descricao}`,
+            { reply_markup: keyboard }
+        );
+        return new Response('OK', { headers: corsHeaders });
+    }
+
     // Se tem conta, prepara confirmação direta
     const contaSelecionada = accounts.find((a: any) => a.id === parsed.conta_origem);
     const contaNome = contaSelecionada?.nome || 'Conta';
@@ -658,8 +779,9 @@ export async function handleTextMessage(supabase: any, chatId: number, message: 
     // Contexto
     const context = await getUserTelegramContext(supabase, userId);
 
-    // Categoria (lógica simplificada da index.ts)
-    let categoriaId = parsed.categoria_id || null; // Simplified logic, index.ts had complex fallback
+    // Categoria - usar subcategoria (mais específica) quando existir
+    // Isso garante que "Supermercado" seja salvo em vez de "Alimentação"
+    let categoriaId = parsed.subcategoria_id || parsed.categoria_id || null;
     let categoriaNome = parsed.categoria_nome || 'Outros';
 
     // Upsert session
@@ -676,20 +798,12 @@ export async function handleTextMessage(supabase: any, chatId: number, message: 
             tipo: parsed.tipo,
             categoria_id: categoriaId,
             conta_origem_id: parsed.conta_origem,
-            origem: 'telegram'
+            origem: 'telegram',
+            parcelas: parsed.parcelas || 1,
+            is_installment: parsed.is_installment || false
         },
         status: 'ativo'
     }, { onConflict: 'telegram_id' }).select('id').single();
-
-    // Mensagem de confirmação
-    const keyboard = {
-        inline_keyboard: [
-            [
-                { text: "✅ Confirmar", callback_data: `confirm_transaction:${sessionData.id}` },
-                { text: "❌ Cancelar", callback_data: `cancel_transaction:${sessionData.id}` }
-            ]
-        ]
-    };
 
     // Mensagem de confirmação rica
     const tipoLabel = parsed.tipo === 'receita' ? '💰 Receita' : parsed.tipo === 'despesa' ? '💸 Despesa' : '🔄 Transferência';
@@ -699,6 +813,9 @@ export async function handleTextMessage(supabase: any, chatId: number, message: 
     confirmMsg += `*Descrição:* ${parsed.descricao}\n`;
     const valor = parsed.valor ?? 0;
     confirmMsg += `*Valor:* ${formatCurrency(valor)}\n`;
+    if (parsed.is_installment) {
+        confirmMsg += `*Parcelas:* ${parsed.parcelas}x\n`;
+    }
     confirmMsg += `*Conta:* ${contaNome}\n`;
 
     if (parsed.subcategoria_nome) {
@@ -710,6 +827,34 @@ export async function handleTextMessage(supabase: any, chatId: number, message: 
 
     // Contexto de Grupo (Simulado por enquanto, ideal trazer do context)
     // if (context?.groupName) confirmMsg += `\n👥 *Grupo:* ${context.groupName}`;
+
+    // 🧠 NUDGE COMPORTAMENTAL (caminho direto)
+    let confirmButtonText = "✅ Confirmar";
+    const nudeTargetCategoryId = parsed.subcategoria_id || parsed.categoria_id || null;
+
+    console.info(`[Nudge Check Direct] tipo=${parsed.tipo}, categoryId=${nudeTargetCategoryId}, valor=${parsed.valor}`);
+
+    if (parsed.tipo === 'despesa' && nudeTargetCategoryId) {
+        console.info(`[Nudge Check Direct] Chamando generateNudge para userId=${userId}`);
+        const nudge = await generateNudge(supabase, userId, nudeTargetCategoryId, parsed.valor || 0);
+        console.info(`[Nudge Check Direct] Resultado:`, nudge ? 'NUDGE ENCONTRADO' : 'null');
+        if (nudge) {
+            confirmMsg += `\n\n🤔 *Momento de Reflexão*\n${nudge.message}`;
+            confirmButtonText = nudge.severity === 'danger'
+                ? "⚠️ Confirmar Mesmo Assim"
+                : "✅ Confirmar";
+        }
+    }
+
+    // Keyboard com texto dinâmico
+    const keyboard = {
+        inline_keyboard: [
+            [
+                { text: confirmButtonText, callback_data: `confirm_transaction:${sessionData.id}` },
+                { text: "❌ Cancelar", callback_data: `cancel_transaction:${sessionData.id}` }
+            ]
+        ]
+    };
 
     await sendTelegramMessage(chatId, confirmMsg, { reply_markup: keyboard });
 

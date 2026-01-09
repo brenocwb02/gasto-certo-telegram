@@ -4,18 +4,23 @@ import { sendTelegramMessage, editTelegramMessage } from '../_shared/telegram-ap
  * Comando /perguntar - IA Query Engine
  */
 export async function handlePerguntarCommand(supabase: any, chatId: number, userId: string, argument: string): Promise<void> {
+    // Envia mensagem inicial
     const thinking = await sendTelegramMessage(chatId, '🤔 Analisando seus dados...');
 
-    try {
-        const response = await supabase.functions.invoke('query-engine', {
-            body: { question: argument, userId }
-        });
+    // Lança a função query-engine em background (sem await no resultado final)
+    // O Edge Function 'query-engine' deve ser responsável por enviar a resposta final ao usuário
+    // Passamos o message_id para ele editar a mensagem "Analisando..."
+    supabase.functions.invoke('query-engine', {
+        body: {
+            question: argument,
+            userId,
+            responseMethod: 'edit_message',
+            chatId,
+            messageId: thinking.result.message_id
+        }
+    }).then(({ error }: any) => {
+        if (error) console.error('Erro ao invocar query-engine:', error);
+    });
 
-        if (response.error) throw response.error;
-
-        await editTelegramMessage(chatId, thinking.result.message_id, `❓ *Pergunta:* ${argument}\n\n${response.data.answer}`, { parse_mode: 'Markdown' });
-    } catch (error) {
-        console.error('Erro no /perguntar:', error);
-        await editTelegramMessage(chatId, thinking.result.message_id, '❌ Desculpe, ocorreu um erro ao processar sua pergunta.');
-    }
+    // Retorna imediatamente para evitar timeout do Telegram
 }

@@ -127,8 +127,8 @@ const Landing = () => {
     <header className="border-b sticky top-0 bg-background/95 backdrop-blur z-50">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <img src="/logo-icon.png" alt="Boas Contas" className="h-10 w-10" />
-          <span className="text-xl font-bold text-[#1a365d]">Boas Contas</span>
+          <img src="/logo-icon.png" alt="Boas Contas" className="h-10 w-10 animate-logo-pulse" />
+          <span className="text-xl font-bold text-primary">Boas Contas</span>
         </div>
         <nav className="hidden md:flex items-center gap-6">
           <a href="#funcionalidades" className="text-sm hover:text-primary transition-colors">
@@ -240,31 +240,48 @@ const Landing = () => {
           </div>
 
           <div className="flex-1 relative">
-            <div className="relative z-10 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border p-6 max-w-md mx-auto">
-              <div className="space-y-4">
+            <div className="relative z-10 bg-white dark:bg-slate-900 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] border-4 border-slate-100/50 p-6 max-w-md mx-auto transform hover:scale-[1.02] transition-transform duration-500 overflow-hidden">
+              {/* Telegram Header Mockup */}
+              <div className="absolute top-0 left-0 right-0 h-14 bg-[#0088cc] flex items-center px-4 gap-3">
+                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white">
+                  <img src="/logo-icon.png" className="w-6 h-6" alt="Zaq" />
+                </div>
+                <div>
+                  <p className="text-white font-bold text-sm leading-none">Zaq - Boas Contas</p>
+                  <p className="text-white/70 text-[10px]">bot</p>
+                </div>
+              </div>
+
+              <div className="space-y-4 mt-12">
                 <div className="flex items-end justify-end">
-                  <div className="bg-blue-500 text-white p-3 rounded-2xl rounded-tr-none max-w-[90%]">
-                    <p>Gastei R$ 138 no mercado com o cartão Nubank</p>
+                  <div className="bg-[#efffde] text-[#222] p-3 rounded-2xl rounded-tr-none max-w-[90%] shadow-sm border border-black/5">
+                    <p className="text-sm">Gastei R$ 138 no mercado com o cartão Nubank</p>
                   </div>
                 </div>
                 <div className="flex items-end justify-start">
-                  <div className="bg-muted p-3 rounded-2xl rounded-tl-none max-w-[90%] space-y-2">
-                    <p className="font-semibold text-primary">✅ Transação registrada!</p>
-                    <div className="text-sm space-y-1">
-                      <p>💰 Valor: R$ 138,00</p>
-                      <p>📂 Categoria: Mercado</p>
-                      <p>🏦 Conta: Nubank</p>
+                  <div className="bg-white p-3 rounded-2xl rounded-tl-none max-w-[90%] space-y-2 shadow-md border border-slate-100 animate-fade-in">
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                        <Check className="w-3 h-3 text-white" />
+                      </div>
+                      <p className="font-bold text-sm text-green-600">Transação registrada!</p>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Seu saldo atual é R$ 1.312,00
-                    </p>
+                    <div className="text-sm space-y-1.5 bg-slate-50 p-3 rounded-xl">
+                      <p className="flex justify-between"><span>💰 Valor:</span> <span className="font-bold">R$ 138,00</span></p>
+                      <p className="flex justify-between"><span>📂 Categoria:</span> <span className="font-bold">Mercado</span></p>
+                      <p className="flex justify-between"><span>🏦 Conta:</span> <span className="font-bold">Nubank</span></p>
+                    </div>
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                      <p className="text-[10px] text-muted-foreground">Seu saldo atual</p>
+                      <p className="text-xs font-bold text-primary">R$ 1.312,00</p>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
             {/* Decorative elements */}
-            <div className="absolute top-10 -right-10 w-24 h-24 bg-blue-500/20 rounded-full blur-xl" />
-            <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-500/20 rounded-full blur-xl" />
+            <div className="absolute top-10 -right-10 w-48 h-48 bg-primary/10 rounded-full blur-[100px]" />
+            <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-success/10 rounded-full blur-[100px]" />
           </div>
         </div>
       </div>
@@ -494,6 +511,24 @@ const Landing = () => {
             </details>
           ))}
         </div>
+      </div>
+    </section>
+
+    {/* Final CTA Section */}
+    <section className="py-20 bg-primary text-primary-foreground">
+      <div className="container mx-auto px-4 text-center">
+        <h2 className="text-3xl md:text-5xl font-bold mb-6">Pronto para transformar sua vida financeira?</h2>
+        <p className="text-xl text-primary-foreground/80 mb-10 max-w-2xl mx-auto">
+          Junte-se a centenas de famílias que já simplificaram suas contas com o Zaq.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <NavLink to="/auth">
+            <Button size="lg" variant="secondary" className="px-10 h-14 text-lg font-bold">
+              🚀 Começar Agora Gratuitamente
+            </Button>
+          </NavLink>
+        </div>
+        <p className="mt-6 text-sm text-primary-foreground/60">Teste grátis por 7 dias. Sem cartão de crédito.</p>
       </div>
     </section>
 

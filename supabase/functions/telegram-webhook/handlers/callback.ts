@@ -9,7 +9,10 @@ import { handleOnboardingCallback } from '../commands/onboarding.ts';
 import { confirmInvoicePayment, handlePaymentCardSelection, handleCardConfigCallback, toggleCardAutoPayment, toggleCardReminder } from './credit-card.ts';
 import { getUserTelegramContext, setUserTelegramContext } from '../utils/context.ts';
 import { handleConfigCartaoCommand } from './credit-card.ts';
-import { handleSelectAccountCallback, handleConfirmTransactionCallback } from './transaction-callbacks.ts';
+import { handleSelectAccountCallback, handleConfirmTransactionCallback, handleSelectCategoryCallback, handleSelectSubcategoryCallback } from './transaction-callbacks.ts';
+import { handlePayBillCallback } from '../commands/contasapagar.ts';
+import { gerarTecladoCategorias } from '../_shared/parsers/transaction.ts';
+
 
 /**
  * Handle all callback queries from inline keyboards
@@ -82,7 +85,8 @@ export async function handleCallbackQuery(supabase: any, body: any): Promise<Res
             'dividas': '/dividas',
             'contexto': '/contexto',
             'editar_ultima': '/editar_ultima',
-            'categorias': '/categorias'
+            'categorias': '/categorias',
+            'contasapagar': '/contasapagar'
         };
 
         const command = commandMap[action];
@@ -133,7 +137,7 @@ export async function handleCallbackQuery(supabase: any, body: any): Promise<Res
             .update({ auto_pagamento_ativo: novoStatus })
             .eq('id', cardId);
 
-        await answerCallbackQuery(callbackQuery.id, 
+        await answerCallbackQuery(callbackQuery.id,
             novoStatus ? '✅ Pagamento automático ativado!' : '❌ Pagamento automático desativado!'
         );
 
@@ -343,7 +347,7 @@ export async function handleCallbackQuery(supabase: any, body: any): Promise<Res
         await editTelegramMessage(chatId, messageId,
             '⚠️ Você não está em nenhum grupo.\n\n' +
             'Para criar ou entrar em um grupo familiar, acesse:\n' +
-            '🔗 https://app.boascontas.com/familia'
+            '🔗 https://www.boascontas.com.br/familia'
         );
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
@@ -385,6 +389,79 @@ export async function handleCallbackQuery(supabase: any, body: any): Promise<Res
 
     if (data === 'config_close') {
         await editTelegramMessage(chatId, messageId, '⚙️ Configurações fechadas.');
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // --- Callbacks de Contas a Pagar (Marcar como Pago) ---
+    if (data.startsWith('pay_bill_')) {
+        const transactionId = data.replace('pay_bill_', '');
+        await handlePayBillCallback(supabase, chatId, userId, transactionId, messageId);
+        await answerCallbackQuery(callbackQuery.id, '✅ Processando pagamento...');
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // --- Callback de Exclusão de Transação (Extrato) ---
+    if (data.startsWith('del_tx_')) {
+        const transactionId = data.replace('del_tx_', '');
+
+        try {
+            // Buscar detalhes da transação antes de excluir
+            const { data: tx, error: fetchError } = await supabase
+                .from('transactions')
+                .select('descricao, valor, tipo, conta_origem_id, account:accounts!transactions_conta_origem_id_fkey(nome, saldo_atual)')
+                .eq('id', transactionId)
+                .eq('user_id', userId)
+                .single();
+
+            if (fetchError || !tx) {
+                await answerCallbackQuery(callbackQuery.id, '❌ Transação não encontrada');
+                return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+            }
+
+            // Excluir a transação
+            const { error: deleteError } = await supabase
+                .from('transactions')
+                .delete()
+                .eq('id', transactionId)
+                .eq('user_id', userId);
+
+            if (deleteError) {
+                console.error('Erro ao excluir transação:', deleteError);
+                await answerCallbackQuery(callbackQuery.id, '❌ Erro ao excluir');
+                return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+            }
+
+            // Reverter saldo da conta se tiver conta associada
+            if (tx.conta_origem_id && tx.account) {
+                const currentBalance = Number(tx.account.saldo_atual);
+                const valor = Number(tx.valor);
+                // Despesa: devolver o valor (somar), Receita: remover (subtrair)
+                const newBalance = tx.tipo === 'despesa'
+                    ? currentBalance + valor
+                    : currentBalance - valor;
+
+                await supabase
+                    .from('accounts')
+                    .update({ saldo_atual: newBalance })
+                    .eq('id', tx.conta_origem_id);
+            }
+
+            // Confirmar exclusão
+            await answerCallbackQuery(callbackQuery.id, `🗑️ "${tx.descricao}" excluída!`);
+
+            // Atualizar a mensagem para refletir exclusão
+            await editTelegramMessage(chatId, messageId,
+                `🗑️ *Transação Excluída*\n\n` +
+                `❌ ${tx.descricao}\n` +
+                `💰 ${formatCurrency(tx.valor)}\n\n` +
+                `_Use /extrato para ver as transações atualizadas._`
+            );
+
+        } catch (error) {
+            console.error('Erro em del_tx_ callback:', error);
+            await answerCallbackQuery(callbackQuery.id, '❌ Erro ao processar');
+        }
+
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
@@ -472,6 +549,24 @@ export async function handleCallbackQuery(supabase: any, body: any): Promise<Res
     // --- Callbacks do Parser de Transações ---
     if (data.startsWith('select_account_')) {
         await handleSelectAccountCallback(supabase, chatId, userId, messageId, data, callbackQuery.from.id.toString());
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    if (data.startsWith('select_category_')) {
+        await handleSelectCategoryCallback(supabase, chatId, userId, messageId, data, callbackQuery.from.id.toString());
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    if (data.startsWith('select_subcategory_')) {
+        await handleSelectSubcategoryCallback(supabase, chatId, userId, messageId, data, callbackQuery.from.id.toString());
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    if (data === 'back_to_categories') {
+        const { data: categories } = await supabase.from('categories').select('*').eq('user_id', userId);
+        const keyboard = gerarTecladoCategorias(categories || []);
+
+        await editTelegramMessage(chatId, messageId, `📂 *Escolha a Categoria:*`, { reply_markup: keyboard });
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 

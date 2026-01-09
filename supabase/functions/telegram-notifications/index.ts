@@ -74,7 +74,22 @@ serve(async (req) => {
 
 async function checkSpendingLimits(supabase: any, userId: string) {
   const currentDate = new Date()
+  const dateStr = currentDate.toISOString().split('T')[0] // YYYY-MM-DD
   const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
+
+  // 1. Check if we already sent an alert TODAY for this user
+  const alertKey = `spending_alert_${userId}_${dateStr}`
+
+  const { data: existingLog } = await supabase
+    .from('notification_logs')
+    .select('id')
+    .eq('key', alertKey)
+    .single()
+
+  if (existingLog) {
+    // Already alerted today
+    return { shouldAlert: false, message: '' }
+  }
 
   // Get this month's expenses
   const { data: transactions } = await supabase
@@ -91,32 +106,22 @@ async function checkSpendingLimits(supabase: any, userId: string) {
   const totalSpent = transactions.reduce((sum: number, t: any) => sum + Number(t.valor), 0)
 
   // Check if spending is above threshold
+  // TODO: Make this threshold configurable via user profile/settings
   if (totalSpent > 2000) {
-    // SPAM FIX: Only alert if there is a RECENT transaction (last 2 hours)
-    // This prevents the bot from spamming every hour just because you are over limit.
-    const twoHoursAgo = new Date(currentDate.getTime() - 2 * 60 * 60 * 1000);
+    // Only alert if there is a RECENT transaction (last 24 hours to be safe, but really we rely on the daily log)
+    // Actually, if we use the daily log, we just alert the first time we see it over 2000 in a day.
 
-    // Check if any transaction in the list is recent
-    // Note: data_transacao might be just date "YYYY-MM-DD" depending on how it's saved, 
-    // but usually for comprehensive logs we'd want 'created_at'. 
-    // If 'data_transacao' is date-only, we should check 'created_at' if available, 
-    // or rely on the cron job running shortly after insertion.
-    // Let's assume we need to check 'created_at' for precision, or fetch it if not selected.
-    // Re-fetching recent activity specifically to be sure.
+    const message = `🚨 *Alerta de Gastos*\n\nVocê realizou uma nova despesa e já gastou R$ ${totalSpent.toFixed(2)} este mês.\n\nConsidere revisar seus gastos para manter o controle financeiro! 💰`
 
-    const { data: recentActivity } = await supabase
-      .from('transactions')
-      .select('id')
-      .eq('user_id', userId)
-      .gte('created_at', twoHoursAgo.toISOString())
-      .limit(1)
+    // Log that we are sending this alert
+    await supabase.from('notification_logs').insert({
+      key: alertKey,
+      user_id: userId,
+      type: 'spending_alert',
+      metadata: { total_spent: totalSpent }
+    })
 
-    const hasRecentActivity = recentActivity && recentActivity.length > 0;
-
-    if (hasRecentActivity) {
-      const message = `🚨 *Alerta de Gastos*\n\nVocê realizou uma nova despesa e já gastou R$ ${totalSpent.toFixed(2)} este mês.\n\nConsidere revisar seus gastos para manter o controle financeiro! 💰`
-      return { shouldAlert: true, message }
-    }
+    return { shouldAlert: true, message }
   }
 
   return { shouldAlert: false, message: '' }
@@ -125,7 +130,7 @@ async function checkSpendingLimits(supabase: any, userId: string) {
 async function checkGoalProgress(supabase: any, userId: string) {
   const { data: goals } = await supabase
     .from('goals')
-    .select('titulo, valor_meta, valor_atual, data_fim')
+    .select('id, titulo, valor_meta, valor_atual, data_fim')
     .eq('user_id', userId)
     .eq('status', 'ativa')
 
@@ -134,13 +139,29 @@ async function checkGoalProgress(supabase: any, userId: string) {
   }
 
   const reminders = []
+  const currentDate = new Date()
+  const dateStr = currentDate.toISOString().split('T')[0]
 
   for (const goal of goals) {
+    const key = `goal_reminder_${goal.id}_${dateStr}`
+
+    // Check log to prevent duplicate hourly alerts
+    const { data: existing } = await supabase.from('notification_logs').select('id').eq('key', key).single()
+    if (existing) continue;
+
     const progress = (Number(goal.valor_atual) / Number(goal.valor_meta)) * 100
     const daysUntilEnd = Math.ceil((new Date(goal.data_fim).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
 
     if (progress < 50 && daysUntilEnd <= 7) {
       reminders.push(`🎯 *${goal.titulo}*\nProgresso: ${progress.toFixed(1)}%\nFaltam ${daysUntilEnd} dias!`)
+
+      // Log debounce immediately to prevent re-sending today
+      await supabase.from('notification_logs').insert({
+        key,
+        user_id: userId,
+        type: 'goal_reminder',
+        metadata: { goal_id: goal.id, progress }
+      })
     }
   }
 

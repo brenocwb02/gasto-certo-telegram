@@ -305,8 +305,9 @@ export function extrairDescricao(texto: string, contaEncontrada: string | null):
     // Remover preposições e conectores no início
     descricao = descricao.replace(/^[\s,.]*(no|na|em|de|do|da|com|pelo|pela|para|pro|pra)\s+/gi, '');
 
-    // Remover padrão "com/no cartão X" ou "pelo/na conta X" antes de processar palavras
-    descricao = descricao.replace(/\s+(com|no|na|pelo|pela)\s+(cart[aã]o|conta|pix)\s+\S+(\s+\S+)?$/gi, '');
+    // Remover padrão "com/no cartão X" ou "pelo/na conta X"
+    // Atualizado para suportar artigos (o/a) e nomes compostos de até 4 palavras
+    descricao = descricao.replace(/\s+(?:no|na|em|de|do|da|com|pelo|pela|para|pro|pra)(?:\s+(?:o|a|os|as|um|uma))?\s+(?:cart[aã]o|conta|pix)\s+[\w\u00C0-\u00FF]+(?:\s+[\w\u00C0-\u00FF]+){0,3}[.,;?!]?\s*$/gi, '');
 
     // Remover nome da conta se encontrada
     if (contaEncontrada) {
@@ -486,7 +487,21 @@ export function parseTransaction(texto: string, contasUsuario: AccountData[], ca
     if (resultado.categoria_sugerida) confianca += 10;
 
     // 7. Extrair Parcelas
-    const matchParcelas = texto.match(/\b(\d+)\s*x\b/i) || texto.match(/em\s+(\d+)\s*(?:x|vezes|parcelas)/i);
+    // Padrões: "10x", "10x50", "10 x 50", "em 10x", "10 vezes", "10 parcelas", "parcelado em 10"
+    const regexParcelas = [
+        /\b(\d+)\s*x\b/i,                       // 10x (isolado)
+        /\b(\d+)\s*x(?=\d)/i,                   // 10x50 (10x seguido de numero)
+        /em\s+(\d+)\s*(?:x|vezes|parcelas)/i,   // em 10x, em 10 vezes
+        /\b(\d+)\s*(?:vezes|parcelas)\b/i,      // 10 vezes, 10 parcelas
+        /parcelad[oa]\s+(?:em\s+)?(\d+)/i       // parcelado em 10
+    ];
+
+    let matchParcelas = null;
+    for (const regex of regexParcelas) {
+        matchParcelas = texto.match(regex);
+        if (matchParcelas) break;
+    }
+
     if (matchParcelas) {
         const parcelas = parseInt(matchParcelas[1]);
         if (parcelas > 1 && parcelas <= 60) {
@@ -537,6 +552,76 @@ export function gerarTecladoContas(contas: AccountData[]): any {
             { text: `💰 ${conta.nome}`, callback_data: `select_account_${conta.id}` }
         ]);
     }
+
+    return keyboard;
+}
+
+/**
+ * Gera teclado inline para seleção de categorias (Apenas Pais)
+ */
+export function gerarTecladoCategorias(categorias: CategoryData[]): any {
+    const keyboard: any = { inline_keyboard: [] };
+
+    // Filtrar apenas categorias pai (que não têm parent_id)
+    const categoriasPai = categorias.filter(c => !c.parent_id);
+
+    // Ordenar alfabeticamente
+    categoriasPai.sort((a, b) => a.nome.localeCompare(b.nome));
+
+    // Adicionar 2 por linha
+    for (let i = 0; i < categoriasPai.length; i += 2) {
+        const row = [];
+        row.push({ text: categoriasPai[i].nome, callback_data: `select_category_${categoriasPai[i].id}` });
+        if (categoriasPai[i + 1]) {
+            row.push({ text: categoriasPai[i + 1].nome, callback_data: `select_category_${categoriasPai[i + 1].id}` });
+        }
+        keyboard.inline_keyboard.push(row);
+    }
+
+    // Adicionar opção "Outros" se não existir na lista
+    const temOutros = categoriasPai.some(c => c.nome.toLowerCase() === 'outros');
+    if (!temOutros) {
+        keyboard.inline_keyboard.push([
+            { text: '➕ Outros', callback_data: 'select_category_outros' }
+        ]);
+    }
+
+    // Botão de Cancelar
+    keyboard.inline_keyboard.push([
+        { text: '❌ Cancelar', callback_data: 'cancel_transaction_parse' }
+    ]);
+
+    return keyboard;
+}
+
+/**
+ * Gera teclado inline para seleção de subcategorias
+ */
+export function gerarTecladoSubcategorias(subcategorias: CategoryData[], parentId: string): any {
+    const keyboard: any = { inline_keyboard: [] };
+
+    // Adicionar opção "Selecionar Própria Categoria Pai" (ex: Gastar na categoria "Alimentação" genericamente)
+    // keyboard.inline_keyboard.push([
+    //    { text: '📁 Usar Categoria Principal', callback_data: `select_subcategory_none_${parentId}` }
+    // ]);
+
+    // Ordenar
+    subcategorias.sort((a, b) => a.nome.localeCompare(b.nome));
+
+    // 2 por linha
+    for (let i = 0; i < subcategorias.length; i += 2) {
+        const row = [];
+        row.push({ text: subcategorias[i].nome, callback_data: `select_subcategory_${subcategorias[i].id}` });
+        if (subcategorias[i + 1]) {
+            row.push({ text: subcategorias[i + 1].nome, callback_data: `select_subcategory_${subcategorias[i + 1].id}` });
+        }
+        keyboard.inline_keyboard.push(row);
+    }
+
+    // Botão Voltar
+    keyboard.inline_keyboard.push([
+        { text: '◀️ Voltar', callback_data: 'back_to_categories' }
+    ]);
 
     return keyboard;
 }

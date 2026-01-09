@@ -83,9 +83,11 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Erro no webhook:', error);
-    return new Response(JSON.stringify({ error: 'Erro interno' }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500
+    // IMPORTANTE: Retornar 200 OK mesmo em caso de erro para evitar que o Telegram
+    // entre em loop de retry infinito (que causa mensagens duplicadas).
+    return new Response('OK', {
+      headers: corsHeaders,
+      status: 200
     });
   }
 });
