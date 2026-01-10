@@ -40,30 +40,72 @@ export function encontrarContaSimilar(termo: string, contas: AccountData[]): { c
 
     const termoLower = termo.toLowerCase().trim();
 
-    // Aliases comuns
+    // Aliases expandidos para bancos brasileiros (25+ entradas)
     const aliases: Record<string, string[]> = {
-        'nubank': ['nu', 'nub', 'roxinho'],
-        'santander': ['san', 'stdr', 'vermelhinho'],
-        'itau': ['itaú', 'ita'],
-        'bradesco': ['bra', 'brad'],
-        'pix': ['pix'],
-        'dinheiro': ['din', 'cash', 'espécie', 'especie'],
-        'carteira': ['din', 'dinheiro', 'cash'],
-        'credito': ['crédito', 'cred'],
-        'debito': ['débito', 'deb'],
+        // === Bancos Digitais ===
+        'nubank': ['nu', 'nub', 'roxinho', 'roxo', 'nubanck'],
+        'inter': ['inter', 'bancointer', 'laranjinha', 'banco inter'],
+        'c6': ['c6', 'c6bank', 'c6 bank', 'cseis'],
+        'next': ['next', 'nextbank', 'banco next'],
+        'neon': ['neon', 'neonbank', 'banco neon'],
+        'picpay': ['picpay', 'pic', 'pic pay', 'picbank'],
+        'original': ['original', 'banco original'],
+        'sofisa': ['sofisa', 'sofisa direto'],
+        'modal': ['modal', 'banco modal', 'modalmais'],
+        'btg': ['btg', 'btg pactual', 'btgpactual'],
+        'xp': ['xp', 'xp investimentos', 'xpinvest'],
+        'rico': ['rico', 'rico investimentos'],
+        'clear': ['clear', 'clear corretora'],
+
+        // === Bancos Tradicionais ===
+        'santander': ['san', 'sant', 'stdr', 'vermelhinho', 'vermelho', 'santand'],
+        'itau': ['itaú', 'ita', 'itauzão', 'itauzao', 'laranja', 'itau'],
+        'bradesco': ['bra', 'brad', 'bradescão', 'bradescao', 'bradesquinho'],
+        'caixa': ['cef', 'caixa economica', 'caixinha', 'cx', 'caixa econômica'],
+        'bb': ['banco do brasil', 'brasil', 'amarelão', 'amarelao', 'bdb', 'bancodobrasil'],
+        'sicredi': ['sicredi', 'sicred'],
+        'sicoob': ['sicoob', 'sicob'],
+        'banrisul': ['banrisul', 'banri'],
+        'banestes': ['banestes'],
+
+        // === Carteiras Digitais ===
+        'mercadopago': ['mp', 'mercado pago', 'meli', 'mercadolivre', 'mercado livre'],
+        'pagseguro': ['pag', 'pagseguro', 'pagbank', 'pag seguro'],
+        'paypal': ['pp', 'paypal', 'pay pal'],
+        'iti': ['iti', 'iti itau'],
+        'ame': ['ame', 'ame digital'],
+        'recargapay': ['recargapay', 'recarga pay'],
+
+        // === Genéricos ===
+        'pix': ['pix', 'pixzinho'],
+        'dinheiro': ['din', 'cash', 'espécie', 'especie', 'vivo', 'na mão', 'namao', 'na mao'],
+        'carteira': ['wallet', 'bolso', 'carteira', 'crt'],
+        'credito': ['crédito', 'cred', 'cc', 'cartao de credito'],
+        'debito': ['débito', 'deb', 'dc', 'cartao de debito'],
+        'poupanca': ['poupança', 'poupanca', 'pp', 'caderneta'],
+        'investimento': ['invest', 'investimentos', 'aplicação', 'aplicacao'],
     };
 
     for (const conta of contas) {
         const nomeContaLower = conta.nome.toLowerCase();
+        // Versão sem acentos para comparação de aliases
+        const nomeContaSemAcento = removeAcentos(nomeContaLower);
 
         // Match exato
         if (nomeContaLower === termoLower || nomeContaLower.includes(termoLower)) {
             return { conta, similaridade: 100 };
         }
 
-        // Verificar aliases
+        // Verificar aliases (remover acentos para comparação)
+        const termoSemAcento = removeAcentos(termoLower);
         for (const [chave, aliasList] of Object.entries(aliases)) {
-            if (aliasList.includes(termoLower) && nomeContaLower.includes(chave)) {
+            // Verificar se o termo está na lista de aliases (com ou sem acento)
+            const aliasMatch = aliasList.some(alias =>
+                removeAcentos(alias) === termoSemAcento || alias === termoLower
+            );
+            // Verificar se o nome da conta contém a chave (com ou sem acento)
+            if (aliasMatch && (nomeContaSemAcento.includes(chave) || nomeContaLower.includes(chave))) {
+                console.log(`[Alias Match] "${termoLower}" → "${chave}" → conta "${conta.nome}"`);
                 return { conta, similaridade: 95 };
             }
         }
@@ -80,9 +122,172 @@ export function encontrarContaSimilar(termo: string, contas: AccountData[]): { c
 }
 
 /**
+ * Normaliza variações de palavras numéricas
+ * cinquentas → cinquenta, cincoenta → cinquenta, etc.
+ */
+function normalizarPalavraNumero(palavra: string): string {
+    // Remover 's' final comum em typos
+    let norm = palavra.replace(/s$/, '');
+
+    // Correções de typos comuns
+    const correcoes: Record<string, string> = {
+        'cincoenta': 'cinquenta',
+        'cincuenta': 'cinquenta',
+        'sinquenta': 'cinquenta',
+        'quareta': 'quarenta',
+        'sesenta': 'sessenta',
+        'seteta': 'setenta',
+        'oiteta': 'oitenta',
+        'noveta': 'noventa',
+        'doiz': 'dois',
+        'trez': 'tres',
+    };
+
+    return correcoes[norm] || norm;
+}
+
+/**
+ * Aliases de contas/bancos para identificação no texto
+ */
+const ALIASES_CONTAS = [
+    // Apelidos de bancos
+    'roxinho', 'roxo', 'vermelhinho', 'vermelho', 'laranja', 'laranjinha',
+    'amarelao', 'amarelão', 'bradesquinho', 'itauzao', 'itauzão', 'bradescao', 'bradescão',
+    // Abreviações
+    'nu', 'nub', 'nubank', 'san', 'sant', 'santander', 'stdr',
+    'ita', 'itau', 'itaú', 'bra', 'brad', 'bradesco',
+    'cef', 'caixa', 'bb', 'inter', 'c6', 'next', 'neon', 'picpay',
+    'mp', 'pag', 'pagseguro', 'pic', 'mercadopago',
+];
+
+/**
+ * Mapa de números por extenso para valores numéricos
+ */
+const NUMEROS_EXTENSO: Record<string, number> = {
+    // Unidades
+    'zero': 0, 'um': 1, 'uma': 1, 'dois': 2, 'duas': 2,
+    'tres': 3, 'três': 3, 'quatro': 4, 'cinco': 5, 'seis': 6,
+    'sete': 7, 'oito': 8, 'nove': 9, 'dez': 10,
+    // 11-19
+    'onze': 11, 'doze': 12, 'treze': 13, 'quatorze': 14, 'catorze': 14,
+    'quinze': 15, 'dezesseis': 16, 'dezessete': 17,
+    'dezoito': 18, 'dezenove': 19,
+    // Dezenas
+    'vinte': 20, 'trinta': 30, 'quarenta': 40, 'cinquenta': 50,
+    'sessenta': 60, 'setenta': 70, 'oitenta': 80, 'noventa': 90,
+    // Centenas
+    'cem': 100, 'cento': 100, 'duzentos': 200, 'trezentos': 300,
+    'quatrocentos': 400, 'quinhentos': 500, 'seiscentos': 600,
+    'setecentos': 700, 'oitocentos': 800, 'novecentos': 900,
+    // Milhares
+    'mil': 1000,
+    // Gírias brasileiras
+    'conto': 1000, 'contos': 1000,
+    'pau': 1000, 'paus': 1000,
+    'pila': 1, 'pilas': 1,
+    'mango': 1, 'mangos': 1,
+    'pratas': 1, 'prata': 1,
+    // NOTA: 'real' e 'reais' NÃO devem estar aqui - são indicadores de moeda, não valores!
+};
+
+/**
+ * Modificadores especiais
+ */
+const MODIFICADORES: Record<string, number> = {
+    'meio': 0.5, 'meia': 0.5,
+    'metade': 0.5,
+};
+
+/**
+ * Converte números por extenso para valor numérico
+ * Exemplos:
+ *   "cinquenta" → 50
+ *   "cento e cinquenta" → 150  
+ *   "dois mil e quinhentos" → 2500
+ *   "meio conto" → 500
+ *   "vinte e cinco" → 25
+ */
+export function converterNumeroExtenso(texto: string): number | null {
+    const textoNorm = texto.toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // remove acentos
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    // Padrão especial: "meio conto" → 500
+    if (textoNorm.match(/meio\s+conto/)) {
+        return 500;
+    }
+
+    // Padrão especial: "meia duzia" → 6
+    if (textoNorm.match(/meia?\s+duzia/)) {
+        return 6;
+    }
+
+    // Tentar extrair padrões compostos
+    // "vinte e cinco" → 25, "cento e cinquenta" → 150
+    const palavras = textoNorm.split(/\s+/);
+    let total = 0;
+    let atual = 0;
+    let temNumero = false;
+    let modificador = 1;
+
+    for (const palavra of palavras) {
+        // Ignorar conectivos e indicadores de moeda
+        if (['e', 'de', 'com', 'reais', 'real'].includes(palavra)) continue;
+
+        // Ignorar aliases de banco (eles vão ser usados para conta, não valor)
+        if (ALIASES_CONTAS.includes(palavra)) continue;
+
+        // Verificar modificador
+        if (MODIFICADORES[palavra]) {
+            modificador = MODIFICADORES[palavra];
+            continue;
+        }
+
+        // Normalizar palavra para lidar com variações (cinquentas → cinquenta)
+        const palavraNorm = normalizarPalavraNumero(palavra);
+
+        // Verificar se é número por extenso
+        const valor = NUMEROS_EXTENSO[palavraNorm] ?? NUMEROS_EXTENSO[palavra];
+        if (valor !== undefined) {
+            temNumero = true;
+
+            // "mil" multiplica o que veio antes
+            if (palavra === 'mil') {
+                if (atual === 0) atual = 1;
+                total += atual * 1000;
+                atual = 0;
+            }
+            // "conto" multiplica por 1000
+            else if (['conto', 'contos', 'pau', 'paus'].includes(palavra)) {
+                if (atual === 0) atual = 1;
+                total += atual * 1000 * modificador;
+                atual = 0;
+                modificador = 1;
+            }
+            // Centenas somam ao atual
+            else if (valor >= 100 && valor < 1000) {
+                atual += valor;
+            }
+            // Dezenas e unidades somam
+            else {
+                atual += valor;
+            }
+        }
+    }
+
+    // Somar o que restou
+    total += atual * modificador;
+
+    return temNumero && total > 0 ? total : null;
+}
+
+/**
  * Extrai valor numérico da mensagem
+ * Suporta: "R$ 50", "50 reais", "cinquenta", "meio conto", "vinte e cinco"
  */
 export function extrairValor(texto: string): number | null {
+    // 1. Primeiro tentar padrões numéricos (regex)
     const patterns = [
         /R\$\s*(\d+(?:\.\d{3})*(?:,\d{1,2})?)/i, // R$ 1.200,50 ou R$ 1200,50
         /(\d+(?:\.\d{3})*(?:,\d{1,2})?)\s*reais?/i, // 1.200,50 reais
@@ -116,6 +321,13 @@ export function extrairValor(texto: string): number | null {
                 return num;
             }
         }
+    }
+
+    // 2. Fallback: tentar converter número por extenso
+    // "cinquenta reais", "meio conto", "vinte e cinco"
+    const valorExtenso = converterNumeroExtenso(texto);
+    if (valorExtenso !== null && valorExtenso > 0) {
+        return valorExtenso;
     }
 
     return null;
@@ -297,10 +509,34 @@ export function extrairDescricao(texto: string, contaEncontrada: string | null):
         descricao = descricao.replace(new RegExp(verbo, 'gi'), '');
     }
 
-    // Remover valores
+    // Remover valores numéricos
     descricao = descricao.replace(/R\$\s*[\d.,]+/gi, '');
     descricao = descricao.replace(/[\d.,]+\s*reais?/gi, '');
     descricao = descricao.replace(/\b\d+(?:[.,]\d+)?\b/g, '');
+
+    // Remover números por extenso e indicadores de moeda
+    const numerosExtenso = [
+        // Unidades (0-9)
+        'zero', 'um', 'uma', 'dois', 'duas', 'tres', 'três', 'quatro', 'cinco',
+        'seis', 'sete', 'oito', 'nove', 'dez',
+        // 11-19
+        'onze', 'doze', 'treze', 'quatorze', 'catorze', 'quinze',
+        'dezesseis', 'dezessete', 'dezoito', 'dezenove',
+        // Dezenas
+        'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa',
+        // Centenas
+        'cem', 'cento', 'duzentos', 'trezentos', 'quatrocentos', 'quinhentos',
+        'seiscentos', 'setecentos', 'oitocentos', 'novecentos',
+        // Milhares e gírias
+        'mil', 'conto', 'contos', 'pau', 'paus', 'pila', 'pilas', 'mango', 'mangos',
+        // Indicadores de moeda
+        'reais', 'real', 'prata', 'pratas',
+        // Modificadores
+        'meio', 'meia'
+    ];
+    for (const num of numerosExtenso) {
+        descricao = descricao.replace(new RegExp(`\\b${num}\\b`, 'gi'), '');
+    }
 
     // Remover preposições e conectores no início
     descricao = descricao.replace(/^[\s,.]*(no|na|em|de|do|da|com|pelo|pela|para|pro|pra)\s+/gi, '');
@@ -319,11 +555,30 @@ export function extrairDescricao(texto: string, contaEncontrada: string | null):
         }
     }
 
+    // Remover aliases populares de bancos (que podem estar no texto)
+    const aliasesParaRemover = [
+        // Apelidos de bancos
+        'roxinho', 'roxo', 'vermelhinho', 'vermelho', 'laranja', 'laranjinha',
+        'amarelão', 'amarelao', 'bradesquinho', 'itauzão', 'itauzao', 'bradescão', 'bradescao',
+        // Abreviações
+        'nu', 'nub', 'san', 'sant', 'stdr', 'ita', 'bra', 'brad', 'cef', 'bb',
+        'mp', 'pag', 'pic', 'inter',
+        // Tipos
+        'cred', 'deb', 'cc', 'dc'
+    ];
+    for (const alias of aliasesParaRemover) {
+        descricao = descricao.replace(new RegExp(`\\b${alias}\\b`, 'gi'), '');
+    }
+
     // Remover "cartão", "pix", etc
     descricao = descricao.replace(/\b(cartão|cartao|pix|débito|debito|crédito|credito|conta)\b/gi, '');
 
     // Limpar preposições restantes no final (com/sem artigos)
     descricao = descricao.replace(/\s+(com|no|na|em|de|do|da|pelo|pela|para|pro|pra)(?:\s+(o|a|os|as|um|uma|uns|umas))?\s*$/gi, '');
+
+    // Remover conectivos órfãos ("e" sozinho entre espaços ou no final)
+    descricao = descricao.replace(/\s+e\s*$/gi, ''); // "e" no final
+    descricao = descricao.replace(/\s+e\s+/gi, ' '); // "e" no meio (substituir por espaço único)
 
     // Limpar espaços extras
     descricao = descricao.replace(/\s+/g, ' ').trim();

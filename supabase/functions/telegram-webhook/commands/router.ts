@@ -1,6 +1,6 @@
 
 import { handleAjudaCommand, handleUpdateMenuCommand } from './admin.ts';
-import { handleFaturaCommand, handlePagarCommand, handleConfigCartaoCommand } from '../handlers/credit-card.ts';
+import { handleFaturaCommand, handlePagarCommand, handleConfigCartaoCommand, handleProjecaoCommand } from '../handlers/credit-card.ts';
 import { handleSaldoCommand, handleExtratoCommand, handleResumoCommand, handlePrevisaoCommand, handleTopGastosCommand, handleCompararMesesCommand, handleOrcamentoCommand, handleDividasCommand } from './financial.ts';
 import { handleCategoriasCommand } from './categories.ts';
 import { handleRecorrenteNovaCommand, handleRecorrentesCommand, handlePausarRecorrenteCommand } from './recurring.ts';
@@ -62,6 +62,11 @@ export async function handleCommand(supabase: any, command: string, userId: stri
         case '/config_cartao':
         case '/configcartao':
             await handleConfigCartaoCommand(supabase, chatId, userId);
+            break;
+
+        case '/projecao':
+        case '/projeção':
+            await handleProjecaoCommand(supabase, chatId, userId);
             break;
 
         case '/categorias':

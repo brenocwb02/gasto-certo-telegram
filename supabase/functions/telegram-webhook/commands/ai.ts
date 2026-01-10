@@ -7,6 +7,11 @@ export async function handlePerguntarCommand(supabase: any, chatId: number, user
     // Envia mensagem inicial
     const thinking = await sendTelegramMessage(chatId, '🤔 Analisando seus dados...');
 
+    if (!thinking) {
+        console.error('Falha ao enviar mensagem de thinking');
+        return;
+    }
+
     // Lança a função query-engine em background (sem await no resultado final)
     // O Edge Function 'query-engine' deve ser responsável por enviar a resposta final ao usuário
     // Passamos o message_id para ele editar a mensagem "Analisando..."
@@ -16,7 +21,7 @@ export async function handlePerguntarCommand(supabase: any, chatId: number, user
             userId,
             responseMethod: 'edit_message',
             chatId,
-            messageId: thinking.result.message_id
+            messageId: thinking.message_id
         }
     }).then(({ error }: any) => {
         if (error) console.error('Erro ao invocar query-engine:', error);

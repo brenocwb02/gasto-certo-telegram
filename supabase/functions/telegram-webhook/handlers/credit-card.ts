@@ -78,6 +78,115 @@ export async function handleFaturaCommand(supabase: any, chatId: number, userId:
 }
 
 /**
+ * Comando /projecao - Mostra projeção de faturas para os próximos 6 meses
+ */
+export async function handleProjecaoCommand(supabase: any, chatId: number, userId: string): Promise<void> {
+    try {
+        // 1. Buscar cartões do usuário (somente pais)
+        const { data: cards, error: cardsError } = await supabase
+            .from('accounts')
+            .select('id, nome, dia_vencimento, parent_account_id')
+            .eq('user_id', userId)
+            .eq('tipo', 'cartao')
+            .eq('ativo', true)
+            .is('parent_account_id', null); // Apenas cartões pais
+
+        if (cardsError) throw cardsError;
+
+        if (!cards || cards.length === 0) {
+            await sendTelegramMessage(
+                chatId,
+                `📅 *Projeção de Faturas*\n\nVocê não tem cartões de crédito cadastrados.`,
+                { parse_mode: 'Markdown' }
+            );
+            return;
+        }
+
+        // 2. Gerar lista de meses para projeção (próximos 6 meses)
+        const months: { start: Date; end: Date; label: string }[] = [];
+        const now = new Date();
+
+        for (let i = 0; i < 6; i++) {
+            const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
+            const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+            months.push({
+                start: new Date(date.getFullYear(), date.getMonth(), 1),
+                end: new Date(date.getFullYear(), date.getMonth() + 1, 0),
+                label: `${monthNames[date.getMonth()]}/${String(date.getFullYear()).slice(-2)}`
+            });
+        }
+
+        let fullMessage = '';
+
+        // 3. Para cada cartão, buscar projeção
+        for (const card of cards) {
+            // Buscar IDs dos cartões filhos (adicionais)
+            const { data: childCards } = await supabase
+                .from('accounts')
+                .select('id')
+                .eq('parent_account_id', card.id);
+
+            const allCardIds = [card.id, ...(childCards?.map((c: any) => c.id) || [])];
+
+            let cardMessage = `💳 *${card.nome}* (venc. dia ${card.dia_vencimento || '?'})\n\n`;
+            let hasData = false;
+
+            for (let j = 0; j < months.length; j++) {
+                const month = months[j];
+
+                // Buscar transações deste mês para este cartão (despesas)
+                const { data: transactions, error: txError } = await supabase
+                    .from('transactions')
+                    .select('valor, total_parcelas')
+                    .in('conta_origem_id', allCardIds)
+                    .eq('tipo', 'despesa')
+                    .gte('data_transacao', month.start.toISOString().split('T')[0])
+                    .lte('data_transacao', month.end.toISOString().split('T')[0]);
+
+                if (txError) {
+                    console.error('Erro ao buscar transações:', txError);
+                    continue;
+                }
+
+                const total = transactions?.reduce((sum: number, t: any) => sum + Math.abs(t.valor || 0), 0) || 0;
+                const parcelaCount = transactions?.filter((t: any) => t.total_parcelas && t.total_parcelas > 1).length || 0;
+
+                if (total > 0) {
+                    hasData = true;
+                    const isCurrentMonth = j === 0;
+                    const marker = isCurrentMonth ? '✅' : '';
+                    const parcelaText = parcelaCount > 0 ? ` (${parcelaCount} ${parcelaCount === 1 ? 'parcela' : 'parcelas'})` : '';
+
+                    cardMessage += `${month.label}:  ${formatCurrency(total)} ${marker}${parcelaText}\n`;
+                }
+            }
+
+            if (!hasData) {
+                cardMessage += `_Sem transações futuras previstas_\n`;
+            }
+
+            fullMessage += cardMessage + `\n`;
+        }
+
+        if (!fullMessage.trim()) {
+            fullMessage = `📅 *Projeção de Faturas*\n\n_Nenhuma fatura futura encontrada._`;
+        } else {
+            fullMessage = `📅 *Projeção de Faturas*\n\n` + fullMessage;
+            fullMessage += `\n💡 Use /faturas para detalhes do mês atual.`;
+        }
+
+        await sendTelegramMessage(chatId, fullMessage, { parse_mode: 'Markdown' });
+
+    } catch (error) {
+        console.error('Erro em /projecao:', error);
+        await sendTelegramMessage(
+            chatId,
+            `❌ Erro ao calcular projeção. Tente novamente.`
+        );
+    }
+}
+
+/**
  * Comando /pagar - Inicia o processo de pagamento de fatura
  */
 export async function handlePagarCommand(supabase: any, chatId: number, userId: string): Promise<void> {

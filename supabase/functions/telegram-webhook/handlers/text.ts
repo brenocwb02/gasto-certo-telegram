@@ -170,7 +170,7 @@ export async function handleTextMessage(supabase: any, chatId: number, message: 
     // 4. Verificar se usuário está vinculado para demais comandos
     const { data: profile } = await supabase
         .from('profiles')
-        .select('user_id')
+        .select('user_id, onboarding_step')
         .eq('telegram_chat_id', chatId)
         .single();
 
@@ -179,6 +179,14 @@ export async function handleTextMessage(supabase: any, chatId: number, message: 
         return new Response('OK', { status: 200, headers: corsHeaders });
     }
     const userId = profile.user_id;
+
+    // 4.1 Verificar se está no onboarding (aguardando nome)
+    if (profile.onboarding_step === 'awaiting_name' && !text.startsWith('/')) {
+        // Importar dinamicamente para evitar dependência circular
+        const { handleOnboardingName } = await import('../commands/onboarding.ts');
+        await handleOnboardingName(supabase, chatId, userId, text);
+        return new Response('OK', { headers: corsHeaders });
+    }
 
     // Buscar contexto familiar (Novo: Visibilidade de Contas Compartilhadas)
     const { data: familyMember } = await supabase
@@ -701,13 +709,32 @@ export async function handleTextMessage(supabase: any, chatId: number, message: 
         return new Response('OK', { headers: corsHeaders });
     }
 
-    // 7. Perguntas em Linguagem Natural
-    const questionKeywords = ['quanto', 'quantos', 'quantas', 'qual', 'quais', 'onde', 'quando', 'como', 'analise', 'diga'];
+    // 7. Perguntas em Linguagem Natural - USAR QUERY ENGINE LOCAL PRIMEIRO
+    const questionKeywords = ['quanto', 'quantos', 'quantas', 'qual', 'quais', 'sobrou', 'faltou', 'mostra', 'lista', 'onde', 'quando', 'como', 'analise', 'diga'];
     if (questionKeywords.some(kw => text!.toLowerCase().startsWith(kw))) {
         try {
+            // Importar Query Engine Local
+            const { handleQueryLocal } = await import('./query-local.ts');
+
+            // Tentar processar localmente (sem IA)
+            const processed = await handleQueryLocal(chatId, text, userId, supabase);
+
+            if (processed) {
+                console.log('✅ Query processada localmente (sem IA)');
+                return new Response('OK', { headers: corsHeaders });
+            }
+
+            // Fallback para IA se não conseguiu processar localmente
+            console.log('⚠️ Query não reconhecida localmente, usando IA...');
             await handlePerguntarCommand(supabase, chatId, userId, text);
         } catch (e) {
             console.error('Erro ao processar pergunta:', e);
+            // Tentar IA como fallback de erro
+            try {
+                await handlePerguntarCommand(supabase, chatId, userId, text);
+            } catch (e2) {
+                console.error('Erro no fallback IA:', e2);
+            }
         }
         return new Response('OK', { headers: corsHeaders });
     }
