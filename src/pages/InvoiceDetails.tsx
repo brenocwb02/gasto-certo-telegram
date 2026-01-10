@@ -11,8 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { TransactionItem } from "@/components/transactions/TransactionItem";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
+// Unused imports removed
 
 const InvoiceDetails = () => {
     const { cardId } = useParams();
@@ -114,8 +113,7 @@ const InvoiceDetails = () => {
     }, [cardId]);
 
 
-    const closingDay = card?.dia_fechamento || 1;
-    const dueDay = card?.dia_vencimento || 10;
+    // closingDay and dueDay are calculated inside useMemo below
 
     // 2. State for Selected Invoice Month
     const [selectedDate, setSelectedDate] = useState(new Date());
@@ -164,7 +162,7 @@ const InvoiceDetails = () => {
     }, [cycle]);
 
     // 5. Filter Transactions & Group by Card
-    const { invoiceTransactions, groupedTransactions, totalsByCard } = useMemo(() => {
+    const { groupedTransactions, totalsByCard } = useMemo(() => {
         if (!card) return { invoiceTransactions: [], groupedTransactions: {}, totalsByCard: {} };
 
         // Filter by Date
@@ -410,7 +408,7 @@ const InvoiceDetails = () => {
                                                 onEdit={() => { }}
                                                 onDelete={() => { }}
                                                 getCategoryName={getCategoryName}
-                                                getAccountName={(id) => c.nome}
+                                                getAccountName={() => c.nome}
                                             />
                                         ))}
                                     </div>

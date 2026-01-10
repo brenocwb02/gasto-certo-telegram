@@ -1,15 +1,11 @@
-import { useState } from "react";
-import { StatsCard } from "@/components/dashboard/StatsCard";
-import { CollapsibleLimitsBanner } from "@/components/dashboard/CollapsibleLimitsBanner";
-import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
-import { FinancialChart } from "@/components/dashboard/FinancialChart";
-import { CashFlowForecast } from "@/components/dashboard/CashFlowForecast";
-import { BudgetSummary } from "@/components/dashboard/BudgetSummary";
-import { TransactionForm } from "@/components/forms/TransactionForm";
-import { DashboardWidgetAccordion } from "@/components/dashboard/DashboardWidgetAccordion";
-import { EmptyStateCard } from "@/components/dashboard/EmptyStateCard";
+import { useState, useMemo } from "react";
+import { useFinancialStats, useProfile, useGoals, useFinancialProfile, useAccounts } from "@/hooks/useSupabaseData";
+import { useFamily } from "@/hooks/useFamily";
+import { useLimits } from "@/hooks/useLimits";
+import { useTransactions } from "@/hooks/useSupabaseData";
+
+// UI Components
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -19,48 +15,42 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useFinancialStats, useProfile, useGoals, useFinancialProfile, useAccounts } from "@/hooks/useSupabaseData";
-import { PlanStatus } from "@/components/PlanGuard";
-import { Skeleton } from "@/components/ui/skeleton";
-import { UpcomingBillsWidget } from "@/components/dashboard/UpcomingBillsWidget";
-import { CreditCardWidget } from "@/components/dashboard/CreditCardWidget";
-import { useFamily } from "@/hooks/useFamily";
+import { Card } from "@/components/ui/card";
+
+// Dashboard Sections
 import {
-  Wallet,
-  CreditCard,
-  TrendingUp,
-  TrendingDown,
-  Target,
+  FinancialStatusSection,
+  MoneyLocationSection,
+  MonthAnalysisSection,
+  AttentionSection,
+  HistorySection,
+} from "@/components/dashboard/sections";
+import { CollapsibleLimitsBanner } from "@/components/dashboard/CollapsibleLimitsBanner";
+import { TransactionForm } from "@/components/forms/TransactionForm";
+import { PlanStatus } from "@/components/PlanGuard";
+
+// Icons
+import {
   Plus,
-  Heart,
   Lock,
-  Lightbulb,
-  AlertTriangle,
-  Bot,
-  Sparkles,
+  Heart,
   Settings2,
-  Receipt,
-  PiggyBank,
 } from "lucide-react";
-import { useLimits } from "@/hooks/useLimits";
 
 const Dashboard = () => {
   const { currentGroup } = useFamily();
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const { stats, loading: statsLoading } = useFinancialStats(currentGroup?.id);
   const { profile } = useProfile();
-  const { goals, loading: goalsLoading } = useGoals(currentGroup?.id);
+  useGoals(currentGroup?.id); // Load goals for cache
   const { financialProfile, hasCompletedQuiz, getFinancialHealthLevel } = useFinancialProfile();
   const { isTransactionLimitReached } = useLimits();
   const { accounts, loading: accountsLoading, refetchAccounts } = useAccounts(currentGroup?.id);
+  const { transactions } = useTransactions(currentGroup?.id);
 
   const handleUpdate = () => {
     refetchAccounts();
-    // Se houver transações recentes sendo exibidas via hook do pai, atualize aqui também.
-    // Por enquanto, atualiza saldo que é crítico.
   };
-
-  const currentMonth = new Date();
 
   // Widget Visibility State
   const [visibleWidgets, setVisibleWidgets] = useState(() => {
@@ -69,17 +59,13 @@ const Dashboard = () => {
       return JSON.parse(saved);
     }
     return {
-      stats: true,
-      charts: true,
-      creditCards: true,
-      upcomingBills: true,
-      recentTransactions: true,
-      goals: true,
-      insights: true,
+      financialStatus: true,
+      moneyLocation: true,
+      monthAnalysis: true,
+      attention: true,
+      history: true,
       health: true,
-      budget: true,
-      quickActions: true,
-      limits: true // Visible by default for conversion
+      limits: true,
     };
   });
 
@@ -89,10 +75,45 @@ const Dashboard = () => {
     localStorage.setItem('dashboardWidgets', JSON.stringify(newState));
   };
 
-  const FinancialHealthSection = () => {
+  // Calculate current invoice total and next due date for status section
+  const { currentInvoice, nextDueDate } = useMemo(() => {
+    // Calculate total credit card balance (current invoice approximation)
+    const creditCards = accounts.filter(a => a.tipo === 'cartao' && !a.parent_account_id);
+    const invoiceTotal = creditCards.reduce((sum, card) => {
+      // Include child cards
+      const childCards = accounts.filter(a => a.parent_account_id === card.id);
+      const childBalance = childCards.reduce((s, c) => s + Math.abs(Number(c.saldo_atual) || 0), 0);
+      return sum + Math.abs(Number(card.saldo_atual) || 0) + childBalance;
+    }, 0);
+
+    // Find next critical due date from pending expenses
+    const pendingExpenses = transactions
+      ?.filter((t: any) => t.tipo === 'despesa' && !t.efetivada)
+      .sort((a: any, b: any) => new Date(a.data_transacao).getTime() - new Date(b.data_transacao).getTime());
+
+    let nextDue = null;
+    if (pendingExpenses && pendingExpenses.length > 0) {
+      const nextBill = pendingExpenses[0];
+      const dueDate = new Date(nextBill.data_transacao);
+      const today = new Date();
+      const daysUntil = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (daysUntil <= 7) {
+        nextDue = {
+          label: `Próx. Vencimento`,
+          amount: Number(nextBill.valor),
+          daysUntil: Math.max(0, daysUntil),
+        };
+      }
+    }
+
+    return { currentInvoice: invoiceTotal, nextDueDate: nextDue };
+  }, [accounts, transactions]);
+
+  // Financial Health Section (Compact Banner)
+  const FinancialHealthBanner = () => {
     if (!visibleWidgets.health) return null;
 
-    // Compact Widget
     return (
       <Card className="relative overflow-hidden border-none bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md">
         <div className="p-4 flex items-center gap-4">
@@ -121,234 +142,16 @@ const Dashboard = () => {
     );
   };
 
-  const CreditCardsSection = () => {
-    if (accountsLoading) {
-      return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-        <Skeleton className="h-40 w-full rounded-xl" />
-        <Skeleton className="h-40 w-full rounded-xl" />
-      </div>;
-    }
-
-    // Only show PRINCIPAL cards (without parent_account_id)
-    // Additional cards are included in the principal's invoice, so no need to display separately
-    // Also filter out cards with no balance and no limit used (zero activity)
-    const creditCards = accounts.filter(a => {
-      if (a.tipo !== 'cartao' || a.parent_account_id) return false;
-      
-      // Show card if it has any balance (positive or negative) or limit usage
-      const hasBalance = Math.abs(a.saldo_atual) > 0;
-      const hasLimitUsage = a.limite_credito && a.limite_credito > 0 && a.saldo_atual !== 0;
-      
-      // Always show cards with activity, or cards that have a limit configured
-      return hasBalance || hasLimitUsage || (a.limite_credito && a.limite_credito > 0);
-    });
-
-    if (creditCards.length === 0) {
-      return (
-        <EmptyStateCard
-          icon={<CreditCard className="h-5 w-5" />}
-          title="Sem cartões ativos"
-          description="Cadastre um cartão de crédito para acompanhar faturas"
-          actionLabel="Adicionar Cartão"
-          actionHref="/accounts"
-          variant="compact"
-        />
-      );
-    }
-
-    return (
-      <div className="space-y-3">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
-          {creditCards.map(card => (
-            <CreditCardWidget
-              key={card.id}
-              account={card}
-              compact={true}
-              groupId={currentGroup?.id}
-              allAccounts={accounts}
-              onUpdate={handleUpdate}
-            />
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  // Versão compacta das Ações Rápidas para uso dentro do accordion
-  const QuickActionsCompact = () => {
-    const [dialogOpen, setDialogOpen] = useState(false);
-    const [transactionType, setTransactionType] = useState<'receita' | 'despesa' | 'transferencia'>('despesa');
-
-    const openTransactionDialog = (tipo: 'receita' | 'despesa' | 'transferencia') => {
-      setTransactionType(tipo);
-      setDialogOpen(true);
-    };
-
-    return (
-      <>
-        <div className="grid grid-cols-3 gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex flex-col items-center gap-1 h-auto py-2"
-            onClick={() => openTransactionDialog('receita')}
-          >
-            <TrendingUp className="h-4 w-4 text-success" />
-            <span className="text-xs">Receita</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex flex-col items-center gap-1 h-auto py-2"
-            onClick={() => openTransactionDialog('despesa')}
-          >
-            <TrendingDown className="h-4 w-4 text-expense" />
-            <span className="text-xs">Despesa</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex flex-col items-center gap-1 h-auto py-2"
-            onClick={() => openTransactionDialog('transferencia')}
-          >
-            <Wallet className="h-4 w-4 text-primary" />
-            <span className="text-xs">Transfer</span>
-          </Button>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <TransactionForm
-              initialData={{ tipo: transactionType }}
-              onSuccess={() => setDialogOpen(false)}
-              onCancel={() => setDialogOpen(false)}
-              groupId={currentGroup?.id}
-            />
-          </DialogContent>
-        </Dialog>
-      </>
-    );
-  };
-
-  // Versão compacta dos Insights AI para uso dentro do accordion
-  const AIInsightsCompact = () => {
-    const insights = [];
-
-    if (statsLoading || !stats) return null;
-
-    if (stats.savingsTrend > 5) {
-      insights.push({
-        icon: Lightbulb,
-        type: "success",
-        title: "Economia detectada!",
-        message: `+${stats.savingsTrend.toFixed(1)}% vs mês anterior`,
-      });
-    }
-
-    const isNegativeMonth = stats.monthlyExpenses > stats.monthlyIncome;
-    const isNegativeBalance = stats.totalBalance < 0;
-
-    if (isNegativeBalance) {
-      insights.push({
-        icon: AlertTriangle,
-        type: "warning",
-        title: "Saldo Negativo",
-        message: "Priorize o pagamento de dívidas",
-      });
-    } else if (isNegativeMonth) {
-      insights.push({
-        icon: AlertTriangle,
-        type: "warning",
-        title: "Atenção",
-        message: "Despesas acima das receitas",
-      });
-    }
-
-    if (insights.length === 0) {
-      insights.push({
-        icon: Sparkles,
-        type: "info",
-        title: "Tudo certo!",
-        message: "Finanças equilibradas",
-      });
-    }
-
-    return (
-      <div className="space-y-2">
-        {insights.slice(0, 2).map((insight, idx) => (
-          <div key={idx} className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-            <div className={`p-1 rounded-full ${insight.type === 'warning' ? 'text-orange-500 bg-orange-100' : insight.type === 'success' ? 'text-green-500 bg-green-100' : 'text-blue-500 bg-blue-100'}`}>
-              <insight.icon className="h-3 w-3" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-xs truncate">{insight.title}</p>
-              <p className="text-xs text-muted-foreground truncate">{insight.message}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  const GoalsSection = () => {
-    if (goalsLoading) {
-      return (
-        <div className="space-y-4">
-          {Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className="space-y-2">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-2 w-full rounded-full" />
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    if (goals.length === 0) {
-      return (
-        <EmptyStateCard
-          icon={<Target className="h-5 w-5" />}
-          title="Defina suas metas"
-          description="Crie metas financeiras para acompanhar seu progresso"
-          actionLabel="Criar Meta"
-          actionHref="/goals"
-          variant="compact"
-        />
-      );
-    }
-
-    return (
-      <div className="space-y-3">
-        {goals.slice(0, 3).map((goal) => {
-          const percentage = Number(goal.valor_meta) > 0 ? (Number(goal.valor_atual) / Number(goal.valor_meta)) * 100 : 0;
-          return (
-            <div key={goal.id} className="space-y-1">
-              <div className="flex justify-between items-center text-sm">
-                <span className="font-medium truncate max-w-[150px]">{goal.titulo}</span>
-                <span className="text-xs text-muted-foreground">{percentage.toFixed(0)}%</span>
-              </div>
-              <div className="w-full bg-muted rounded-full h-1.5">
-                <div className={`h-1.5 rounded-full ${percentage >= 100 ? 'bg-success' : 'bg-primary'}`} style={{ width: `${Math.min(percentage, 100)}%` }}></div>
-              </div>
-            </div>
-          );
-        })}
-        <Button variant="ghost" size="sm" className="w-full text-xs" asChild>
-          <a href="/goals">Ver todas as metas</a>
-        </Button>
-      </div>
-    );
-  };
-
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-10">
+    <div className="space-y-6 animate-in fade-in duration-500 pb-10">
 
       {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-primary">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary">
             Olá{profile?.nome ? `, ${profile.nome}` : ''}! 🌟
           </h1>
-          <p className="text-muted-foreground text-lg">
+          <p className="text-muted-foreground">
             Visão Geral Financeira
           </p>
         </div>
@@ -365,34 +168,25 @@ const Dashboard = () => {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>Personalizar Dashboard</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuCheckboxItem checked={visibleWidgets.stats} onCheckedChange={() => toggleWidget('stats')}>
-                Saldo e Resumo
+              <DropdownMenuCheckboxItem checked={visibleWidgets.financialStatus} onCheckedChange={() => toggleWidget('financialStatus')}>
+                Estado Financeiro
               </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem checked={visibleWidgets.charts} onCheckedChange={() => toggleWidget('charts')}>
-                Gráficos
+              <DropdownMenuCheckboxItem checked={visibleWidgets.moneyLocation} onCheckedChange={() => toggleWidget('moneyLocation')}>
+                Onde Está Meu Dinheiro
               </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem checked={visibleWidgets.creditCards} onCheckedChange={() => toggleWidget('creditCards')}>
-                Cartões de Crédito
+              <DropdownMenuCheckboxItem checked={visibleWidgets.monthAnalysis} onCheckedChange={() => toggleWidget('monthAnalysis')}>
+                Análise do Mês
               </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem checked={visibleWidgets.upcomingBills} onCheckedChange={() => toggleWidget('upcomingBills')}>
-                Contas a Pagar
+              <DropdownMenuCheckboxItem checked={visibleWidgets.attention} onCheckedChange={() => toggleWidget('attention')}>
+                Atenção no Mês
               </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem checked={visibleWidgets.recentTransactions} onCheckedChange={() => toggleWidget('recentTransactions')}>
-                Transações Recentes
+              <DropdownMenuCheckboxItem checked={visibleWidgets.history} onCheckedChange={() => toggleWidget('history')}>
+                Histórico
               </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem checked={visibleWidgets.quickActions} onCheckedChange={() => toggleWidget('quickActions')}>
-                Ações Rápidas
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem checked={visibleWidgets.goals} onCheckedChange={() => toggleWidget('goals')}>
-                Metas
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem checked={visibleWidgets.insights} onCheckedChange={() => toggleWidget('insights')}>
-                Insights IA
-              </DropdownMenuCheckboxItem>
+              <DropdownMenuSeparator />
               <DropdownMenuCheckboxItem checked={visibleWidgets.health} onCheckedChange={() => toggleWidget('health')}>
                 Saúde Financeira
               </DropdownMenuCheckboxItem>
-              <DropdownMenuSeparator />
               <DropdownMenuCheckboxItem checked={visibleWidgets.limits} onCheckedChange={() => toggleWidget('limits')}>
                 Avisos de Plano
               </DropdownMenuCheckboxItem>
@@ -418,138 +212,55 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* LIMITS BANNER */}
       {visibleWidgets.limits && <CollapsibleLimitsBanner />}
 
-      {/* TOP: STATS CARDS */}
-      {visibleWidgets.stats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {statsLoading ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <Card key={i} className="financial-card"><CardContent className="p-6"><Skeleton className="h-12 w-full" /></CardContent></Card>
-            ))
-          ) : (() => {
-            // Get current month name in Portuguese
-            const monthName = new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(new Date());
-            const capitalizedMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
-            
-            // Format trend with max 1 decimal
-            const formatChange = (value: number) => {
-              const formatted = Math.abs(value).toFixed(1);
-              const clean = formatted.endsWith('.0') ? formatted.slice(0, -2) : formatted;
-              return `${value >= 0 ? '+' : '-'}${clean}%`;
-            };
-            
-            return (
-              <>
-                <StatsCard 
-                  title="Saldo Total" 
-                  subtitle="Todas as contas"
-                  value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.totalBalance)} 
-                  change={formatChange(stats.trend)} 
-                  changeType={stats.trend > 0 ? "positive" : "negative"} 
-                  icon={Wallet} 
-                  trend={Math.abs(stats.trend)} 
-                />
-                <StatsCard 
-                  title="Receitas" 
-                  subtitle={capitalizedMonth}
-                  value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthlyIncome)} 
-                  change={formatChange(stats.incomeTrend)} 
-                  changeType={stats.incomeTrend >= 0 ? "positive" : "negative"} 
-                  icon={TrendingUp} 
-                  trend={Math.abs(stats.incomeTrend)} 
-                />
-                <StatsCard 
-                  title="Despesas" 
-                  subtitle={capitalizedMonth}
-                  value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthlyExpenses)} 
-                  change={formatChange(stats.expenseTrend)} 
-                  changeType={stats.expenseTrend <= 0 ? "positive" : "negative"} 
-                  icon={TrendingDown} 
-                  trend={Math.abs(stats.expenseTrend)} 
-                />
-                <StatsCard 
-                  title="Economia" 
-                  subtitle={capitalizedMonth}
-                  value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthlySavings)} 
-                  change={formatChange(stats.savingsTrend)} 
-                  changeType={stats.savingsTrend >= 0 ? "positive" : "neutral"} 
-                  icon={Target} 
-                  trend={Math.abs(stats.savingsTrend)} 
-                />
-              </>
-            );
-          })()}
-        </div>
+      {/* FINANCIAL HEALTH BANNER */}
+      <FinancialHealthBanner />
+
+      {/* SECTION 1: Estado Financeiro (Top Priority) */}
+      {visibleWidgets.financialStatus && (
+        <FinancialStatusSection
+          stats={stats}
+          loading={statsLoading}
+          currentInvoice={currentInvoice}
+          nextDueDate={nextDueDate}
+        />
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      {/* SECTION 2: Onde Está Meu Dinheiro (2-column grid) */}
+      {visibleWidgets.moneyLocation && (
+        <MoneyLocationSection
+          accounts={accounts}
+          loading={accountsLoading}
+          groupId={currentGroup?.id}
+          onUpdate={handleUpdate}
+        />
+      )}
 
-        {/* LEFT COLUMN (2/3): Main Data */}
-        <div className="lg:col-span-2 space-y-6">
-          {visibleWidgets.charts && (
-            <div className="grid grid-cols-1 gap-6">
-              <FinancialChart groupId={currentGroup?.id} />
-              <CashFlowForecast groupId={currentGroup?.id} />
-            </div>
-          )}
+      {/* SECTION 3: Análise do Mês (Charts only) */}
+      {visibleWidgets.monthAnalysis && (
+        <MonthAnalysisSection groupId={currentGroup?.id} />
+      )}
 
-          {visibleWidgets.recentTransactions && (
-            <RecentTransactions limit={10} groupId={currentGroup?.id} />
-          )}
-        </div>
-
-        {/* RIGHT COLUMN (1/3): Widgets condensados em Accordion */}
-        <div className="space-y-4">
-          {visibleWidgets.health && <FinancialHealthSection />}
-          
-          <DashboardWidgetAccordion
-            defaultOpen={['quickActions', 'creditCards']}
-            sections={[
-              ...(visibleWidgets.quickActions ? [{
-                id: 'quickActions',
-                title: 'Ações Rápidas',
-                icon: <Plus className="h-4 w-4" />,
-                content: <QuickActionsCompact />,
-              }] : []),
-              ...(visibleWidgets.creditCards ? [{
-                id: 'creditCards',
-                title: 'Meus Cartões',
-                icon: <CreditCard className="h-4 w-4" />,
-                content: <CreditCardsSection />,
-                badge: accounts.filter(a => a.tipo === 'cartao' && !a.parent_account_id).length > 0 
-                  ? accounts.filter(a => a.tipo === 'cartao' && !a.parent_account_id).length.toString() 
-                  : undefined,
-              }] : []),
-              ...(visibleWidgets.upcomingBills ? [{
-                id: 'upcomingBills',
-                title: 'Contas a Pagar',
-                icon: <Receipt className="h-4 w-4" />,
-                content: <UpcomingBillsWidget groupId={currentGroup?.id} />,
-              }] : []),
-              ...(visibleWidgets.goals ? [{
-                id: 'goals',
-                title: 'Metas',
-                icon: <Target className="h-4 w-4" />,
-                content: <GoalsSection />,
-                badge: goals.length > 0 ? goals.length.toString() : undefined,
-              }] : []),
-              ...(visibleWidgets.insights ? [{
-                id: 'insights',
-                title: 'Insights IA',
-                icon: <Bot className="h-4 w-4" />,
-                content: <AIInsightsCompact />,
-              }] : []),
-              ...(visibleWidgets.budget ? [{
-                id: 'budget',
-                title: 'Orçamento',
-                icon: <PiggyBank className="h-4 w-4" />,
-                content: <BudgetSummary month={currentMonth} groupId={currentGroup?.id} />,
-              }] : []),
-            ]}
+      {/* SECTION 4 & 5: Grid for Attention + History */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* SECTION 4: Atenção no Mês (Action Required) */}
+        {visibleWidgets.attention && (
+          <AttentionSection
+            groupId={currentGroup?.id}
+            stats={stats}
+            loading={statsLoading}
           />
-        </div>
+        )}
 
+        {/* SECTION 5: Histórico (Recent Transactions) */}
+        {visibleWidgets.history && (
+          <HistorySection
+            groupId={currentGroup?.id}
+            limit={6}
+          />
+        )}
       </div>
     </div>
   );
