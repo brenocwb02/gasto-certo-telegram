@@ -889,7 +889,9 @@ export type Database = {
           lgpd_consent_date: string | null
           lgpd_consent_version: string | null
           nome: string
+          objetivo_financeiro: string | null
           onboarding_completed: boolean
+          onboarding_step: string | null
           privacy_settings: Json | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
@@ -907,7 +909,9 @@ export type Database = {
           lgpd_consent_date?: string | null
           lgpd_consent_version?: string | null
           nome: string
+          objetivo_financeiro?: string | null
           onboarding_completed?: boolean
+          onboarding_step?: string | null
           privacy_settings?: Json | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -925,7 +929,9 @@ export type Database = {
           lgpd_consent_date?: string | null
           lgpd_consent_version?: string | null
           nome?: string
+          objetivo_financeiro?: string | null
           onboarding_completed?: boolean
+          onboarding_step?: string | null
           privacy_settings?: Json | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -1257,9 +1263,12 @@ export type Database = {
           installment_total: number | null
           observacoes: string | null
           origem: string | null
+          parcela_atual: number | null
+          parcela_id: string | null
           parent_transaction_id: string | null
           tags: string[] | null
           tipo: string
+          total_parcelas: number | null
           updated_at: string
           user_id: string
           valor: number
@@ -1280,9 +1289,12 @@ export type Database = {
           installment_total?: number | null
           observacoes?: string | null
           origem?: string | null
+          parcela_atual?: number | null
+          parcela_id?: string | null
           parent_transaction_id?: string | null
           tags?: string[] | null
           tipo: string
+          total_parcelas?: number | null
           updated_at?: string
           user_id: string
           valor: number
@@ -1303,9 +1315,12 @@ export type Database = {
           installment_total?: number | null
           observacoes?: string | null
           origem?: string | null
+          parcela_atual?: number | null
+          parcela_id?: string | null
           parent_transaction_id?: string | null
           tags?: string[] | null
           tipo?: string
+          total_parcelas?: number | null
           updated_at?: string
           user_id?: string
           valor?: number
@@ -1374,7 +1389,33 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      cron_job_status: {
+        Row: {
+          active: boolean | null
+          command: string | null
+          jobid: number | null
+          jobname: string | null
+          nodename: string | null
+          schedule: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          command?: string | null
+          jobid?: number | null
+          jobname?: string | null
+          nodename?: string | null
+          schedule?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          command?: string | null
+          jobid?: number | null
+          jobname?: string | null
+          nodename?: string | null
+          schedule?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       accept_family_invite:

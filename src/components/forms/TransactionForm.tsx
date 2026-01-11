@@ -302,6 +302,9 @@ export function TransactionForm({ onSuccess, onCancel, onRefetch, mode = 'create
             installment_total: 1,
             parent_transaction_id: null,
             group_id: null,
+            parcela_atual: null,
+            parcela_id: null,
+            total_parcelas: null,
           });
 
           // 2. If recurring, create the rule
