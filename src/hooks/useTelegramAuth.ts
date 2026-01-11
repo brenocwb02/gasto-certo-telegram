@@ -25,14 +25,34 @@ export function useTelegramAuth() {
     useEffect(() => {
         // Check if running in Telegram
         const tg = window.Telegram?.WebApp;
-        if (tg?.initData) {
-            setIsTelegram(true);
-            tg.ready();
-            tg.expand();
 
-            // If not logged in, attempt transparent login
-            if (!session) {
-                attemptTelegramLogin(tg.initData);
+        console.log("🔍 [TMA Debug] Checking Telegram WebApp...", tg);
+
+        if (tg) {
+            if (tg.initData) {
+                console.log("✅ [TMA Debug] initData found!", tg.initData.substring(0, 20) + "...");
+
+                setIsTelegram(true);
+                tg.ready();
+                tg.expand();
+
+                toast({
+                    title: "🔄 Conectando com Telegram...",
+                    description: "Aguarde enquanto validamos suas credenciais.",
+                    duration: 3000,
+                });
+
+                // If not logged in, attempt transparent login
+                if (!session) {
+                    attemptTelegramLogin(tg.initData);
+                } else {
+                    console.log("ℹ️ [TMA Debug] Already logged in via session.");
+                }
+            } else {
+                console.warn("⚠️ [TMA Debug] Telegram WebApp detected but initData is empty.");
+                // Only toast if we are sure it's a TMA context (some browsers might expose window.Telegram?)
+                // Usually safe to ignore if empty, but for debugging user issue:
+                // toast({ title: "Debug", description: "Telegram detetado mas sem dados.", variant: "destructive" });
             }
         }
     }, [session]);
