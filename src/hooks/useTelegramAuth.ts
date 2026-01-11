@@ -71,18 +71,25 @@ export function useTelegramAuth() {
             if (authError) throw authError;
 
             toast({
-                title: "Bem-vindo de volta!",
-                description: "Login automático via Telegram realizado com sucesso.",
+                title: "Login realizado! 🚀",
+                description: "Bem-vindo de volta ao Boas Contas.",
+                duration: 3000,
             });
 
         } catch (error: any) {
             console.error('❌ Erro no login Telegram:', error);
-            // Optional: Show error only if it's not a "user not found" scenario which might be common
-            // toast({
-            //   variant: "destructive",
-            //   title: "Falha na autenticação automática",
-            //   description: error.message
-            // });
+
+            let message = "Não foi possível fazer login automático.";
+            if (error.message?.includes('User not linked')) {
+                message = "Este Telegram não está vinculado a uma conta. Faça login com email para conectar.";
+            }
+
+            toast({
+                variant: "destructive",
+                title: "Atenção",
+                description: message,
+                duration: 5000,
+            });
         }
     };
 
