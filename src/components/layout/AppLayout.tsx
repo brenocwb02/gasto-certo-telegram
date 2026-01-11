@@ -2,6 +2,7 @@ import React, { useState, Suspense } from 'react';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { BottomNav } from './BottomNav';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -53,11 +54,13 @@ export function AppLayout({ children }: AppLayoutProps) {
           }`}
       >
         <Header onMenuClick={() => setSidebarOpen(true)} />
-        <main className="flex-1 p-6 space-y-6 animate-fade-in">
+        <main className="flex-1 p-6 space-y-6 animate-fade-in pb-24">
           <Suspense fallback={<LayoutLoader />}>
             {children}
           </Suspense>
         </main>
+
+        <BottomNav />
       </div>
     </div>
   );
