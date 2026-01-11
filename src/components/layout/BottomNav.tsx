@@ -69,7 +69,7 @@ export function BottomNav() {
                     </SheetTrigger>
                     <SheetContent side="left" className="p-0 w-[80vw]">
                         <Sidebar
-                            className="flex static h-full border-r-0"
+                            className="flex static h-full border-r-0 tma-force-show"
                             onClose={() => { }} // No-op
                             isExpanded={true}
                         />
