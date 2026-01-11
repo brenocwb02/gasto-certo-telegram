@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardCard, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/dashboard/DashboardCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -56,7 +56,7 @@ const Settings = () => {
       <div className="space-y-6">
 
         {/* Profile Information */}
-        <Card className="financial-card shadow-sm">
+        <DashboardCard className="financial-card shadow-sm">
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-xl">
               <div className="p-2 rounded-lg bg-primary/10">
@@ -93,10 +93,10 @@ const Settings = () => {
               </div>
             )}
           </CardContent>
-        </Card>
+        </DashboardCard>
 
         {/* Subscription Information */}
-        <Card className="financial-card shadow-sm">
+        <DashboardCard className="financial-card shadow-sm">
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-xl">
               <div className="p-2 rounded-lg bg-success/10">
@@ -168,10 +168,10 @@ const Settings = () => {
               </div>
             )}
           </CardContent>
-        </Card>
+        </DashboardCard>
 
         {/* Telegram Integration */}
-        <Card className="financial-card shadow-sm">
+        <DashboardCard className="financial-card shadow-sm">
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-xl">
               <div className="p-2 rounded-lg bg-blue-500/10">
@@ -244,10 +244,10 @@ const Settings = () => {
               </div>
             </div>
           </CardContent>
-        </Card>
+        </DashboardCard>
 
         {/* Bot Commands */}
-        <Card className="financial-card shadow-sm">
+        <DashboardCard className="financial-card shadow-sm">
           <CardHeader className="pb-4">
             <CardTitle className="text-xl">Comandos do Bot</CardTitle>
             <CardDescription className="text-base">
@@ -302,13 +302,13 @@ const Settings = () => {
               </div>
             </div>
           </CardContent>
-        </Card>
+        </DashboardCard>
 
         {/* Notification Settings */}
         <NotificationSettings />
 
         {/* Help & Support */}
-        <Card className="financial-card shadow-sm">
+        <DashboardCard className="financial-card shadow-sm">
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-xl">
               <div className="p-2 rounded-lg bg-amber-500/10">
@@ -350,7 +350,7 @@ const Settings = () => {
               </Button>
             </div>
           </CardContent>
-        </Card>
+        </DashboardCard>
       </div>
     </>
   );

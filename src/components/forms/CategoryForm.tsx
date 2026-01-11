@@ -201,7 +201,7 @@ export function CategoryForm({ category, parentCategories = [], onSuccess, group
           render={({ field }) => (
             <FormItem>
               <FormLabel>Tipo</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o tipo" />
@@ -252,11 +252,16 @@ export function CategoryForm({ category, parentCategories = [], onSuccess, group
             return (
               <FormItem>
                 <FormLabel>Ícone</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione um ícone">
-                        {selectedIcon && `${selectedIcon.emoji} ${selectedIcon.label}`}
+                        {selectedIcon ? (
+                          <span className="flex items-center gap-2">
+                            <span className="text-lg">{selectedIcon.emoji}</span>
+                            <span>{selectedIcon.label}</span>
+                          </span>
+                        ) : "Selecione um ícone"}
                       </SelectValue>
                     </SelectTrigger>
                   </FormControl>

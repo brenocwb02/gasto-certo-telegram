@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { Card, CardContent } from "@/components/ui/card";
+import { DashboardCard, CardContent } from "@/components/dashboard/DashboardCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,7 +25,7 @@ import {
   XCircle,
   AlertCircle,
   RefreshCw,
-  
+
   Users
 } from "lucide-react";
 import { useRecurringTransactions } from "@/hooks/useRecurringTransactions";
@@ -53,11 +53,11 @@ export default function RecurringTransactions() {
     getFrequencyLabel,
     isDueSoon,
     isOverdue
-  } = useRecurringTransactions(); void(getRecurringStats); void(generationLogs);
+  } = useRecurringTransactions(); void (getRecurringStats); void (generationLogs);
 
   // Estados para modais
   const [showCreateRecurring, setShowCreateRecurring] = useState(false);
-  const [, setShowStats] = useState(false); void(setShowStats);
+  const [, setShowStats] = useState(false); void (setShowStats);
 
   // Estados para formulário
   const [formData, setFormData] = useState({
@@ -415,7 +415,7 @@ export default function RecurringTransactions() {
       )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-        <Card>
+        <DashboardCard>
           <CardContent className="p-4 flex flex-col justify-between h-full">
             <div className="flex items-center justify-between space-y-0 pb-2">
               <span className="text-sm font-medium text-muted-foreground">Total Recorrências</span>
@@ -423,9 +423,9 @@ export default function RecurringTransactions() {
             </div>
             <div className="text-2xl font-bold">{stats.total}</div>
           </CardContent>
-        </Card>
+        </DashboardCard>
 
-        <Card>
+        <DashboardCard>
           <CardContent className="p-4 flex flex-col justify-between h-full">
             <div className="flex items-center justify-between space-y-0 pb-2">
               <span className="text-sm font-medium text-muted-foreground">Ativas vs Pausadas</span>
@@ -439,9 +439,9 @@ export default function RecurringTransactions() {
               <span className="text-sm text-muted-foreground">/ {stats.paused}</span>
             </div>
           </CardContent>
-        </Card>
+        </DashboardCard>
 
-        <Card>
+        <DashboardCard>
           <CardContent className="p-4 flex flex-col justify-between h-full">
             <div className="flex items-center justify-between space-y-0 pb-2">
               <span className="text-sm font-medium text-muted-foreground">Custo Mensal Estimado</span>
@@ -451,10 +451,10 @@ export default function RecurringTransactions() {
               R$ {Math.abs(stats.totalAmount).toFixed(2)}
             </div>
           </CardContent>
-        </Card>
+        </DashboardCard>
 
         {stats.nextDue ? (
-          <Card className="border-l-4 border-l-primary">
+          <DashboardCard className="border-l-4 border-l-primary">
             <CardContent className="p-4 flex flex-col justify-between h-full">
               <div className="flex items-center justify-between space-y-0 pb-2">
                 <span className="text-sm font-medium text-muted-foreground">Próximo Vencimento</span>
@@ -467,9 +467,9 @@ export default function RecurringTransactions() {
                 </div>
               </div>
             </CardContent>
-          </Card>
+          </DashboardCard>
         ) : (
-          <Card>
+          <DashboardCard>
             <CardContent className="p-4 flex flex-col justify-between h-full">
               <div className="flex items-center justify-between space-y-0 pb-2">
                 <span className="text-sm font-medium text-muted-foreground">Próximo Vencimento</span>
@@ -477,7 +477,7 @@ export default function RecurringTransactions() {
               </div>
               <div className="text-sm text-muted-foreground">Nenhuma previsão</div>
             </CardContent>
-          </Card>
+          </DashboardCard>
         )}
       </div>
 
@@ -489,7 +489,7 @@ export default function RecurringTransactions() {
 
         <TabsContent value="transactions" className="space-y-4">
           {recurringTransactions.length === 0 ? (
-            <Card>
+            <DashboardCard>
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <Repeat className="h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="text-lg font-semibold mb-2">Nenhuma transação recorrente encontrada</h3>
@@ -501,11 +501,11 @@ export default function RecurringTransactions() {
                   Criar Primeira Recorrência
                 </Button>
               </CardContent>
-            </Card>
+            </DashboardCard>
           ) : (
             <div className="grid gap-4">
               {recurringTransactions.map((transaction) => (
-                <Card key={transaction.id}>
+                <DashboardCard key={transaction.id}>
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
@@ -597,7 +597,7 @@ export default function RecurringTransactions() {
                       </div>
                     </div>
                   </CardContent>
-                </Card>
+                </DashboardCard>
               ))}
             </div>
           )}
@@ -606,7 +606,7 @@ export default function RecurringTransactions() {
         <TabsContent value="logs" className="space-y-4">
           <div className="grid gap-4">
             {generationLogs.map((log) => (
-              <Card key={log.id}>
+              <DashboardCard key={log.id}>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -649,16 +649,16 @@ export default function RecurringTransactions() {
                     </div>
                   </div>
                 </CardContent>
-              </Card>
+              </DashboardCard>
             ))}
 
             {generationLogs.length === 0 && (
-              <Card>
+              <DashboardCard>
                 <CardContent className="flex flex-col items-center justify-center py-8">
                   <Clock className="h-8 w-8 text-muted-foreground mb-2" />
                   <p className="text-muted-foreground">Nenhum log de geração encontrado</p>
                 </CardContent>
-              </Card>
+              </DashboardCard>
             )}
           </div>
         </TabsContent>

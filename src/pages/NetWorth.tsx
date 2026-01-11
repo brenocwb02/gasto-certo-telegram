@@ -4,10 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNetWorth } from '@/hooks/useNetWorth';
+import { useNetWorthHistory } from '@/hooks/useNetWorthHistory';
+import { NetWorthChart } from '@/components/dashboard/NetWorthChart';
 import { Progress } from '@/components/ui/progress';
 
 export default function NetWorth() {
   const { data, loading, refetch } = useNetWorth();
+  const { history: netWorthHistory, loading: historyLoading } = useNetWorthHistory();
 
   return (
 
@@ -57,6 +60,9 @@ export default function NetWorth() {
           )}
         </CardContent>
       </Card>
+
+      {/* Evolution Chart */}
+      <NetWorthChart data={netWorthHistory} loading={historyLoading} />
 
       {/* Breakdown do Patrimônio */}
       {data && (

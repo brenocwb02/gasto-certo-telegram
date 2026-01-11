@@ -10,22 +10,37 @@
     --background: 240 10% 98%;
     --foreground: 224 15% 12%;
 
-    /* Fintech Brand Colors */
-    --primary: 213 74% 15%;
+    /* Brand Colors (From Logo) */
+    --brand-navy: 215 65% 20%;
+    /* Deep Blue "B" */
+    --brand-green: 142 70% 50%;
+    /* Vibrant Green Check/Bg */
+
+    /* Primary now reflects the Brand Navy */
+    --primary: 215 65% 20%;
     --primary-foreground: 0 0% 98%;
-    --primary-light: 213 74% 25%;
-    --primary-glow: 213 74% 85%;
+    --primary-light: 215 65% 30%;
+    --primary-glow: 215 65% 85%;
 
-    /* Financial Success Colors (New Boas Contas Green) */
-    --success: 145 63% 49%;
+    /* Financial Brand Colors (Boas Contas V2) */
+    --income: 217 91% 60%;
+    /* Blue 500 */
+    --income-foreground: 0 0% 98%;
+
+    --expense: 343 88% 66%;
+    /* Rose 500 */
+    --expense-foreground: 0 0% 98%;
+
+    --balance: 158 64% 52%;
+    /* Emerald 500 */
+    --balance-foreground: 0 0% 98%;
+
+    /* Legacy Mappings (soft deprecation) */
+    --success: 158 64% 52%;
     --success-foreground: 0 0% 98%;
-    --success-light: 145 63% 59%;
 
-    /* Warning & Expense Colors */
     --warning: 45 93% 58%;
     --warning-foreground: 0 0% 98%;
-    --expense: 0 84% 60%;
-    --expense-foreground: 0 0% 98%;
 
     /* Card & Surface Colors */
     --card: 0 0% 100%;
@@ -76,18 +91,15 @@
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-fast: all 0.15s ease-out;
 
-    /* Sidebar */
-    --sidebar-background: 224 15% 97%;
-    --sidebar-foreground: 224 15% 12%;
-    --sidebar-primary: 213 74% 15%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 224 12% 95%;
-    --sidebar-accent-foreground: 224 15% 12%;
-    --sidebar-border: 224 12% 88%;
-    --sidebar-ring: 213 74% 15%;
+    /* Sidebar Adaptive Colors */
+    --sidebar-background: 215 65% 20%;
+    /* Brand Navy (Light Mode default) */
+    --sidebar-foreground: 0 0% 100%;
   }
 
   .dark {
+    /* ... existing dark overrides ... */
+
     /* Dark Mode - Professional Fintech Theme */
     --background: 224 15% 6%;
     --foreground: 224 5% 96%;
@@ -99,20 +111,20 @@
     --primary-glow: 224 64% 25%;
 
     /* Cards & Surfaces */
-    --card: 224 15% 9%;
+    --card: 224 15% 8%;
     --card-foreground: 224 5% 96%;
     --card-hover: 224 15% 12%;
 
     /* Interactive */
-    --popover: 224 15% 9%;
+    --popover: 224 15% 8%;
     --popover-foreground: 224 5% 96%;
 
     /* Secondary & Muted */
-    --secondary: 224 12% 15%;
+    --secondary: 224 12% 16%;
     --secondary-foreground: 224 5% 96%;
 
-    --muted: 224 12% 15%;
-    --muted-foreground: 224 5% 65%;
+    --muted: 224 12% 16%;
+    --muted-foreground: 224 5% 60%;
 
     /* Accent */
     --accent: 224 64% 58%;
@@ -129,7 +141,7 @@
     --ring: 224 64% 58%;
 
     /* Sidebar Dark */
-    --sidebar-background: 224 15% 8%;
+    --sidebar-background: 215 35% 13%;
     --sidebar-foreground: 224 5% 96%;
     --sidebar-primary: 224 64% 58%;
     --sidebar-primary-foreground: 224 15% 6%;

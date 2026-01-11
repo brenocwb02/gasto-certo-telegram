@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardCard, CardContent, CardHeader, CardTitle } from "./DashboardCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,7 +18,7 @@ export const BudgetSummary = ({ month, groupId }: BudgetSummaryProps) => {
 
   if (loading) {
     return (
-      <Card className="financial-card">
+      <DashboardCard className="h-full flex flex-col">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calculator className="h-5 w-5 text-primary" />
@@ -37,13 +37,13 @@ export const BudgetSummary = ({ month, groupId }: BudgetSummaryProps) => {
             </div>
           ))}
         </CardContent>
-      </Card>
+      </DashboardCard>
     );
   }
 
   if (budgets.length === 0) {
     return (
-      <Card className="financial-card">
+      <DashboardCard className="h-full flex flex-col">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calculator className="h-5 w-5 text-primary" />
@@ -62,14 +62,14 @@ export const BudgetSummary = ({ month, groupId }: BudgetSummaryProps) => {
             </Button>
           </NavLink>
         </CardContent>
-      </Card>
+      </DashboardCard>
     );
   }
 
   const topBudgets = budgets.slice(0, 4);
 
   return (
-    <Card className="financial-card h-full flex flex-col">
+    <DashboardCard className="h-full flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
         <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
           <Calculator className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
@@ -130,6 +130,6 @@ export const BudgetSummary = ({ month, groupId }: BudgetSummaryProps) => {
           );
         })}
       </CardContent>
-    </Card>
+    </DashboardCard>
   );
 };

@@ -77,7 +77,11 @@ export function TransactionItem({
     const installmentInfo = parseInstallment(transaction.descricao || '');
 
     return (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-border hover:bg-card-hover transition-colors group gap-3 relative">
+        <div
+            className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-border hover:bg-card-hover transition-colors group gap-3 relative cursor-pointer"
+            role="button"
+            onClick={() => onEdit(transaction)}
+        >
             {/* Mobile Top Row / Desktop Left Side */}
             <div className="flex items-center gap-3 w-full sm:w-auto">
                 <div className="p-2 rounded-lg bg-muted shrink-0">
@@ -109,11 +113,7 @@ export function TransactionItem({
                         </span>
                     </div>
 
-                    {/* Desktop: Tags below description (existing behavior) or keep cleaner? 
-              Let's keep the existing behavior for desktop but hidden on mobile in this specific div 
-              actually let's render it conditionally based on breakpoints if needed, 
-              but flex-wrap works well.
-          */}
+                    {/* Desktop: Tags below description (existing behavior) */}
                     <div className="hidden sm:flex items-center gap-2 mt-1">
                         {!transaction.efetivada && (
                             <Badge variant="outline" className="text-yellow-600 border-yellow-600 text-[10px] h-5 px-1.5 gap-1">
@@ -136,25 +136,12 @@ export function TransactionItem({
                         </span>
                     </div>
                 </div>
-
-                {/* Mobile: Value & Date absolute properly or just flex'd?
-            Let's use a flex row for the mobile top part if we want value next to description?
-            No, the plan is 2-3 rows.
-            Let's stick to the request: "Icon | Desc | Tags | Value" on desktop.
-            On Mobile:
-            Row 1: Icon + Desc + Menu
-            Row 2: Tags + Value/Date?
-        */}
             </div>
 
             {/* Right Side / Mobile Bottom Row */}
             <div className="flex sm:items-center justify-between sm:justify-end gap-3 w-full sm:w-auto mt-1 sm:mt-0 pl-[44px] sm:pl-0">
-                {/* Mobile: Tags were handled above.
-             Here we handle Value and Date.
-         */}
                 <div className="flex flex-col sm:items-end w-full sm:w-auto">
                     <div className="flex items-center justify-between sm:justify-end w-full">
-                        {/* Mobile: Account Name if we didn't put it up top? No, let's keep it clean. */}
                         <p
                             className={cn(
                                 "font-semibold text-sm sm:text-base ml-auto sm:ml-0",
@@ -202,7 +189,7 @@ export function TransactionItem({
                 </div>
 
                 {/* Actions Menu */}
-                <div className="absolute top-3 right-3 sm:relative sm:top-auto sm:right-auto">
+                <div className="absolute top-3 right-3 sm:relative sm:top-auto sm:right-auto" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button

@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardCard, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/dashboard/DashboardCard";
+import { InteractiveSummaryCard } from "@/components/dashboard/InteractiveSummaryCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
 import { Calendar, TrendingUp, TrendingDown, DollarSign, Activity, ArrowUpRight, ArrowDownRight, PiggyBank, AlertTriangle, ChevronRight, X, Download, Users } from "lucide-react";
@@ -460,91 +461,52 @@ const Reports = () => {
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Receitas</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(summaryStats.receitas)}
-            </div>
-            {summaryStats.prevReceitas > 0 && (
-              <div className={`flex items-center text-xs mt-1 ${summaryStats.variacaoReceitas >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                {summaryStats.variacaoReceitas >= 0 ? <ArrowUpRight className="h-3 w-3 mr-1" /> : <ArrowDownRight className="h-3 w-3 mr-1" />}
-                {Math.abs(summaryStats.variacaoReceitas).toFixed(1)}% vs período anterior
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <InteractiveSummaryCard
+          title="Total de Receitas"
+          value={summaryStats.receitas}
+          icon={TrendingUp}
+          trend={summaryStats.variacaoReceitas}
+          trendLabel="vs período anterior"
+          variant="success"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Despesas</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {formatCurrency(summaryStats.despesas)}
-            </div>
-            {summaryStats.prevDespesas > 0 && (
-              <div className={`flex items-center text-xs mt-1 ${summaryStats.variacaoDespesas <= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                {summaryStats.variacaoDespesas >= 0 ? <ArrowUpRight className="h-3 w-3 mr-1" /> : <ArrowDownRight className="h-3 w-3 mr-1" />}
-                {Math.abs(summaryStats.variacaoDespesas).toFixed(1)}% vs período anterior
-                {summaryStats.variacaoDespesas > 10 && <AlertTriangle className="h-3 w-3 ml-1 text-orange-500" />}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <InteractiveSummaryCard
+          title="Total de Despesas"
+          value={summaryStats.despesas}
+          icon={TrendingDown}
+          trend={summaryStats.variacaoDespesas}
+          trendLabel="vs período anterior"
+          variant="danger"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saldo do Período</CardTitle>
-            <DollarSign className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${summaryStats.saldo >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {formatCurrency(summaryStats.saldo)}
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              Receitas - Despesas
-            </div>
-          </CardContent>
-        </Card>
+        <InteractiveSummaryCard
+          title="Saldo do Período"
+          value={summaryStats.saldo}
+          icon={DollarSign}
+          trend={summaryStats.variacaoSaldo}
+          trendLabel="vs período anterior"
+          variant="blue"
+        />
 
-        <Card className={summaryStats.taxaPoupanca >= 20 ? 'border-green-200 bg-green-50/50 dark:bg-green-950/20' : summaryStats.taxaPoupanca < 0 ? 'border-red-200 bg-red-50/50 dark:bg-red-950/20' : ''}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Taxa de Poupança</CardTitle>
-            <PiggyBank className={`h-4 w-4 ${summaryStats.taxaPoupanca >= 20 ? 'text-green-600' : summaryStats.taxaPoupanca < 0 ? 'text-red-500' : 'text-muted-foreground'}`} />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${summaryStats.taxaPoupanca >= 20 ? 'text-green-600' : summaryStats.taxaPoupanca < 0 ? 'text-red-500' : 'text-foreground'}`}>
-              {summaryStats.taxaPoupanca.toFixed(1)}%
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {summaryStats.taxaPoupanca >= 20 ? '✅ Meta atingida (≥20%)' : summaryStats.taxaPoupanca >= 10 ? '🟡 Quase lá (meta: 20%)' : summaryStats.taxaPoupanca >= 0 ? '⚠️ Abaixo da meta' : '🔴 Gastando mais que ganha'}
-            </div>
-          </CardContent>
-        </Card>
+        <InteractiveSummaryCard
+          title="Taxa de Poupança"
+          value={`${summaryStats.taxaPoupanca.toFixed(1)}%`}
+          icon={PiggyBank}
+          variant={summaryStats.taxaPoupanca >= 20 ? 'success' : summaryStats.taxaPoupanca >= 0 ? 'warning' : 'danger'}
+          trendLabel={summaryStats.taxaPoupanca >= 20 ? 'Meta atingida!' : 'Abaixo da meta'}
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Transações</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {summaryStats.totalTransactions}
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              no período selecionado
-            </div>
-          </CardContent>
-        </Card>
-      </div >
+        <InteractiveSummaryCard
+          title="Transações"
+          value={summaryStats.totalTransactions}
+          icon={Activity}
+          variant="default"
+          trendLabel="no período selecionado"
+        />
+      </div>
 
       {/* DRE Simplificado */}
-      < Card >
+      <DashboardCard>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <DollarSign className="h-5 w-5" />
@@ -553,57 +515,57 @@ const Reports = () => {
           <CardDescription>Demonstrativo de Resultado do Período</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center py-2 border-b">
+          <div className="space-y-2">
+            <div className="flex justify-between items-center py-1 border-b">
               <span className="font-medium text-green-600">RECEITAS TOTAIS</span>
               <span className="font-bold text-lg text-green-600">{formatCurrency(summaryStats.receitas)}</span>
             </div>
-            <div className="flex justify-between items-center py-2 border-b text-red-500">
+            <div className="flex justify-between items-center py-1 border-b text-red-500">
               <span className="font-medium">(-) Despesas Totais</span>
               <span className="font-bold text-lg">{formatCurrency(summaryStats.despesas)}</span>
             </div>
-            <div className="flex justify-between items-center py-3 bg-muted/50 rounded-lg px-3 -mx-3">
+            <div className="flex justify-between items-center py-2 bg-muted/50 rounded-lg px-3 -mx-3">
               <span className="font-bold text-lg">= RESULTADO DO PERÍODO</span>
               <span className={`font-bold text-2xl ${summaryStats.saldo >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {formatCurrency(summaryStats.saldo)}
               </span>
             </div>
             <div className="grid grid-cols-2 gap-4 pt-2">
-              <div className="text-center p-3 bg-muted/30 rounded-lg">
+              <div className="text-center p-2 bg-muted/30 rounded-lg">
                 <div className="text-sm text-muted-foreground">Taxa de Poupança</div>
                 <div className={`text-xl font-bold ${summaryStats.taxaPoupanca >= 20 ? 'text-green-600' : summaryStats.taxaPoupanca >= 0 ? 'text-yellow-600' : 'text-red-500'}`}>
                   {summaryStats.taxaPoupanca.toFixed(1)}%
                 </div>
               </div>
-              <div className="text-center p-3 bg-muted/30 rounded-lg">
+              <div className="text-center p-2 bg-muted/30 rounded-lg">
                 <div className="text-sm text-muted-foreground">Meta Recomendada</div>
                 <div className="text-xl font-bold text-muted-foreground">20%</div>
               </div>
             </div>
           </div>
         </CardContent>
-      </Card >
+      </DashboardCard>
 
       {
         loading ? (
           <div className="grid gap-6 md:grid-cols-2" >
             {
               [1, 2].map((i) => (
-                <Card key={i} className="animate-pulse">
+                <DashboardCard key={i} className="animate-pulse">
                   <CardHeader>
                     <div className="h-4 bg-muted rounded w-1/3"></div>
                   </CardHeader>
                   <CardContent>
                     <div className="h-64 bg-muted rounded"></div>
                   </CardContent>
-                </Card>
+                </DashboardCard>
               ))
             }
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2">
             {/* Monthly Trend Chart */}
-            <Card className="md:col-span-2">
+            <DashboardCard className="md:col-span-2">
               <CardHeader>
                 <CardTitle>Tendência Mensal</CardTitle>
                 <CardDescription>Receitas e despesas ao longo do tempo</CardDescription>
@@ -640,10 +602,10 @@ const Reports = () => {
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>
-            </Card>
+            </DashboardCard>
 
             {/* Category Distribution (Main View) */}
-            <Card className="md:col-span-2">
+            <DashboardCard className="md:col-span-2">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   Despesas por Categoria
@@ -662,7 +624,7 @@ const Reports = () => {
                           data={categoryData}
                           cx="50%"
                           cy="50%"
-                          innerRadius={60}
+                          innerRadius={75}
                           outerRadius={90}
                           paddingAngle={2}
                           dataKey="value"
@@ -753,11 +715,11 @@ const Reports = () => {
                   </div>
                 </div>
               </CardContent>
-            </Card>
+            </DashboardCard>
 
             {/* Subcategory Drill-Down (Duplicate Panel Restored) */}
             {selectedCategory && (
-              <Card className="md:col-span-2 animate-in fade-in slide-in-from-top-4 border-l-4" style={{ borderLeftColor: selectedCategory.color }}>
+              <DashboardCard className="md:col-span-2 animate-in fade-in slide-in-from-top-4 border-l-4" style={{ borderLeftColor: selectedCategory.color }}>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <div className="space-y-1">
                     <CardTitle className="text-lg font-semibold flex items-center gap-2">
@@ -791,12 +753,12 @@ const Reports = () => {
                     )}
                   </div>
                 </CardContent>
-              </Card>
+              </DashboardCard>
             )}
 
             {/* Gastos por Membro da Família */}
             {getMemberSpendingData.length > 0 && members.length > 1 && (
-              <Card className="md:col-span-2">
+              <DashboardCard className="md:col-span-2">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Users className="h-5 w-5 text-primary" />
@@ -815,7 +777,7 @@ const Reports = () => {
                             data={getMemberSpendingData}
                             cx="50%"
                             cy="50%"
-                            innerRadius={50}
+                            innerRadius={65}
                             outerRadius={80}
                             paddingAngle={3}
                             dataKey="value"
@@ -876,13 +838,13 @@ const Reports = () => {
                     </div>
                   </div>
                 </CardContent>
-              </Card>
+              </DashboardCard>
             )}
 
 
 
             {/* Monthly Comparison Bar Chart */}
-            <Card className="md:col-span-2">
+            <DashboardCard className="md:col-span-2">
               <CardHeader>
                 <CardTitle>Comparativo Mensal</CardTitle>
                 <CardDescription>Receitas vs Despesas por mês</CardDescription>
@@ -907,13 +869,13 @@ const Reports = () => {
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
-            </Card>
+            </DashboardCard>
           </div>
         )}
 
       {
         !loading && monthlyData.length === 0 && (
-          <Card className="text-center py-12">
+          <DashboardCard className="text-center py-12">
             <CardContent>
               <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">Nenhum dado encontrado</h3>
@@ -921,7 +883,7 @@ const Reports = () => {
                 Não há transações no período selecionado.
               </p>
             </CardContent>
-          </Card>
+          </DashboardCard>
         )
       }
     </>

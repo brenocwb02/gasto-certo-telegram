@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardCard, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/dashboard/DashboardCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -521,7 +521,7 @@ export default function FamilySettings() {
       )}
 
       {!hasGroup ? (
-        <Card>
+        <DashboardCard>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Users className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">Nenhum grupo familiar encontrado</h3>
@@ -529,7 +529,7 @@ export default function FamilySettings() {
               Crie um grupo familiar ou aceite um convite para começar a compartilhar suas finanças.
             </p>
           </CardContent>
-        </Card>
+        </DashboardCard>
       ) : (
         <Tabs defaultValue="members" className="space-y-4">
           <TabsList>
@@ -598,7 +598,7 @@ export default function FamilySettings() {
 
                 <div className="grid gap-4">
                   {members.map((member) => (
-                    <Card key={member.id}>
+                    <DashboardCard key={member.id}>
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
@@ -651,13 +651,13 @@ export default function FamilySettings() {
                           )}
                         </div>
                       </CardContent>
-                    </Card>
+                    </DashboardCard>
                   ))}
                 </div>
 
                 {/* !! NOVA ZONA DE PERIGO ADICIONADA !! */}
                 {isGroupOwner(currentGroup.id) && (
-                  <Card className="border-destructive mt-6">
+                  <DashboardCard className="border-destructive mt-6">
                     <CardHeader>
                       <CardTitle className="text-destructive">Zona de Perigo</CardTitle>
                       <CardDescription>
@@ -720,12 +720,12 @@ export default function FamilySettings() {
                         </DialogContent>
                       </Dialog>
                     </CardContent>
-                  </Card>
+                  </DashboardCard>
                 )}
 
               </div>
             ) : (
-              <Card>
+              <DashboardCard>
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <Users className="h-12 w-12 text-muted-foreground mb-4" />
                   <h3 className="text-lg font-semibold mb-2">Nenhum grupo selecionado</h3>
@@ -733,7 +733,7 @@ export default function FamilySettings() {
                     Ocorreu um erro ao carregar o seu grupo.
                   </p>
                 </CardContent>
-              </Card>
+              </DashboardCard>
             )}
           </TabsContent>
 
@@ -746,7 +746,7 @@ export default function FamilySettings() {
 
                 <div className="grid gap-4">
                   {invites.map((invite) => (
-                    <Card key={invite.id}>
+                    <DashboardCard key={invite.id}>
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
@@ -781,21 +781,21 @@ export default function FamilySettings() {
                           )}
                         </div>
                       </CardContent>
-                    </Card>
+                    </DashboardCard>
                   ))}
 
                   {invites.length === 0 && (
-                    <Card>
+                    <DashboardCard>
                       <CardContent className="flex flex-col items-center justify-center py-8">
                         <Mail className="h-8 w-8 text-muted-foreground mb-2" />
                         <p className="text-muted-foreground">Nenhum convite pendente</p>
                       </CardContent>
-                    </Card>
+                    </DashboardCard>
                   )}
                 </div>
               </div>
             ) : (
-              <Card>
+              <DashboardCard>
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <Mail className="h-12 w-12 text-muted-foreground mb-4" />
                   <h3 className="text-lg font-semibold mb-2">Nenhum grupo selecionado</h3>
@@ -803,7 +803,7 @@ export default function FamilySettings() {
                     Ocorreu um erro ao carregar os convites do grupo.
                   </p>
                 </CardContent>
-              </Card>
+              </DashboardCard>
             )}
           </TabsContent>
         </Tabs>

@@ -75,8 +75,10 @@ export function Sidebar({ className, onClose, isExpanded = false, onToggle }: Si
       end={item.end}
       className={({ isActive }) =>
         cn(
-          "flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-foreground",
-          isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground",
+          "flex items-center gap-3 rounded-lg px-3 py-2 transition-all",
+          isActive
+            ? "bg-brand-green text-white font-medium shadow-md"
+            : "text-white/70 hover:text-white hover:bg-white/10",
           isExpanded ? "justify-start w-full" : "justify-center h-9 w-9 p-0 md:h-8 md:w-8"
         )
       }
@@ -99,25 +101,29 @@ export function Sidebar({ className, onClose, isExpanded = false, onToggle }: Si
   return (
     <aside
       className={cn(
-        "fixed inset-y-0 left-0 z-10 flex flex-col border-r bg-background transition-all duration-300",
+        "fixed inset-y-0 left-0 z-10 flex flex-col bg-sidebar transition-all duration-300 text-sidebar-foreground shadow-xl",
         isExpanded ? "w-64" : "w-14",
         className
       )}
     >
       {/* Header / Logo */}
-      <div className={cn("flex items-center h-14 border-b px-3", isExpanded ? "justify-between" : "justify-center")}>
+      <div className={cn("flex items-center h-14 px-3 mb-2", isExpanded ? "justify-between" : "justify-center")}>
         <NavLink
           to="/"
           onClick={handleLinkClick}
           className={cn(
-            "group flex items-center justify-center gap-2 rounded-lg transition-all",
+            "group flex items-center justify-center gap-2 rounded-lg transition-all text-white",
             isExpanded ? "h-10 px-2" : "h-10 w-10"
           )}
         >
-          <img src="/logo-icon.png" alt="Boas Contas" className="h-8 w-8 flex-shrink-0 animate-logo-pulse" />
+          <img
+            src="/logo-icon.png"
+            alt="Logo"
+            className="w-8 h-8 rounded-xl object-contain shadow-sm border border-white/10"
+          />
           <span
             className={cn(
-              "whitespace-nowrap font-bold text-primary transition-all duration-300 overflow-hidden",
+              "whitespace-nowrap font-bold text-white transition-all duration-300 overflow-hidden",
               isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0"
             )}
           >
@@ -130,7 +136,7 @@ export function Sidebar({ className, onClose, isExpanded = false, onToggle }: Si
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 hidden sm:flex"
+            className="h-8 w-8 hidden sm:flex text-white/70 hover:text-white hover:bg-white/10"
             onClick={onToggle}
           >
             {isExpanded ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -156,7 +162,7 @@ export function Sidebar({ className, onClose, isExpanded = false, onToggle }: Si
           })}
         </TooltipProvider>
 
-        <div className="mt-auto pt-4 border-t space-y-2">
+        <div className="mt-auto pt-4 space-y-2">
           <TooltipProvider delayDuration={0}>
             {bottomItems.map((item) => {
               if (!isExpanded) {
@@ -175,7 +181,7 @@ export function Sidebar({ className, onClose, isExpanded = false, onToggle }: Si
                 <Button
                   variant="ghost"
                   className={cn(
-                    "flex items-center gap-3 transition-all duration-300 hover:text-foreground text-muted-foreground px-3",
+                    "flex items-center gap-3 transition-all duration-300 hover:text-white text-white/70 hover:bg-white/10 px-3",
                     isExpanded ? "w-full justify-start" : "justify-center h-9 w-9 p-0 md:h-8 md:w-8 mx-auto"
                   )}
                   onClick={handleLogout}

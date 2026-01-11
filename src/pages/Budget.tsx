@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/DashboardCard";
 import { Button } from "@/components/ui/button";
 import { Plus, PiggyBank, Edit, Trash2, ChevronLeft, ChevronRight, Settings, Sparkles } from "lucide-react";
 import { useBudgets } from "@/hooks/useBudgets";
@@ -161,7 +161,7 @@ const Budget = () => {
           {loading ? (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {[1, 2, 3].map((i) => (
-                <Card key={i} className="animate-pulse">
+                <DashboardCard key={i} className="animate-pulse">
                   <CardHeader className="space-y-2">
                     <div className="h-4 bg-muted rounded w-2/3"></div>
                     <div className="h-3 bg-muted rounded w-1/2"></div>
@@ -170,11 +170,11 @@ const Budget = () => {
                     <div className="h-3 bg-muted rounded w-full"></div>
                     <div className="h-6 bg-muted rounded w-3/4"></div>
                   </CardContent>
-                </Card>
+                </DashboardCard>
               ))}
             </div>
           ) : budgets.length === 0 ? (
-            <Card className="text-center py-12">
+            <DashboardCard className="text-center py-12">
               <CardContent>
                 <PiggyBank className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-lg font-semibold mb-2">Nenhum orçamento definido</h3>
@@ -190,7 +190,7 @@ const Budget = () => {
                   </DialogTrigger>
                 </Dialog>
               </CardContent>
-            </Card>
+            </DashboardCard>
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {budgets.map((budget: any) => {
@@ -202,7 +202,7 @@ const Budget = () => {
                 const isDefault = budget.is_default;
 
                 return (
-                  <Card
+                  <DashboardCard
                     key={budget.category_id}
                     className="hover:shadow-lg transition-all cursor-pointer hover:border-primary/50"
                     onClick={() => handleCardClick(budget)}
@@ -273,7 +273,7 @@ const Budget = () => {
                         </div>
                       )}
                     </CardContent>
-                  </Card>
+                  </DashboardCard>
                 );
               })}
             </div>
@@ -285,18 +285,18 @@ const Budget = () => {
           {loadingDefaults ? (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {[1, 2, 3].map((i) => (
-                <Card key={i} className="animate-pulse">
+                <DashboardCard key={i} className="animate-pulse">
                   <CardHeader className="space-y-2">
                     <div className="h-4 bg-muted rounded w-2/3"></div>
                   </CardHeader>
                   <CardContent>
                     <div className="h-6 bg-muted rounded w-1/2"></div>
                   </CardContent>
-                </Card>
+                </DashboardCard>
               ))}
             </div>
           ) : defaultBudgets.length === 0 ? (
-            <Card className="text-center py-12">
+            <DashboardCard className="text-center py-12">
               <CardContent>
                 <Settings className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-lg font-semibold mb-2">Nenhum orçamento padrão</h3>
@@ -312,11 +312,11 @@ const Budget = () => {
                   </DialogTrigger>
                 </Dialog>
               </CardContent>
-            </Card>
+            </DashboardCard>
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {defaultBudgets.map((budget) => (
-                <Card key={budget.id} className="hover:shadow-md transition-shadow">
+                <DashboardCard key={budget.id} className="hover:shadow-md transition-shadow">
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base flex items-center gap-2">
@@ -348,7 +348,7 @@ const Budget = () => {
                       Aplicado automaticamente a todos os meses
                     </p>
                   </CardContent>
-                </Card>
+                </DashboardCard>
               ))}
             </div>
           )}

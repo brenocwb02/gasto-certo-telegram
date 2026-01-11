@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardCard, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/dashboard/DashboardCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -117,7 +117,7 @@ const Goals = () => {
       {loading ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
-            <Card key={i} className="animate-pulse">
+            <DashboardCard key={i} className="animate-pulse">
               <CardHeader className="space-y-2">
                 <div className="h-4 bg-muted rounded w-2/3"></div>
                 <div className="h-3 bg-muted rounded w-1/2"></div>
@@ -126,11 +126,11 @@ const Goals = () => {
                 <div className="h-3 bg-muted rounded w-full"></div>
                 <div className="h-6 bg-muted rounded w-3/4"></div>
               </CardContent>
-            </Card>
+            </DashboardCard>
           ))}
         </div>
       ) : goals.length === 0 ? (
-        <Card className="text-center py-12">
+        <DashboardCard className="text-center py-12">
           <CardHeader>
             <CardTitle>Nenhuma meta cadastrada</CardTitle>
             <CardDescription>
@@ -153,7 +153,7 @@ const Goals = () => {
               </DialogContent>
             </Dialog>
           </CardContent>
-        </Card>
+        </DashboardCard>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {goals.map((goal) => {
@@ -161,7 +161,7 @@ const Goals = () => {
             const isCompleted = progress >= 100;
 
             return (
-              <Card key={goal.id} className="hover:shadow-md transition-shadow">
+              <DashboardCard key={goal.id} className="hover:shadow-md transition-shadow">
                 <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
                   <div className="space-y-1">
                     <CardTitle className="text-base">{goal.titulo}</CardTitle>
@@ -231,18 +231,18 @@ const Goals = () => {
                     </p>
                   )}
                 </CardContent>
-              </Card>
+              </DashboardCard>
             );
           })}
         </div>
       )}
 
       {error && (
-        <Card className="border-destructive">
+        <DashboardCard className="border-destructive">
           <CardContent className="pt-6">
             <p className="text-destructive">Erro ao carregar metas: {error}</p>
           </CardContent>
-        </Card>
+        </DashboardCard>
       )}
     </>
   );

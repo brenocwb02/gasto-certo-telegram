@@ -35,7 +35,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   };
 
   return (
-    <header className="bg-card border-b border-border px-6 py-4 flex items-center justify-between">
+    <header className="bg-background border-none px-6 py-4 flex items-center justify-between">
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"
@@ -46,7 +46,11 @@ export function Header({ onMenuClick }: HeaderProps) {
           <Menu className="h-5 w-5" />
         </Button>
         <div className="flex items-center gap-3">
-          <img src="/logo-icon.png" alt="Boas Contas" className="h-9 w-9" />
+          <img
+            src="/logo-icon.png"
+            alt="Boas Contas Logo"
+            className="h-10 w-10 rounded-xl shadow-sm border border-white/10"
+          />
           <div>
             <h1 className="text-2xl font-bold text-primary">Boas Contas</h1>
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Controle Financeiro Inteligente</p>

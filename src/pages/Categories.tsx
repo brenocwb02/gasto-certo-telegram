@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/DashboardCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -150,7 +150,7 @@ export default function Categories() {
 
   const renderCategory = (category: Category, isSubcategory = false) => (
     <div key={category.id} className={`${isSubcategory ? 'ml-6' : ''}`}>
-      <div className="flex flex-col p-4 bg-card border rounded-lg">
+      <div className="flex flex-col p-4 bg-muted/30 hover:bg-muted/50 transition-colors rounded-xl">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {!isSubcategory && category.subcategories && category.subcategories.length > 0 ? (
@@ -336,7 +336,7 @@ export default function Categories() {
           <p className="text-muted-foreground">Carregando categorias...</p>
         </div>
       ) : flatCategories.length === 0 ? (
-        <Card className="border-dashed">
+        <DashboardCard className="border-2 border-dashed bg-transparent shadow-none">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <div className="text-6xl mb-4">📋</div>
             <h3 className="text-xl font-semibold mb-2">Nenhuma categoria cadastrada</h3>
@@ -366,11 +366,11 @@ export default function Categories() {
               As categorias padrão incluem: Alimentação, Transporte, Casa, Saúde, Lazer, Educação e mais.
             </p>
           </CardContent>
-        </Card>
+        </DashboardCard>
       ) : (
         <div className="grid gap-6">
           {['despesa', 'receita'].map((tipo) => (
-            <Card key={tipo}>
+            <DashboardCard key={tipo}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <div className={`w-3 h-3 rounded-full ${tipo === 'receita' ? 'bg-success' : 'bg-expense'}`} />
@@ -393,7 +393,7 @@ export default function Categories() {
                   )}
                 </div>
               </CardContent>
-            </Card>
+            </DashboardCard>
           ))}
         </div>
       )}

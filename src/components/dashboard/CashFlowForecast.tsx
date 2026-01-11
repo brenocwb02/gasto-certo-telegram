@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/DashboardCard";
 import { TrendingUp, Info } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -142,7 +142,7 @@ export function CashFlowForecast({ groupId }: { groupId?: string }) {
     if (loading) return null;
 
     return (
-        <Card className="financial-card">
+        <DashboardCard className="financial-card">
             <CardHeader className="flex flex-row items-center justify-between py-4">
                 <div className="space-y-0.5">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -224,6 +224,6 @@ export function CashFlowForecast({ groupId }: { groupId?: string }) {
                     </AreaChart>
                 </ResponsiveContainer>
             </CardContent>
-        </Card>
+        </DashboardCard>
     );
 }

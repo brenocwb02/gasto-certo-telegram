@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardCard, CardContent, CardHeader, CardTitle } from "./DashboardCard";
 import { PieChart } from "lucide-react";
 import { useFinancialStats } from "@/hooks/useSupabaseData";
 import { useState, useEffect } from "react";
@@ -139,16 +139,16 @@ export function FinancialChart({ groupId }: { groupId?: string }) {
 
   if (loading) {
     return (
-      <Card className="financial-card">
+      <DashboardCard>
         <CardContent className="flex items-center justify-center h-64">
           <div className="text-sm text-muted-foreground">Carregando dados...</div>
         </CardContent>
-      </Card>
+      </DashboardCard>
     );
   }
 
   return (
-    <Card className="financial-card">
+    <DashboardCard>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-6">
         <div>
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
@@ -237,6 +237,6 @@ export function FinancialChart({ groupId }: { groupId?: string }) {
           )}
         </div>
       </CardContent>
-    </Card>
+    </DashboardCard>
   );
 }

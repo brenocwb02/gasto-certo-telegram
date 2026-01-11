@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardCard, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/dashboard/DashboardCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -140,7 +140,7 @@ const Support = () => {
       </div>
 
       {/* Status Banner */}
-      <Card className="border-success/50 bg-success/5">
+      <DashboardCard className="border-success/50 bg-success/5">
         <CardContent className="pt-6">
           <div className="flex items-center gap-3">
             <CheckCircle2 className="h-5 w-5 text-success" />
@@ -152,11 +152,11 @@ const Support = () => {
             </div>
           </div>
         </CardContent>
-      </Card>
+      </DashboardCard>
 
       {/* Contact Channels */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+        <DashboardCard className="hover:shadow-lg transition-shadow cursor-pointer">
           <CardContent className="pt-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -179,9 +179,9 @@ const Support = () => {
               </Button>
             </div>
           </CardContent>
-        </Card>
+        </DashboardCard>
 
-        <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+        <DashboardCard className="hover:shadow-lg transition-shadow cursor-pointer">
           <CardContent className="pt-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -204,9 +204,9 @@ const Support = () => {
               </Button>
             </div>
           </CardContent>
-        </Card>
+        </DashboardCard>
 
-        <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+        <DashboardCard className="hover:shadow-lg transition-shadow cursor-pointer">
           <CardContent className="pt-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -225,11 +225,11 @@ const Support = () => {
               </Button>
             </div>
           </CardContent>
-        </Card>
+        </DashboardCard>
       </div>
 
       {/* FAQ Section */}
-      <Card>
+      <DashboardCard>
         <CardHeader>
           <div className="flex items-center gap-2">
             <HelpCircle className="h-5 w-5 text-primary" />
@@ -253,7 +253,7 @@ const Support = () => {
             ))}
           </Accordion>
         </CardContent>
-      </Card>
+      </DashboardCard>
 
       {/* Resources */}
       <div>
@@ -262,7 +262,7 @@ const Support = () => {
           {resources.map((resource, index) => {
             const Icon = resource.icon;
             return (
-              <Card key={index} className="hover:shadow-lg transition-shadow">
+              <DashboardCard key={index} className="hover:shadow-lg transition-shadow">
                 <CardContent className="pt-6">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
@@ -283,14 +283,14 @@ const Support = () => {
                     </Button>
                   </div>
                 </CardContent>
-              </Card>
+              </DashboardCard>
             );
           })}
         </div>
       </div>
 
       {/* Contact Form */}
-      <Card>
+      <DashboardCard>
         <CardHeader>
           <div className="flex items-center gap-2">
             <Send className="h-5 w-5 text-primary" />
@@ -366,10 +366,10 @@ const Support = () => {
             </Button>
           </form>
         </CardContent>
-      </Card>
+      </DashboardCard>
 
       {/* Support Hours */}
-      <Card>
+      <DashboardCard>
         <CardContent className="pt-6">
           <div className="flex items-center gap-4">
             <Clock className="h-8 w-8 text-primary" />
@@ -384,10 +384,10 @@ const Support = () => {
             </div>
           </div>
         </CardContent>
-      </Card>
+      </DashboardCard>
 
       {/* Tips */}
-      <Card className="border-primary/20 bg-primary/5">
+      <DashboardCard className="border-primary/20 bg-primary/5">
         <CardContent className="pt-6">
           <div className="flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-primary mt-0.5" />
@@ -402,7 +402,7 @@ const Support = () => {
             </div>
           </div>
         </CardContent>
-      </Card>
+      </DashboardCard>
     </div>
   );
 };

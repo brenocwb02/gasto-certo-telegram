@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { banks } from "@/lib/bank-brands";
 
 const accountSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
@@ -32,6 +33,8 @@ interface AccountFormProps {
 export function AccountForm({ account, onSuccess, groupId }: AccountFormProps) {
   const [loading, setLoading] = useState(false);
   const [parentCards, setParentCards] = useState<any[]>([]);
+  const [showCustomBankInput, setShowCustomBankInput] = useState(false);
+  const [customBankName, setCustomBankName] = useState("");
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -268,10 +271,83 @@ export function AccountForm({ account, onSuccess, groupId }: AccountFormProps) {
           name="banco"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Banco (Opcional)</FormLabel>
-              <FormControl>
-                <Input placeholder="Ex: Nubank, Bradesco..." {...field} />
-              </FormControl>
+              <FormLabel>Banco</FormLabel>
+              {!showCustomBankInput ? (
+                <>
+                  <Select
+                    onValueChange={(value) => {
+                      if (value === "__outro__") {
+                        setShowCustomBankInput(true);
+                        field.onChange("");
+                      } else if (value === "__none__") {
+                        field.onChange("");
+                      } else {
+                        field.onChange(value);
+                      }
+                    }}
+                    defaultValue={field.value || "__none__"}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o banco" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="max-h-[300px]">
+                      <SelectItem value="__none__">
+                        <span className="text-muted-foreground">Nenhum</span>
+                      </SelectItem>
+                      {banks.map((bank) => (
+                        <SelectItem key={bank.name} value={bank.name}>
+                          <span className="flex items-center gap-2">
+                            {bank.iconClass ? (
+                              <i className={`${bank.iconClass} text-base`} style={{ color: bank.primaryColor }} />
+                            ) : (
+                              <span
+                                className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] text-white font-bold"
+                                style={{ backgroundColor: bank.primaryColor }}
+                              >
+                                {bank.name[0]}
+                              </span>
+                            )}
+                            <span>{bank.name}</span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="__outro__">
+                        <span className="flex items-center gap-2 text-blue-600">
+                          ✏️ <span>Outro (digitar nome)</span>
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </>
+              ) : (
+                <div className="flex gap-2">
+                  <FormControl>
+                    <Input
+                      placeholder="Digite o nome do banco..."
+                      value={customBankName}
+                      onChange={(e) => {
+                        setCustomBankName(e.target.value);
+                        field.onChange(e.target.value);
+                      }}
+                      className="flex-1"
+                    />
+                  </FormControl>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setShowCustomBankInput(false);
+                      setCustomBankName("");
+                      field.onChange("");
+                    }}
+                  >
+                    ← Voltar
+                  </Button>
+                </div>
+              )}
               <FormMessage />
             </FormItem>
           )}

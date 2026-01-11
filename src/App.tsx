@@ -12,8 +12,8 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import Landing from "@/pages/Landing";
 
 // Lazy load internal pages
-// Dashboard moved to DashboardNew
-const DashboardNew = lazy(() => import("@/pages/Dashboard"));
+
+const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const Auth = lazy(() => import("@/pages/Auth"));
 const Onboarding = lazy(() => import("@/pages/Onboarding"));
 const QuizFinanceiro = lazy(() => import("@/pages/QuizFinanceiro"));
@@ -35,6 +35,7 @@ const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
 const UpdatePassword = lazy(() => import("@/pages/UpdatePassword"));
 const Admin = lazy(() => import("@/pages/Admin"));
 const InvoiceDetails = lazy(() => import("@/pages/InvoiceDetails"));
+const Styleguide = lazy(() => import("@/pages/Styleguide"));
 
 const queryClient = new QueryClient();
 
@@ -93,7 +94,7 @@ const AppRoutes = () => {
             needsOnboarding ? <Navigate to="/onboarding" replace /> :
               <ProtectedRoute>
                 <AppLayout>
-                  <DashboardNew />
+                  <Dashboard />
                 </AppLayout>
               </ProtectedRoute>
           }
@@ -238,6 +239,17 @@ const AppRoutes = () => {
           }
         />
 
+
+        <Route
+          path="/styleguide"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <Styleguide />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
 
         {/* Redirects para rotas antigas */}
         <Route path="/license" element={<Navigate to="/planos" replace />} />
