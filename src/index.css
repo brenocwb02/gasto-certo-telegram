@@ -260,14 +260,12 @@
 
 .tma-mode header,
 .tma-mode footer,
-.tma-mode aside {
+.tma-mode .app-main-sidebar {
   /* Ocultar cabeçalhos, rodapés e sidebar padrões do site quando dentro do Telegram */
   display: none !important;
 }
 
-.tma-mode .tma-force-show {
-  display: flex !important;
-}
+/* Override removed as it is no longer needed */
 
 .tma-mode main {
   /* Remove padding excessivo no topo, já que não tem header */

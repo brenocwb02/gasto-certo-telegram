@@ -33,7 +33,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     <div className="min-h-screen bg-background flex">
       {/* Desktop/Tablet Sidebar - Visible on sm+ */}
       <Sidebar
-        className="hidden sm:flex"
+        className="hidden sm:flex app-main-sidebar"
         isExpanded={isDesktopSidebarExpanded}
         onToggle={toggleDesktopSidebar}
       />
@@ -42,7 +42,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
         <SheetContent side="left" className="p-0 w-auto border-r-0">
           <Sidebar
-            className="flex static h-full border-r-0"
+            className="flex static h-full border-r-0 app-main-sidebar"
             onClose={() => setSidebarOpen(false)}
             isExpanded={true} // Always expanded on mobile
           />
