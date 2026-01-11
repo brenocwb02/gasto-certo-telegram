@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { useTelegramAuth } from "@/hooks/useTelegramAuth";
 
 // Eager load Landing for better LCP
 import Landing from "@/pages/Landing";
@@ -50,6 +51,7 @@ const PageLoader = () => (
 
 const AppRoutes = () => {
   const { user, loading, profile } = useAuth();
+  useTelegramAuth();
 
   if (loading) {
     return <PageLoader />;

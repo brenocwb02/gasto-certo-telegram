@@ -49,7 +49,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       </Sheet>
 
       <div
-        className={`flex-1 flex flex-col transition-all duration-300 ${isDesktopSidebarExpanded ? 'sm:pl-64' : 'sm:pl-14'
+        className={`main-layout-content flex-1 flex flex-col transition-all duration-300 ${isDesktopSidebarExpanded ? 'sm:pl-64' : 'sm:pl-14'
           }`}
       >
         <Header onMenuClick={() => setSidebarOpen(true)} />

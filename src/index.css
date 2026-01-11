@@ -252,3 +252,25 @@
     }
   }
 }
+
+/* Telegram Mini App Overrides */
+.tma-mode .tma-hidden {
+  display: none !important;
+}
+
+.tma-mode header,
+.tma-mode footer,
+.tma-mode aside {
+  /* Ocultar cabeçalhos, rodapés e sidebar padrões do site quando dentro do Telegram */
+  display: none !important;
+}
+
+.tma-mode main {
+  /* Remove padding excessivo no topo, já que não tem header */
+  padding-top: 1rem !important;
+}
+
+.tma-mode .main-layout-content {
+  /* Remove padding esquerdo reservado para a sidebar */
+  padding-left: 0 !important;
+}

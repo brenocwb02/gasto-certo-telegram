@@ -1,6 +1,29 @@
 import { sendTelegramMessage } from '../_shared/telegram-api.ts';
 
 /**
+ * Comando /app - Abre o Mini App
+ */
+export async function handleAppCommand(chatId: number): Promise<void> {
+    const siteUrl = Deno.env.get('SITE_URL') || 'https://app.boascontas.com.br';
+
+    // Ensure URL is HTTPS
+    const webAppUrl = siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`;
+
+    const message = `🚀 *Boas Contas App*
+    
+Clique no botão abaixo para abrir o app completo sem sair do Telegram.`;
+
+    await sendTelegramMessage(chatId, message, {
+        parse_mode: 'Markdown',
+        reply_markup: {
+            inline_keyboard: [[
+                { text: "📲 Abrir App", web_app: { url: webAppUrl } }
+            ]]
+        }
+    });
+}
+
+/**
  * Comando /tutorial - Mostra link do tutorial
  */
 export async function handleTutorialCommand(chatId: number): Promise<void> {
@@ -40,8 +63,3 @@ export async function handleTutorialCommand(chatId: number): Promise<void> {
 💡 *Dica:* Complete o tutorial no app para uma experiência completa!`;
     await sendTelegramMessage(chatId, message, { parse_mode: 'Markdown' });
 }
-
-/**
- * Comando /ajuda, /start, /help - Já existe em admin.ts mas idealmente ficaria aqui se fosse generico
- * admin.ts lida com start por causa do vinculo de licença.
- */

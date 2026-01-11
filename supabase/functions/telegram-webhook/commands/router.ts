@@ -7,7 +7,7 @@ import { handleRecorrenteNovaCommand, handleRecorrentesCommand, handlePausarReco
 import { handleContasAPagarCommand, handlePendentesCommand } from './contasapagar.ts';
 import { handleMeuPerfilCommand } from './profile.ts';
 import { handleEditarUltimaCommand, handleDesfazerCommand } from './transactions.ts';
-import { handleTutorialCommand } from './general.ts';
+import { handleTutorialCommand, handleAppCommand } from './general.ts';
 import { handlePerguntarCommand } from './ai.ts';
 import { handleContextCommand, handlePersonalCommand, handleGroupCommand, handleConfigCommand } from '../utils/context.ts';
 import { sendTelegramMessage } from '../_shared/telegram-api.ts';
@@ -138,6 +138,11 @@ export async function handleCommand(supabase: any, command: string, userId: stri
 
         case '/tutorial':
             await handleTutorialCommand(chatId);
+            break;
+
+        case '/app':
+        case '/tma':
+            await handleAppCommand(chatId);
             break;
 
         case '/meuperfil':
