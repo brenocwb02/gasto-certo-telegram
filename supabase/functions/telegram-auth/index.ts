@@ -91,12 +91,12 @@ serve(async (req) => {
         );
 
         // Search profile by telegram_id
-        // Note: We cast to text just in case, though profile column should be text based on previous file viewing
+        // Note: We cast to text just in case, though profile column should be text    // 2. Encontrar usuário pelo ID do Telegram (verificar ambos os campos para retrocompatibilidade)
         const { data: profile, error: profileError } = await supabaseAdmin
             .from('profiles')
             .select('user_id')
-            .eq('telegram_id', telegramId)
-            .single();
+            .or(`telegram_id.eq.${telegramId},telegram_chat_id.eq.${telegramId}`)
+            .maybeSingle();
 
         if (profileError || !profile) {
             console.log('User not linked:', telegramId);

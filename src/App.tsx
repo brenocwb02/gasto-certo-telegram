@@ -33,6 +33,7 @@ const RecurringTransactions = lazy(() => import("@/pages/RecurringTransactions")
 const Planos = lazy(() => import("@/pages/Planos"));
 const CheckoutSuccess = lazy(() => import("@/pages/CheckoutSuccess"));
 const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("@/pages/TermsOfService"));
 const UpdatePassword = lazy(() => import("@/pages/UpdatePassword"));
 const Admin = lazy(() => import("@/pages/Admin"));
 const InvoiceDetails = lazy(() => import("@/pages/InvoiceDetails"));
@@ -74,8 +75,9 @@ const AppRoutes = () => {
         />
         <Route path="/auth" element={user ? <Navigate to="/dashboard" replace /> : <Auth />} />
 
-        {/* Política de Privacidade - Pública */}
+        {/* Política de Privacidade e Termos - Públicas */}
         <Route path="/privacidade" element={<PrivacyPolicy />} />
+        <Route path="/termos" element={<TermsOfService />} />
 
         <Route
           path="/onboarding"

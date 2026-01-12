@@ -44,7 +44,7 @@ export default function PrivacyPolicy() {
                     </CardHeader>
                     <CardContent className="space-y-2">
                         <p className="text-sm">
-                            <strong>Gasto Certo</strong> leva sua privacidade a sério. Esta política explica:
+                            <strong>Boas Contas</strong> leva sua privacidade a sério. Esta política explica:
                         </p>
                         <ul className="list-disc pl-6 text-sm space-y-1">
                             <li>Quais dados coletamos e por quê</li>
@@ -65,9 +65,7 @@ export default function PrivacyPolicy() {
                     </CardHeader>
                     <CardContent className="space-y-3">
                         <p className="text-sm">
-                            <strong>Razão Social:</strong> João Silva ME <br />
-                            <strong>CNPJ/CPF:</strong> 123.456.789-00 <br />
-                            <strong>Endereço:</strong> Rua Exemplo, 123 - São Paulo, SP <br />
+                            <strong>Razão Social:</strong> Boas Contas Tecnologia<br />
                             <strong>Email:</strong> contato@boascontas.com.br
                         </p>
                         <p className="text-sm text-muted-foreground">
@@ -285,7 +283,7 @@ export default function PrivacyPolicy() {
                             </p>
                             <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
                                 Mantenha sua senha segura e não a compartilhe. Use senhas fortes e
-                                únicas para o Gasto Certo.
+                                únicas para o Boas Contas.
                             </p>
                         </div>
                     </CardContent>

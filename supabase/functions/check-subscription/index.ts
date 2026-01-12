@@ -91,7 +91,77 @@ serve(async (req) => {
       productName = product.name;
       logStep("Determined subscription tier", { productId, productName });
     } else {
-      logStep("No active subscription found");
+      logStep("No active subscription found for user. Checking Family Membership...");
+
+      // CHECK FAMILY MEMBERSHIP FALLBACK
+      // 1. Check if user is a member of any active family group
+      const { data: memberData, error: memberError } = await supabaseClient
+        .from('family_members')
+        .select('group_id, status')
+        .eq('member_id', user.id)
+        .eq('status', 'active') // Only checking active members
+        .maybeSingle();
+
+      if (memberData && !memberError) {
+        logStep("User is a family member", { groupId: memberData.group_id });
+
+        // 2. Get the owner of the group
+        const { data: groupData, error: groupError } = await supabaseClient
+          .from('family_groups')
+          .select('owner_id')
+          .eq('id', memberData.group_id)
+          .maybeSingle();
+
+        if (groupData && !groupError) {
+          logStep("Found family group owner", { ownerId: groupData.owner_id });
+
+          // 3. Get owner's email to check Stripe
+          const { data: ownerUserResponse, error: ownerUserError } = await supabaseClient.auth.admin.getUserById(groupData.owner_id);
+
+          if (ownerUserResponse?.user?.email && !ownerUserError) {
+            const ownerEmail = ownerUserResponse.user.email;
+            logStep("Checking Owner Subscription", { ownerEmail });
+
+            // 4. Check Stripe for Owner
+            const ownerCustomers = await stripe.customers.list({ email: ownerEmail, limit: 1 });
+
+            if (ownerCustomers.data.length > 0) {
+              const ownerCustomerId = ownerCustomers.data[0].id;
+              const ownerSubscriptions = await stripe.subscriptions.list({
+                customer: ownerCustomerId,
+                status: "active",
+                limit: 1,
+              });
+
+              if (ownerSubscriptions.data.length > 0) {
+                const ownerSub = ownerSubscriptions.data[0];
+                const ownerProductId = ownerSub.items.data[0].price.product;
+                const ownerProduct = await stripe.products.retrieve(ownerProductId as string);
+
+                // 5. Verify if it is indeed a Family Plan
+                // We check if the product name contains "Familia" or "Admin" or similar keywords, or acts as premium generally.
+                // Ideally, we restrict this only if the owner has a "Family" plan.
+                // Assuming "Family" is in the name.
+                const isFamilyPlan = ownerProduct.name.toLowerCase().includes('família') || ownerProduct.name.toLowerCase().includes('familia');
+
+                if (isFamilyPlan) {
+                  hasActiveSub = true;
+                  subscriptionEnd = new Date(ownerSub.current_period_end * 1000).toISOString();
+                  productId = ownerProductId;
+                  productName = ownerProduct.name + " (Membro)";
+                  logStep("Valid Family Plan found via Owner", { productName });
+                } else {
+                  logStep("Owner has subscription but NOT a Family Plan", { productName: ownerProduct.name });
+                }
+              }
+            }
+          } else {
+            logStep("Could not fetch owner user details or email missing");
+          }
+        }
+      } else {
+        logStep("User is not in any active family group");
+      }
     }
 
     return new Response(JSON.stringify({

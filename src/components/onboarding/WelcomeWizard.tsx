@@ -93,7 +93,7 @@ export function WelcomeWizard({ onComplete }: WelcomeWizardProps) {
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle className="text-2xl text-center">Boas-vindas ao Gasto Certo! 👋</DialogTitle>
+                    <DialogTitle className="text-2xl text-center">Boas-vindas ao Boas Contas! 👋</DialogTitle>
                     <DialogDescription className="text-center pt-2">
                         Para começar, como você prefere organizar suas finanças?
                     </DialogDescription>
